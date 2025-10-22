@@ -257,3 +257,5 @@ google-services.json
 *.BASE.*
 *.LOCAL.*
 *.REMOTE.*
+
+**/application-secret.properties
