@@ -1,5 +1,7 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.exception.CustomException;
+import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
 import com.ssafy.linkcare.user.dto.LoginRequest;
 import com.ssafy.linkcare.user.dto.LoginResponse;
@@ -33,7 +35,7 @@ public class AuthService {
 
         // 1. 이메일 중복 체크
         if (checkEmailDuplicate(request.email())) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다");
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         // 2. 비밀번호 암호화
@@ -58,11 +60,11 @@ public class AuthService {
 
         // 1. 이메일로 사용자 조회
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
         // 2. 비밀번호 확인
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다");
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         // 3. JWT 토큰 생성
