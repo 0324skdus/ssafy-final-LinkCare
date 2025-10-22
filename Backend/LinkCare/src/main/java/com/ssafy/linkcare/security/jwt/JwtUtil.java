@@ -35,7 +35,7 @@ public class JwtUtil {
         return generateToken(userId, refreshTokenExpiration);
     }
 
-    // 토큰 생성 (공통 로직)
+    // 토큰 생성
     private String generateToken(String userId, long expiration) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);

@@ -3,6 +3,7 @@ package com.ssafy.linkcare.user.service;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
+import com.ssafy.linkcare.security.service.RefreshTokenService;
 import com.ssafy.linkcare.user.dto.LoginRequest;
 import com.ssafy.linkcare.user.dto.LoginResponse;
 import com.ssafy.linkcare.user.dto.SignupRequest;
@@ -10,6 +11,7 @@ import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AuthService {
 
+    private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
+
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
 
     // 이메일 중복 확인
     public boolean checkEmailDuplicate(String email) {
@@ -32,7 +38,6 @@ public class AuthService {
     // 회원가입
     @Transactional
     public void signup(SignupRequest request) {
-
         // 1. 이메일 중복 체크
         if (checkEmailDuplicate(request.email())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
@@ -67,13 +72,61 @@ public class AuthService {
             throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        // 3. JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(user.getUserPk().toString());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getUserPk().toString());
-
         log.info("로그인 성공: {}", request.email());
 
-        // 4. 응답 반환
+        // 3. 토큰 생성 및 응답
+        return generateTokenResponse(user);
+    }
+
+    // Token 재발급
+    public LoginResponse refreshAccessToken(String refreshToken) {
+
+        // 1. Refresh Token 검증 (JWT 자체 검증)
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 2. Token에서 userId 추출
+        String userId = jwtUtil.getUserIdFromToken(refreshToken);
+
+        // 3. Redis에 저장된 Refresh Token과 비교
+        if (!refreshTokenService.validateRefreshToken(userId, refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_TOKEN, "유효하지 않은 Refresh Token입니다");
+        }
+
+        // 4. 사용자 정보 조회
+        User user = userRepository.findById(Long.parseLong(userId))
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        log.info("Token 재발급 완료: userId={}", userId);
+
+        // 5. 토큰 생성 및 응답
+        return generateTokenResponse(user);
+    }
+
+    // 로그아웃
+    public void logout(String userId) {
+        // Redis에서 Refresh Token 삭제
+        refreshTokenService.deleteRefreshToken(userId);
+        log.info("로그아웃 완료: userId={}", userId);
+    }
+
+    /**
+        * 토큰 생성 및 LoginResponse 반환 (공통 함수)
+        * @param user 사용자 정보
+        * @return LoginResponse
+     */
+    private LoginResponse generateTokenResponse(User user) {
+        String userId = user.getUserPk().toString();
+
+        // 1. JWT 토큰 생성
+        String accessToken = jwtUtil.generateAccessToken(userId);
+        String refreshToken = jwtUtil.generateRefreshToken(userId);
+
+        // 2. Refresh Token을 Redis에 저장
+        refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
+
+        // 3. 응답 반환
         return new LoginResponse(
                 accessToken,
                 refreshToken,

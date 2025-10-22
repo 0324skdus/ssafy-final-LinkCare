@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private static final String BEARER_PREFIX = "Bearer ";
 
     /*
         * 이메일 중복 확인
@@ -48,4 +50,34 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    // Token 재발급
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@RequestHeader("Authorization") String authorizationHeader) {
+        // "Bearer " 제거
+        String refreshToken = extractToken(authorizationHeader);
+        LoginResponse response = authService.refreshAccessToken(refreshToken);
+        return ResponseEntity.ok(response);
+    }
+
+    /// 로그아웃
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(Authentication authentication) {
+        // Spring이 자동으로 주입
+        String userId = authentication.getName();
+        authService.logout(userId);
+        return ResponseEntity.ok("로그아웃이 완료되었습니다");
+    }
+
+
+    /**
+        * Authorization Header에서 Token 추출
+        * @param authorizationHeader "Bearer {token}"
+        * @return token
+    */
+    private String extractToken(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX)) {
+            return authorizationHeader.substring(BEARER_PREFIX.length());
+        }
+        throw new IllegalArgumentException("유효하지 않은 Authorization Header");
+    }
 }
