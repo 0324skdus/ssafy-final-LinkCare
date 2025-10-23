@@ -1,5 +1,7 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.email.service.EmailService;
+import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
@@ -23,9 +25,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService emailVerificationService;
+
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
@@ -33,6 +38,34 @@ public class AuthService {
     // 이메일 중복 확인
     public boolean checkEmailDuplicate(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+
+    // 이메일 인증 코드 발송
+    @Transactional
+    public void sendVerificationCode(String email) {
+
+        // 1. 이메일 중복 확인
+        if (checkEmailDuplicate(email)) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        // 2. 인증 코드 생성 (6자리)
+        String code = emailVerificationService.generateVerificationCode();
+
+        // 3. Redis에 저장 (5분 유효)
+        emailVerificationService.saveVerificationCode(email, code);
+
+        // 4. 이메일 발송
+        emailService.sendVerificationEmail(email, code);
+
+        log.info("인증 코드 발송 완료: email={}", email);
+    }
+
+    // 인증 코드 검증
+    public void verifyCode(String email, String code) {
+        emailVerificationService.verifyCode(email, code);
+        log.info("인증 코드 검증 성공: email={}", email);
     }
 
     // 회원가입

@@ -1,8 +1,6 @@
 package com.ssafy.linkcare.user.controller;
 
-import com.ssafy.linkcare.user.dto.LoginRequest;
-import com.ssafy.linkcare.user.dto.LoginResponse;
-import com.ssafy.linkcare.user.dto.SignupRequest;
+import com.ssafy.linkcare.user.dto.*;
 import com.ssafy.linkcare.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +26,26 @@ public class AuthController {
     public ResponseEntity<Boolean> checkEmailDuplicate(@RequestParam String email) {
         boolean isDuplicate = authService.checkEmailDuplicate(email);
         return ResponseEntity.ok(isDuplicate);
+    }
+
+    /*
+        * 이메일 인증 코드 발송
+        * POST /api/auth/send-verification-code
+    */
+    @PostMapping("/send-verification-code")
+    public ResponseEntity<String> sendVerificationCode(@Valid @RequestBody SendVerificationCodeRequest request) {
+        authService.sendVerificationCode(request.email());
+        return ResponseEntity.ok("인증 코드가 발송되었습니다");
+    }
+
+    /*
+        * 인증 코드 검증
+        * POST /api/auth/verify-code
+    */
+    @PostMapping("/verify-code")
+    public ResponseEntity<String> verifyCode(@Valid @RequestBody VerifyCodeRequest request) {
+        authService.verifyCode(request.email(), request.code());
+        return ResponseEntity.ok("인증이 완료되었습니다");
     }
 
     /*
