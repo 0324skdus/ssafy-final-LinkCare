@@ -17,8 +17,5 @@ public record SignupRequest(
     String password,
 
     @NotBlank(message = "이름은 필수입니다")
-    String name,
-
-    @NotNull(message = "생년월일은 필수입니다")
-    LocalDate birth
+    String name
 ) {}

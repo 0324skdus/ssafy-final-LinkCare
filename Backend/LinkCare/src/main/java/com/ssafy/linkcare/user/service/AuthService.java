@@ -5,6 +5,7 @@ import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
+import com.ssafy.linkcare.security.service.OAuth2Service;
 import com.ssafy.linkcare.security.service.RefreshTokenService;
 import com.ssafy.linkcare.user.dto.LoginRequest;
 import com.ssafy.linkcare.user.dto.LoginResponse;
@@ -26,6 +27,7 @@ public class AuthService {
 
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final OAuth2Service oauth2Service;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -84,7 +86,6 @@ public class AuthService {
                 .email(request.email())
                 .password(encodedPassword)
                 .name(request.name())
-                .birth(request.birth())
                 .build();
 
         // 4. DB 저장
@@ -159,13 +160,35 @@ public class AuthService {
         // 2. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
 
-        // 3. 응답 반환
+        // 3. 프로필 완성 여부 확인 (birth가 null이면 추가 정보 입력 필요)
+        Boolean needsProfileCompletion = (user.getBirth() == null);
+
         return new LoginResponse(
                 accessToken,
                 refreshToken,
                 user.getUserPk(),
                 user.getEmail(),
-                user.getName()
+                user.getName(),
+                needsProfileCompletion
         );
     }
+
+
+    /*
+        * Google 소셜 로그인
+        * @param idToken Android 앱에서 받은 Google ID Token
+        * @return LoginResponse (JWT 토큰 포함)
+    */
+    @Transactional(readOnly = false)
+    public LoginResponse googleLogin(String idToken) {
+
+        // 1. OAuth2Service로 Google ID Token 검증 및 사용자 정보 가져오기
+        User user = oauth2Service.verifyGoogleTokenAndGetUser(idToken);
+
+        log.info("Google 로그인 성공: email={}", user.getEmail());
+
+        // 2. 토큰 생성 및 응답 (기존 공통 메서드 재사용!)
+        return generateTokenResponse(user);
+    }
+
 }

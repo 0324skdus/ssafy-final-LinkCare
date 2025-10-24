@@ -86,6 +86,16 @@ public class AuthController {
         return ResponseEntity.ok("로그아웃이 완료되었습니다");
     }
 
+    /*
+        * Google 소셜 로그인
+        * POST /api/auth/google
+    */
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        LoginResponse response = authService.googleLogin(request.idToken());
+        return ResponseEntity.ok(response);
+    }
+
 
     /**
         * Authorization Header에서 Token 추출

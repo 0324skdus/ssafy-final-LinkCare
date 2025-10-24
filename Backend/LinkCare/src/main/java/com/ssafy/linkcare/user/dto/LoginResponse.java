@@ -5,5 +5,6 @@ public record LoginResponse(
     String refreshToken,
     Long userPk,
     String email,
-    String name
+    String name,
+    Boolean needsProfileCompletion
 ) {}

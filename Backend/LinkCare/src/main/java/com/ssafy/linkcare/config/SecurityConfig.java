@@ -35,7 +35,8 @@ public class SecurityConfig {
                                 "/api/auth/check-email",
                                 "/api/auth/refresh",  // Refresh Token 재발급
                                 "/api/auth/send-verification-code",
-                                "/api/auth/verify-code"
+                                "/api/auth/verify-code",
+                                "/api/auth/google"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
