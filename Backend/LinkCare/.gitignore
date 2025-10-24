@@ -1,4 +1,4 @@
-# macOS
+﻿# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -78,10 +78,6 @@ obj/
 # Generated files
 bin/
 gen/
-
-# Gradle Wrapper (allow these important files)
-!**/gradle/wrapper/gradle-wrapper.jar
-!**/gradle/wrapper/gradle-wrapper.properties
 
 # CocoaPods
 ios/Pods/
@@ -257,5 +253,3 @@ google-services.json
 *.BASE.*
 *.LOCAL.*
 *.REMOTE.*
-
-**/application-secret.properties
