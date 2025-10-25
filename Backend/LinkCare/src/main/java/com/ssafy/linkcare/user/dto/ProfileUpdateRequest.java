@@ -13,5 +13,7 @@ public record ProfileUpdateRequest(
 
     Float weight,
 
+    String gender,
+
     Integer exerciseStartYear
 ) {}
