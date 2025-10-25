@@ -26,6 +26,9 @@ public class OAuth2Service {
     @Value("${google.client-id}")
     private String googleClientId;
 
+    @Value("${app.default-profile-image-url}")
+    private String defaultProfileImageUrl;
+
     /*
         * Google ID Token을 검증하고 사용자 정보를 반환
         * @param idToken Android 앱에서 받은 Google ID Token
@@ -66,11 +69,13 @@ public class OAuth2Service {
                         // 신규 회원 자동 가입
                         log.info("신규 Google 회원 자동 가입 - email: {}", email);
 
+                        String profileImage = (picture != null && !picture.isEmpty()) ? picture : defaultProfileImageUrl;
+
                         User newUser = User.builder()
                                 .email(email)
                                 .password(null) // 소셜 로그인은 비밀번호 없음
                                 .name(name)
-                                .imageUrl(picture)
+                                .imageUrl(profileImage)
                                 .provider("GOOGLE")
                                 .providerId(providerId)
                                 .build();

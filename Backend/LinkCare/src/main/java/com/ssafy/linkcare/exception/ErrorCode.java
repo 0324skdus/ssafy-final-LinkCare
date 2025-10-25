@@ -34,7 +34,12 @@ public enum ErrorCode {
 
     // Google OAuth2
     INVALID_GOOGLE_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 Google 토큰입니다"),
-    GOOGLE_TOKEN_VERIFICATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Google 토큰 검증에 실패했습니다");
+    GOOGLE_TOKEN_VERIFICATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Google 토큰 검증에 실패했습니다"),
+
+    // 파일 업로드 관련 에러
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다"),
+    FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제에 실패했습니다"),
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다");
 
     private final HttpStatus status;
     private final String message;
