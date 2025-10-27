@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/api/auth/refresh",  // Refresh Token 재발급
                                 "/api/auth/send-verification-code",
                                 "/api/auth/verify-code",
-                                "/api/auth/google"
+                                "/api/auth/google",
+                                "/api/auth/kakao"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );

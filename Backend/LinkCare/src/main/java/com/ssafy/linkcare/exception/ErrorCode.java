@@ -36,6 +36,10 @@ public enum ErrorCode {
     INVALID_GOOGLE_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 Google 토큰입니다"),
     GOOGLE_TOKEN_VERIFICATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Google 토큰 검증에 실패했습니다"),
 
+    // Kakao 로그인 에러
+    KAKAO_TOKEN_REQUEST_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "카카오 토큰 발급에 실패했습니다"),
+    KAKAO_USER_INFO_REQUEST_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "카카오 사용자 정보 조회에 실패했습니다"),
+
     // 파일 업로드 관련 에러
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다"),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제에 실패했습니다"),

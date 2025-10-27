@@ -5,8 +5,10 @@ import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
+import com.ssafy.linkcare.security.service.KakaoService;
 import com.ssafy.linkcare.security.service.OAuth2Service;
 import com.ssafy.linkcare.security.service.RefreshTokenService;
+import com.ssafy.linkcare.user.dto.KakaoUserInfo;
 import com.ssafy.linkcare.user.dto.LoginRequest;
 import com.ssafy.linkcare.user.dto.LoginResponse;
 import com.ssafy.linkcare.user.dto.SignupRequest;
@@ -27,6 +29,7 @@ public class AuthService {
 
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final KakaoService kakaoService;
     private final OAuth2Service oauth2Service;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -192,6 +195,25 @@ public class AuthService {
         log.info("Google 로그인 성공: email={}", user.getEmail());
 
         // 2. 토큰 생성 및 응답 (기존 공통 메서드 재사용!)
+        return generateTokenResponse(user);
+    }
+
+    /*
+        * 카카오 소셜 로그인
+        * @param code Android 앱에서 받은 인가 코드
+        * @return LoginResponse (JWT 토큰 포함)
+    */
+    @Transactional(readOnly = false)
+    public LoginResponse kakaoLogin(String accessToken) {
+        // 1. Access Token으로 사용자 정보 직접 조회 (토큰 발급 단계 생략!)
+        KakaoUserInfo kakaoUserInfo = kakaoService.getUserInfo(accessToken);
+
+        // 2. User 엔티티 조회 또는 생성
+        User user = kakaoService.getOrCreateUser(kakaoUserInfo);
+
+        log.info("카카오 로그인 성공: email={}", user.getEmail());
+
+        // 3. JWT 토큰 생성 및 응답
         return generateTokenResponse(user);
     }
 

@@ -1,7 +1,16 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -18,6 +27,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 카카오 Native 앱 키 추가
+        val kakaoAppKey = localProperties.getProperty("KAKAO_NATIVE_APP_KEY") ?: ""
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoAppKey\"")
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoAppKey
     }
 
     buildTypes {
@@ -38,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -53,6 +68,9 @@ dependencies {
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Kakao SDK 추가
+    implementation("com.kakao.sdk:v2-user:2.22.0")
 
     // Retrofit (백엔드 API 호출)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

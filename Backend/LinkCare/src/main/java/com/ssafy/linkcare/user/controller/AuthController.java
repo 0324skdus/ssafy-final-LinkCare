@@ -144,6 +144,23 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    /*
+        * 카카오 로그인
+        * POST /api/auth/kakao
+    */
+    @Operation(summary = "카카오 소셜 로그인",
+            description = "카카오에서 발급받은 인가 코드로 로그인/회원가입을 처리합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 인가 코드"),
+            @ApiResponse(responseCode = "500", description = "카카오 로그인 처리 실패")
+    })
+    @PostMapping("/kakao")
+    public ResponseEntity<LoginResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest request) {
+        LoginResponse response = authService.kakaoLogin(request.accessToken());
+        return ResponseEntity.ok(response);
+    }
+
 
     /**
         * Authorization Header에서 Token 추출
