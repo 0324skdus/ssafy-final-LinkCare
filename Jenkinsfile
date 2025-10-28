@@ -42,6 +42,7 @@ pipeline {
          stage('Build JAR') {
              steps {
                  dir('Backend/LinkCare') {
+                     sh 'chmod +x gradlew'
                      sh './gradlew clean build -x test'
                  }
              }
