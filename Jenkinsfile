@@ -75,42 +75,55 @@ pipeline {
                      passwordVariable: 'DOCKER_PASSWORD'
                  )]) {
                      sshagent(['ec2-ssh-key']) {
+                         // 1. .env 파일 로컬에서 생성
                          sh """
-                             ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
-                                mkdir -p $DEPLOY_DIR
-                             "
+                             cat > /tmp/deploy.env << EOF
+                             DOCKER_REGISTRY=${DOCKER_REGISTRY}
+                             DOCKER_USERNAME=${DOCKER_USERNAME}
+                             DOCKER_TAG=${DOCKER_TAG}
+                             DOCKER_PASSWORD=${DOCKER_PASSWORD}
+                             JWT_SECRET=${JWT_SECRET}
+                             DB_USER_PASSWORD=${DB_USER_PASSWORD}
+                             GMAIL_PASSWORD=${GMAIL_PASSWORD}
+                             GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+                             KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+                             AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+                             AWS_SECRET_KEY=${AWS_SECRET_KEY}
+                             EOF
+                         """
 
-                             scp -o StrictHostKeyChecking=no Infra/docker-compose.yml $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.yml
+                         // 2. 디렉토리 생성
+                         sh """
+                             ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_DIR}"
+                         """
 
-                             ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
-                                 cd $DEPLOY_DIR
+                         // 3. 파일 복사
+                         sh """
+                             scp -o StrictHostKeyChecking=no /tmp/deploy.env ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_DIR}/.env
+                             scp -o StrictHostKeyChecking=no Infra/docker-compose.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
+                         """
 
-                                 echo "Pull latest image..."
-                                 docker pull $DOCKER_REGISTRY/$DOCKER_USERNAME/backend:$DOCKER_TAG
+                         // 4. 배포 실행
+                         sh """
+                             ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "
+                                 cd ${DEPLOY_DIR}
 
-                                 echo "Stop old containers..."
+                                 echo 'Pull latest image...'
+                                 docker pull ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
+
+                                 echo 'Stop old containers...'
                                  docker compose down || true
 
-                                 echo "Start new containers..."
-
-                                 DOCKER_REGISTRY=$DOCKER_REGISTRY \\
-                                 DOCKER_USERNAME=$DOCKER_USERNAME \\
-                                 DOCKER_TAG=$DOCKER_TAG \\
-                                 DOCKER_PASSWORD='$DOCKER_PASSWORD' \\
-                                 JWT_SECRET='$JWT_SECRET' \\
-                                 DB_USER_PASSWORD='$DB_USER_PASSWORD' \\
-                                 GMAIL_PASSWORD='$GMAIL_PASSWORD' \\
-                                 GOOGLE_CLIENT_ID='$GOOGLE_CLIENT_ID' \\
-                                 KAKAO_CLIENT_ID='$KAKAO_CLIENT_ID' \\
-                                 AWS_ACCESS_KEY='$AWS_ACCESS_KEY' \\
-                                 AWS_SECRET_KEY='$AWS_SECRET_KEY' \\
-
+                                 echo 'Start new containers...'
                                  docker compose up -d
 
-                                 echo "Cleanup old images..."
-                                 docker image prune -f --filter "label=project=backend"
+                                 echo 'Cleanup old images...'
+                                 docker image prune -f --filter 'label=project=backend'
                              "
                          """
+
+                         // 5. .env 파일 정리
+                         sh "rm -f /tmp/deploy.env"
                      }
                  }
              }
