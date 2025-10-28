@@ -1,5 +1,7 @@
 package com.ssafy.linkcare.user.controller;
 
+import com.ssafy.linkcare.exception.CustomException;
+import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
 import com.ssafy.linkcare.user.entity.User;
@@ -50,9 +52,17 @@ public class UserController {
 
         String userId = authentication.getName();
 
+        // 검증
+        LocalDate birthDate = validateAndParseBirth(birth);
+        validateHeight(height);
+        validateWeight(weight);
+        validateGender(gender);
+        validateExerciseStartYear(exerciseStartYear);
+        validateImage(image);
+
         // 1. ProfileUpdateRequest 생성
         ProfileUpdateRequest request = new ProfileUpdateRequest(
-            LocalDate.parse(birth),
+            birthDate,
             height,
             weight,
             gender,
@@ -62,9 +72,10 @@ public class UserController {
         // 2. 이미지가 있으면 S3 업로드
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
-            // 기존 이미지 삭제 (기본 이미지 제외)
+            // 기존 이미지 삭제 (LOCAL 회원의 S3 이미지만 삭제, 소셜 로그인 외부 URL 제외)
             User user = userService.getUserById(Long.parseLong(userId));
-            if (user.getImageUrl() != null &&
+            if ("LOCAL".equals(user.getProvider()) &&
+                user.getImageUrl() != null &&
                 !user.getImageUrl().contains("default_profile.png")) {
                 s3Service.deleteFile(user.getImageUrl());
             }
@@ -77,5 +88,62 @@ public class UserController {
         userService.updateProfile(Long.parseLong(userId), request, imageUrl);
 
         return ResponseEntity.ok("프로필 업데이트 성공");
+    }
+
+    // 검증 메서드들
+    private LocalDate validateAndParseBirth(String birth) {
+        try {
+            LocalDate birthDate = LocalDate.parse(birth);
+            if (birthDate.isAfter(LocalDate.now())) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "생년월일은 미래일 수 없습니다");
+            }
+            return birthDate;
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "생년월일 형식이 올바르지 않습니다");
+        }
+    }
+
+    private void validateHeight(Float height) {
+        if (height != null && (height <= 0 || height > 300)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "키는 0~300 사이여야 합니다");
+        }
+    }
+
+    private void validateWeight(Float weight) {
+        if (weight != null && (weight <= 0 || weight > 500)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "몸무게는 0~500 사이여야 합니다");
+        }
+    }
+
+    private void validateGender(String gender) {
+        if (gender != null && !gender.trim().matches("남|여")) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "성별은 남, 여 중 하나여야 합니다");
+        }
+    }
+
+    private void validateExerciseStartYear(Integer year) {
+        int currentYear = LocalDate.now().getYear();
+        if (year != null && (year < 1900 || year > currentYear)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "운동 시작 년도가 올바르지 않습니다");
+        }
+    }
+
+    private void validateImage(MultipartFile image) {
+        if (image != null && !image.isEmpty()) {
+            // 파일명 체크 추가
+            String originalFilename = image.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "파일명이 유효하지 않습니다");
+            }
+
+            String contentType = image.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new CustomException(ErrorCode.INVALID_FILE_TYPE);
+            }
+
+            if (image.getSize() > 100 * 1024 * 1024) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미지 크기는 100MB 이하여야 합니다");
+            }
+        }
     }
 }

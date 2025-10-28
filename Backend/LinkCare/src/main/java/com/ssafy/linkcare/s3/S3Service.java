@@ -69,9 +69,11 @@ public class S3Service {
     public void deleteFile(String fileUrl) {
         try {
             // URL에서 파일명 추출 (profile/UUID_filename.jpg)
-            String filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            // profile/ 포함해서 추출하려면:
-            String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
+            int index = fileUrl.indexOf(".com/");
+            if (index == -1) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 S3 URL입니다");
+            }
+            String key = fileUrl.substring(index + 5);
 
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(bucket)

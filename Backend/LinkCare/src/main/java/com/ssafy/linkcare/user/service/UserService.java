@@ -35,6 +35,7 @@ public class UserService {
             request.height(),
             request.weight(),
             request.birth(),
+                request.gender(),
             request.exerciseStartYear()
         );
 

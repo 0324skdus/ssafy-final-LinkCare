@@ -35,7 +35,7 @@ public class OAuth2Service {
         * @return User 엔티티 (신규 가입 or 기존 회원)
         * @throws CustomException ID Token이 유효하지 않거나 검증 실패 시
     */
-    @Transactional(readOnly = false)
+    @Transactional
     public User verifyGoogleTokenAndGetUser(String idToken) {
         try {
             // Google ID Token 검증기 생성

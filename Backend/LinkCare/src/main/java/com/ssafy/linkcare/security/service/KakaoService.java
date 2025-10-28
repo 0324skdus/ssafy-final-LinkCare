@@ -2,7 +2,6 @@ package com.ssafy.linkcare.security.service;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.user.dto.KakaoTokenResponse;
 import com.ssafy.linkcare.user.dto.KakaoUserInfo;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -10,11 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Slf4j
@@ -23,52 +19,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class KakaoService {
 
     private final UserRepository userRepository;
-    private final WebClient webClient = WebClient.builder().build();
-
-    @Value("${kakao.client-id}")
-    private String clientId;
-
-    @Value("${kakao.redirect-uri}")
-    private String redirectUri;
-
-    @Value("${kakao.token-uri}")
-    private String tokenUri;
+    private final WebClient webClient;
 
     @Value("${kakao.user-info-uri}")
     private String userInfoUri;
 
     @Value("${app.default-profile-image-url}")
     private String defaultProfileImageUrl;
-
-    // 인가 코드로 카카오 Access Token 발급
-    public String getAccessToken(String code) {
-        try {
-            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("grant_type", "authorization_code");
-            params.add("client_id", clientId);
-            params.add("redirect_uri", redirectUri);
-            params.add("code", code);
-
-            KakaoTokenResponse response = webClient.post()
-                    .uri(tokenUri)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .bodyValue(params)
-                    .retrieve()
-                    .bodyToMono(KakaoTokenResponse.class)
-                    .block();
-
-            if (response == null || response.getAccessToken() == null) {
-                throw new CustomException(ErrorCode.KAKAO_TOKEN_REQUEST_FAILED);
-            }
-
-            log.info("카카오 Access Token 발급 성공");
-            return response.getAccessToken();
-
-        } catch (Exception e) {
-            log.error("카카오 토큰 발급 실패", e);
-            throw new CustomException(ErrorCode.KAKAO_TOKEN_REQUEST_FAILED);
-        }
-    }
 
     // Access Token으로 카카오 사용자 정보 조회
     public KakaoUserInfo getUserInfo(String accessToken) {
