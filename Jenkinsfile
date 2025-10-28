@@ -93,17 +93,19 @@ pipeline {
 
                                  echo "Start new containers..."
 
-                                 export DOCKER_REGISTRY=$DOCKER_REGISTRY
-                                 export DOCKER_USERNAME=$DOCKER_USERNAME
-                                 export DOCKER_PASSWORD=$DOCKER_PASSWORD
-                                 export DB_USER_PASSWORD=$DB_USER_PASSWORD
-                                 export GMAIL_PASSWORD=$GMAIL_PASSWORD
-                                 export GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-                                 export KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
-                                 export AWS_ACCESS_KEY=$AWS_ACCESS_KEY
-                                 export AWS_SECRET_KEY=$AWS_SECRET_KEY
+                                 DOCKER_REGISTRY=$DOCKER_REGISTRY \\
+                                 DOCKER_USERNAME=$DOCKER_USERNAME \\
+                                 DOCKER_TAG=$DOCKER_TAG \\
+                                 DOCKER_PASSWORD='$DOCKER_PASSWORD' \\
+                                 JWT_SECRET='$JWT_SECRET' \\
+                                 DB_USER_PASSWORD='$DB_USER_PASSWORD' \\
+                                 GMAIL_PASSWORD='$GMAIL_PASSWORD' \\
+                                 GOOGLE_CLIENT_ID='$GOOGLE_CLIENT_ID' \\
+                                 KAKAO_CLIENT_ID='$KAKAO_CLIENT_ID' \\
+                                 AWS_ACCESS_KEY='$AWS_ACCESS_KEY' \\
+                                 AWS_SECRET_KEY='$AWS_SECRET_KEY' \\
 
-                                 docker compose up -d --build
+                                 docker compose up -d
 
                                  echo "Cleanup old images..."
                                  docker image prune -f --filter "label=project=backend"
