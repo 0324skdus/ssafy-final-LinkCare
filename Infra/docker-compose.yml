@@ -1,0 +1,46 @@
+
+services:
+  backend:
+    image: ${DOCKER_IMAGE}
+    container_name: backend
+    restart: always
+    ports:
+      - "9090:9090"
+    environment:
+      jwt.secret: ${JWT_SECRET}
+      spring.datasource.password: ${DB_USER_PASSWORD}
+      spring.mail.password: ${GMAIL_PASSWORD}
+      google.client-id: ${GOOGLE_CLIENT_ID}
+      kakao.client-id: ${KAKAO_CLIENT_ID}
+      spring.cloud.aws.credentials.access-key: ${AWS_ACCESS_KEY}
+      spring.cloud.aws.credentials.secret-key: ${AWS_SECRET_KEY}
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_USER_PASSWORD}
+      MYSQL_PASSWORD: ${DB_USER_PASSWORD}
+      MYSQL_DATABASE: linkcare
+      MYSQL_USER: ssafy
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
