@@ -80,17 +80,18 @@ pipeline {
 
                              ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
                                  cd ${DEPLOY_DIR}
-                                 DOCKER_IMAGE=${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
 
                                  echo "Pull latest image..."
-                                 docker pull ${DOCKER_IMAGE}
+                                 docker pull ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
 
                                  echo "Stop old containers..."
                                  docker-compose down || true
 
                                  echo "Start new containers..."
 
-                                 export DOCKER_IMAGE=${DOCKER_IMAGE}
+                                 export DOCKER_REGISTRY=${DOCKER_REGISTRY}
+                                 export DOCKER_USERNAME=${DOCKER_USERNAME}
+                                 export DOCKER_PASSWORD=${DOCKER_PASSWORD}
                                  export DB_USER_PASSWORD=${DB_USER_PASSWORD}
                                  export GMAIL_PASSWORD=${GMAIL_PASSWORD}
                                  export GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
