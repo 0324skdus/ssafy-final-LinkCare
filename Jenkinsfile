@@ -49,20 +49,22 @@ pipeline {
          }
 
          stage('Build & Push Docker Image') {
-             steps {
-                 withCredentials([usernamePassword(
-                     credentialsId: 'DOCKER_HUB',
-                     usernameVariable: 'DOCKER_USERNAME',
-                     passwordVariable: 'DOCKER_PASSWORD'
-                 )]) {
-                     sh """
-                         echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                         docker build --label project=backend -t ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG} -f Dockerfile .
-                         docker push ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
-                         docker logout
-                     """
-                 }
-             }
+            steps {
+                dir('Backend/LinkCare') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'DOCKER_HUB',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )]) {
+                        sh """
+                            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                            docker build --label project=backend -t ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG} -f Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
+                            docker logout
+                        """
+                    }
+                }
+            }
          }
 
          stage('Deploy to Server') {
