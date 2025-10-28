@@ -76,6 +76,10 @@ pipeline {
                  )]) {
                      sshagent(['ec2-ssh-key']) {
                          sh """
+                             ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
+                                mkdir -p $DEPLOY_DIR
+                             "
+
                              scp -o StrictHostKeyChecking=no Infra/docker-compose.yml $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.yml
 
                              ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
