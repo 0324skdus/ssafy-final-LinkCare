@@ -58,8 +58,8 @@ pipeline {
                     )]) {
                         sh """
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                            docker build --label project=backend -t ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG} -f Dockerfile .
-                            docker push ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
+                            docker build --label project=backend -t $DOCKER_REGISTRY/$DOCKER_USERNAME/backend:$DOCKER_TAG -f Dockerfile .
+                            docker push $DOCKER_REGISTRY/$DOCKER_USERNAME/backend:$DOCKER_TAG
                             docker logout
                         """
                     }
@@ -76,34 +76,34 @@ pipeline {
                  )]) {
                      sshagent(['ec2-ssh-key']) {
                          sh """
-                             scp -o StrictHostKeyChecking=no Infra/docker-compose.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_DIR}/docker-compose.yml
+                             scp -o StrictHostKeyChecking=no Infra/docker-compose.yml $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.yml
 
-                             ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
-                                 cd ${DEPLOY_DIR}
+                             ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
+                                 cd $DEPLOY_DIR
 
                                  echo "Pull latest image..."
-                                 docker pull ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
+                                 docker pull $DOCKER_REGISTRY/$DOCKER_USERNAME/backend:$DOCKER_TAG
 
                                  echo "Stop old containers..."
                                  docker-compose down || true
 
                                  echo "Start new containers..."
 
-                                 export DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                                 export DOCKER_USERNAME=${DOCKER_USERNAME}
-                                 export DOCKER_PASSWORD=${DOCKER_PASSWORD}
-                                 export DB_USER_PASSWORD=${DB_USER_PASSWORD}
-                                 export GMAIL_PASSWORD=${GMAIL_PASSWORD}
-                                 export GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-                                 export KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-                                 export AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-                                 export AWS_SECRET_KEY=${AWS_SECRET_KEY}
+                                 export DOCKER_REGISTRY=$DOCKER_REGISTRY
+                                 export DOCKER_USERNAME=$DOCKER_USERNAME
+                                 export DOCKER_PASSWORD=$DOCKER_PASSWORD
+                                 export DB_USER_PASSWORD=$DB_USER_PASSWORD
+                                 export GMAIL_PASSWORD=$GMAIL_PASSWORD
+                                 export GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+                                 export KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
+                                 export AWS_ACCESS_KEY=$AWS_ACCESS_KEY
+                                 export AWS_SECRET_KEY=$AWS_SECRET_KEY
 
                                  docker-compose up -d --build
 
                                  echo "Cleanup old images..."
                                  docker image prune -f --filter "label=project=backend"
-                             '
+                             "
                          """
                      }
                  }
@@ -114,10 +114,10 @@ pipeline {
              steps {
                  sshagent(['ec2-ssh-key']) {
                      sh """
-                         ssh ${DEPLOY_USER}@${DEPLOY_HOST} '
+                         ssh $DEPLOY_USER@$DEPLOY_HOST "
                              echo "=== Running Containers ==="
                              docker ps
-                         '
+                         "
                      """
                  }
              }
