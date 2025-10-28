@@ -89,7 +89,7 @@ pipeline {
                                  docker pull $DOCKER_REGISTRY/$DOCKER_USERNAME/backend:$DOCKER_TAG
 
                                  echo "Stop old containers..."
-                                 docker-compose down || true
+                                 docker compose down || true
 
                                  echo "Start new containers..."
 
@@ -103,7 +103,7 @@ pipeline {
                                  export AWS_ACCESS_KEY=$AWS_ACCESS_KEY
                                  export AWS_SECRET_KEY=$AWS_SECRET_KEY
 
-                                 docker-compose up -d --build
+                                 docker compose up -d --build
 
                                  echo "Cleanup old images..."
                                  docker image prune -f --filter "label=project=backend"
