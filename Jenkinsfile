@@ -22,10 +22,29 @@ pipeline {
         AWS_SECRET_KEY = credentials('AWS_SECRET_KEY')
     }
 
+  stage('Check Backend Changes') {
+              steps {
+                  script {
+                      def backendChanged = sh(
+                          script: "git diff --name-only HEAD~1 HEAD | grep '^backend/' || true",
+                          returnStdout: true
+                      ).trim()
+                      if (!backendChanged) {
+                          echo "No backend changes. Skipping pipeline."
+                          currentBuild.result = 'SUCCESS'
+                          return
+                      }
+                  }
+              }
+          }
+
+
   stages {
          stage('Build JAR') {
              steps {
-                 sh './gradlew clean build -x test'
+                 dir('Backend/LinkCare') {
+                     sh './gradlew clean build -x test'
+                 }
              }
          }
 
