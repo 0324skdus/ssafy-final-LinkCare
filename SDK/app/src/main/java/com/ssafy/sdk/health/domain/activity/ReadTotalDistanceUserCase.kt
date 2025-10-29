@@ -22,11 +22,12 @@ class ReadTotalDistanceUserCase @Inject constructor(
     @Throws(HealthDataException::class)
     private suspend fun readTotalDistance(): Double {
         val startDate = LocalDate.now().atStartOfDay()     // 현재 날짜
-        val now = LocalDateTime.now()       // 현재 시간
-        Log.i(TAG, "StartDate: $startDate; Now: $now")
+//        val now = LocalDateTime.now()       // 현재 시간
+        val end = startDate.plusDays(1)
+        Log.i(TAG, "StartDate: $startDate; Now: $end")
         val readRequest = DataType.ActivitySummaryType.TOTAL_DISTANCE
             .requestBuilder
-            .setLocalTimeFilter(LocalTimeFilter.of(startDate, now))
+            .setLocalTimeFilter(LocalTimeFilter.of(startDate, end))
             .build()
         val result = healthDataStore.aggregateData(readRequest)
         var totalDistance: Double = 0.toDouble();

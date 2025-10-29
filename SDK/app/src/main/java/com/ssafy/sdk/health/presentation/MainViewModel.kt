@@ -24,17 +24,33 @@ import com.samsung.android.sdk.health.data.error.InvalidRequestException
 import com.samsung.android.sdk.health.data.error.PlatformInternalException
 import com.samsung.android.sdk.health.data.error.ResolvablePlatformException
 import com.ssafy.sdk.health.data.model.ActivityData
+import com.ssafy.sdk.health.data.model.BloodPressureData
+import com.ssafy.sdk.health.data.model.ExerciseData
 import com.ssafy.sdk.health.data.model.HealthError
+import com.ssafy.sdk.health.data.model.HeartRatesData
+import com.ssafy.sdk.health.data.model.SleepData
+import com.ssafy.sdk.health.data.model.SleepGoalData
 import com.ssafy.sdk.health.data.model.StepData
+import com.ssafy.sdk.health.data.model.WaterIntakeData
 import com.ssafy.sdk.health.domain.ArePermissionsGrantedUseCase
-import com.ssafy.sdk.health.domain.activity.ReadTotalActiveTimeUserCase
 import com.ssafy.sdk.health.domain.activity.ReadTotalSummaryUserCase
+import com.ssafy.sdk.health.domain.bloodPressures.ReadBloodPressureUseCase
+import com.ssafy.sdk.health.domain.exercise.ReadExerciseUseCase
+import com.ssafy.sdk.health.domain.heartRates.ReadHeartRateUserCase
+import com.ssafy.sdk.health.domain.sleeps.ReadTotalSleepsUseCase
 import com.ssafy.sdk.health.domain.steps.ReadStepDataUseCase
+import com.ssafy.sdk.health.domain.waterIntake.ReadGroupedWaterIntakeUseCase
+import com.ssafy.sdk.health.domain.waterIntake.ReadWaterIntakeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneOffset
 import javax.inject.Inject
 
 private const val TAG = "MainViewModel"
@@ -43,8 +59,14 @@ private const val TAG = "MainViewModel"
 class MainViewModel @Inject constructor(
     private val arePermissionsGrantedUseCase: ArePermissionsGrantedUseCase,
     private val readStepDataUseCase: ReadStepDataUseCase,
-    private val readTotalSummaryUserCase: ReadTotalSummaryUserCase
-) : ViewModel() {
+    private val readTotalSummaryUserCase: ReadTotalSummaryUserCase,
+    private val readHeartRateUserCase: ReadHeartRateUserCase,
+    private val readWaterIntakeUseCase: ReadWaterIntakeUseCase,
+    private val readTotalSleepsUseCase: ReadTotalSleepsUseCase,
+    private val readExerciseUseCase: ReadExerciseUseCase,
+    private val readBloodPressureUseCase: ReadBloodPressureUseCase,
+
+    ) : ViewModel() {
     init {
         Log.i(TAG, "init()")
         checkPermissions()
@@ -56,7 +78,44 @@ class MainViewModel @Inject constructor(
                 permissionRequested = false,
                 permissionsGranted = false,
                 steps = StepData(0, 0, ArrayList()),
-                activities = ActivityData(0.toDouble(), 0.toLong(), 0.toDouble(), 0.toDouble()),
+                activities = ActivityData(null, 0.toDouble(), 0.toLong(), 0.toDouble(), 0.toDouble()),
+                heartRates = listOf(
+                    HeartRatesData(
+                        "",
+                        null,
+                        null,
+                        ZoneOffset.UTC,
+                    null,
+                        0f,
+                        emptyList(),
+                        0f,
+                        0f)
+                ),
+                waterIntake = WaterIntakeData(
+                    null,
+                    emptyList(),
+                    0f,
+                    0f
+                ),
+                sleeps = SleepData(
+                    null,
+                    emptyList(),
+                    0L,
+                    SleepGoalData(
+                        LocalTime.MIDNIGHT,
+                        LocalTime.MIDNIGHT
+                    )
+                ),
+                exercises = ExerciseData(
+                    null,
+                    emptyList(),
+                    0L,
+                    0f
+                ),
+                bloodPressures = BloodPressureData(
+                    null,
+                    emptyList()
+                ),
                 refresh = false,
                 errorLevel = null,
             )
@@ -141,6 +200,120 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun readHeartRates() {
+        Log.i(TAG, "readHeartRates()")
+        viewModelScope.launch {
+            try {
+                val heartRates = readHeartRateUserCase()
+                _state.update { currentState ->
+                    currentState.copy(
+                        heartRates = heartRates,
+                        errorLevel = null
+                    )
+                }
+            } catch (healthDataException: HealthDataException) {
+                handleHealthDataException(healthDataException)
+            } finally {
+                _state.update { currentState ->
+                    currentState.copy(
+                        refresh = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun readWaterIntake() {
+        Log.i(TAG, "readWaterIntake()")
+        viewModelScope.launch {
+            try {
+                val waterIntake = readWaterIntakeUseCase()
+                _state.update { currentState ->
+                    currentState.copy(
+                        waterIntake = waterIntake,
+                        errorLevel = null
+                    )
+                }
+            } catch (healthDataException: HealthDataException) {
+                handleHealthDataException(healthDataException)
+            } finally {
+                _state.update { currentState ->
+                    currentState.copy(
+                        refresh = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun readSleep() {
+        Log.i(TAG, "readSleep()")
+        viewModelScope.launch {
+            try {
+                val sleeps = readTotalSleepsUseCase()
+                _state.update { currentState ->
+                    currentState.copy(
+                        sleeps = sleeps,
+                        errorLevel = null
+                    )
+                }
+            } catch (healthDataException: HealthDataException) {
+                handleHealthDataException(healthDataException)
+            } finally {
+                _state.update { currentState ->
+                    currentState.copy(
+                        refresh = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun readExercises() {
+        Log.i(TAG, "readExercises()")
+        viewModelScope.launch {
+            try {
+                val exercises = readExerciseUseCase()
+                _state.update { currentState ->
+                    currentState.copy(
+                        exercises = exercises,
+                        errorLevel = null
+                    )
+                }
+            } catch (healthDataException: HealthDataException) {
+                handleHealthDataException(healthDataException)
+            } finally {
+                _state.update { currentState ->
+                    currentState.copy(
+                        refresh = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun readBloodPressures() {
+        Log.i(TAG, "readBloodPressures()")
+        viewModelScope.launch {
+            try {
+                val bloodPressures = readBloodPressureUseCase()
+                _state.update { currentState ->
+                    currentState.copy(
+                        bloodPressures = bloodPressures,
+                        errorLevel = null
+                    )
+                }
+            } catch (healthDataException: HealthDataException) {
+                handleHealthDataException(healthDataException)
+            } finally {
+                _state.update { currentState ->
+                    currentState.copy(
+                        refresh = false
+                    )
+                }
+            }
+        }
+    }
 
     fun userAcceptedPermissions(agreed: Boolean) {
         Log.i(TAG, "userAcceptedPermissions")
@@ -183,6 +356,11 @@ data class State(
     val permissionsGranted: Boolean,
     val steps: StepData,
     val activities: ActivityData,
+    val heartRates: List<HeartRatesData>,
+    val waterIntake: WaterIntakeData,
+    val sleeps: SleepData,
+    val exercises: ExerciseData,
+    val bloodPressures: BloodPressureData,
     val refresh: Boolean,
     val errorLevel: HealthError?,
 )

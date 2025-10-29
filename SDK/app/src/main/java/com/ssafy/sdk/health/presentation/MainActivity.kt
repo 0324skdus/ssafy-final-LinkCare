@@ -36,6 +36,7 @@ import com.ssafy.sdk.health.presentation.ui.theme.PhoneAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -58,11 +59,17 @@ class MainActivity : ComponentActivity() {
 
             val state by viewModel.state.collectAsStateWithLifecycle()
             LaunchedEffect(state.permissionsGranted) {
-                if (state.permissionsGranted) {
-                    Log.i("MainActivity", "permissionsGranted = true → readActivities() 호출")
-                    viewModel.readActivities()     // ★ 자동 호출
+                if (!state.permissionsGranted) return@LaunchedEffect
+                coroutineScope {
+                    launch { viewModel.readActivities() }
+                    launch { viewModel.readHeartRates() }
+                    launch { viewModel.readWaterIntake() }
+                    launch { viewModel.readSleep() }
+                    launch { viewModel.readExercises() }
+                    launch { viewModel.readBloodPressures() }
                 }
             }
+
             val refresh = state.refresh
 
             state.errorLevel?.let { healthError ->

@@ -7,6 +7,7 @@ import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
@@ -21,12 +22,14 @@ class ReadTotalCaloriesBurnedUserCase @Inject constructor(
 
     @Throws(HealthDataException::class)
     private suspend fun readTotalCaloriesBurned(): Double {
-        val startDate = LocalDate.now().atStartOfDay()     // 현재 날짜
-        val now = LocalDateTime.now()       // 현재 시간
-        Log.i(TAG, "StartDate: $startDate; Now: $now")
+        val zone = ZoneId.systemDefault()
+        val startDate = LocalDate.now(zone).atStartOfDay()     // 현재 날짜
+//        val now = LocalDateTime.now(zone)       // 현재 시간
+        val end = startDate.plusDays(1)
+        Log.i(TAG, "StartDate: $startDate; Now: $end")
         val readRequest = DataType.ActivitySummaryType.TOTAL_CALORIES_BURNED
             .requestBuilder
-            .setLocalTimeFilter(LocalTimeFilter.of(startDate, now))
+            .setLocalTimeFilter(LocalTimeFilter.of(startDate, end))
             .build()
         val result = healthDataStore.aggregateData(readRequest)
         var totalCaloriesBurned: Double = 0.toDouble();

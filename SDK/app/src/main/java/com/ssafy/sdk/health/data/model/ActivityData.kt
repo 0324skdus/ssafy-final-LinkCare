@@ -11,8 +11,9 @@ data class ActivityMinuteBucket(
 )
 
 data class ActivityData(
+    val startTime: LocalDateTime?,
     val totalActiveCaloriesBurned: Double,
-    var totalActiveTimeMillis: Long,
+    val totalActiveTimeMillis: Long,
     val totalCaloriesBurned: Double,
     val totalDistanceMeters: Double,
 //    val minutely: List<ActivityMinuteBucket> = emptyList()

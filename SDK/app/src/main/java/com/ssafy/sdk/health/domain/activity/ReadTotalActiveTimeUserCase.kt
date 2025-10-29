@@ -22,16 +22,18 @@ class ReadTotalActiveTimeUserCase @Inject constructor(
     @Throws(HealthDataException::class)
     private suspend fun readTotalActiveTime(): Long {
         val startDate = LocalDate.now().atStartOfDay()     // 현재 날짜
-        val now = LocalDateTime.now()       // 현재 시간
-        Log.i(TAG, "StartDate: $startDate; Now: $now")
+//        val now = LocalDateTime.now()       // 현재 시간
+        val end = startDate.plusDays(1)
+
+        Log.i(TAG, "StartDate: $startDate; Now: $end")
         val readRequest = DataType.ActivitySummaryType.TOTAL_ACTIVE_TIME
             .requestBuilder
-            .setLocalTimeFilter(LocalTimeFilter.of(startDate, now))
+            .setLocalTimeFilter(LocalTimeFilter.of(startDate, end))
             .build()
         val result = healthDataStore.aggregateData(readRequest)
         var totalActiveTime: Long = 0L;
         result.dataList.forEach { data ->
-            Log.i(TAG, "Total Active TIme: ${data.value}")
+            Log.i(TAG, "Total Active TIme: ${data.value?.toMillis()}")
             Log.i(TAG, "data.startDate: ${data.startTime}")
             Log.i(TAG, "data.endTIme: ${data.endTime}")
             data.value?.let { totalActiveTime = it.toMillis()}

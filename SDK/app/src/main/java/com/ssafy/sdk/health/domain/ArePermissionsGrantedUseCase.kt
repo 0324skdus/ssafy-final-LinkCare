@@ -60,6 +60,20 @@ object Permissions {
         // 심박수
         Permission.of(DataTypes.HEART_RATE, AccessType.READ),
 
-        Permission.of()
+        // 음수량
+        Permission.of(DataTypes.WATER_INTAKE, AccessType.READ),
+        Permission.of(DataTypes.WATER_INTAKE_GOAL, AccessType.READ),
+
+        // 수면
+        Permission.of(DataTypes.SLEEP, AccessType.READ),
+        Permission.of(DataTypes.SLEEP_GOAL, AccessType.READ),
+
+        // 운동
+        Permission.of(DataTypes.EXERCISE, AccessType.READ),
+
+        // 혈압
+        Permission.of(DataTypes.BLOOD_PRESSURE, AccessType.READ),
+
+
     )
 }
