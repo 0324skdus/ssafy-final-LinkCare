@@ -17,6 +17,7 @@ pipeline {
 
         GOOGLE_CLIENT_ID = credentials('GOOGLE_CLIENT_ID')
         KAKAO_CLIENT_ID = credentials('KAKAO_CLIENT_ID')
+        KAKAO_REDIRECT_URI = credentials('KAKAO_REDIRECT_URI')
 
         AWS_ACCESS_KEY = credentials('AWS_ACCESS_KEY')
         AWS_SECRET_KEY = credentials('AWS_SECRET_KEY')
@@ -87,6 +88,7 @@ pipeline {
                              GMAIL_PASSWORD=${GMAIL_PASSWORD}
                              GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
                              KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+                             KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
                              AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
                              AWS_SECRET_KEY=${AWS_SECRET_KEY}
                              EOF
