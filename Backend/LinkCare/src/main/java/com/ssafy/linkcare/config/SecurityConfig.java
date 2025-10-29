@@ -41,7 +41,7 @@ public class SecurityConfig {
                                 "/api/auth/verify-code",
                                 "/api/auth/google",
                                 "/api/auth/kakao",
-                                "/health"
+                                "/actuator/health"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
