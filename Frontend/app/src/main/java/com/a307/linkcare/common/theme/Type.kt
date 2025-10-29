@@ -1,4 +1,4 @@
-package com.a307.linkcare.ui.theme
+package com.a307.linkcare.common.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
