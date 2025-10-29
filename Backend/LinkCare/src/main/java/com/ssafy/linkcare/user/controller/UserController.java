@@ -2,22 +2,22 @@ package com.ssafy.linkcare.user.controller;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
-import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @Slf4j
 @RestController
@@ -26,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
-    private final S3Service s3Service;
 
     /*
      * 프로필 업데이트
@@ -47,8 +46,7 @@ public class UserController {
         @RequestParam("height") Float height,
         @RequestParam("weight") Float weight,
         @RequestParam("gender") String gender,
-        @RequestParam("exerciseStartYear") Integer exerciseStartYear,
-        @RequestPart(value = "image", required = false) MultipartFile image) {
+        @RequestParam("exerciseStartYear") Integer exerciseStartYear) {
 
         String userId = authentication.getName();
 
@@ -58,7 +56,6 @@ public class UserController {
         validateWeight(weight);
         validateGender(gender);
         validateExerciseStartYear(exerciseStartYear);
-        validateImage(image);
 
         // 1. ProfileUpdateRequest 생성
         ProfileUpdateRequest request = new ProfileUpdateRequest(
@@ -69,23 +66,8 @@ public class UserController {
             exerciseStartYear
         );
 
-        // 2. 이미지가 있으면 S3 업로드
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            // 기존 이미지 삭제 (LOCAL 회원의 S3 이미지만 삭제, 소셜 로그인 외부 URL 제외)
-            User user = userService.getUserById(Long.parseLong(userId));
-            if ("LOCAL".equals(user.getProvider()) &&
-                user.getImageUrl() != null &&
-                !user.getImageUrl().contains("default_profile.png")) {
-                s3Service.deleteFile(user.getImageUrl());
-            }
-
-            // 새 이미지 업로드
-            imageUrl = s3Service.uploadFile(image);
-        }
-
-        // 3. 프로필 정보 + 이미지 URL 업데이트
-        userService.updateProfile(Long.parseLong(userId), request, imageUrl);
+        // 2. 프로필 정보 + 이미지 URL 업데이트
+        userService.updateProfile(Long.parseLong(userId), request);
 
         return ResponseEntity.ok("프로필 업데이트 성공");
     }
@@ -125,25 +107,6 @@ public class UserController {
         int currentYear = LocalDate.now().getYear();
         if (year != null && (year < 1900 || year > currentYear)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "운동 시작 년도가 올바르지 않습니다");
-        }
-    }
-
-    private void validateImage(MultipartFile image) {
-        if (image != null && !image.isEmpty()) {
-            // 파일명 체크 추가
-            String originalFilename = image.getOriginalFilename();
-            if (originalFilename == null || originalFilename.isEmpty()) {
-                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "파일명이 유효하지 않습니다");
-            }
-
-            String contentType = image.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                throw new CustomException(ErrorCode.INVALID_FILE_TYPE);
-            }
-
-            if (image.getSize() > 100 * 1024 * 1024) {
-                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "이미지 크기는 100MB 이하여야 합니다");
-            }
         }
     }
 }

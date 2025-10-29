@@ -24,9 +24,6 @@ public class KakaoService {
     @Value("${kakao.user-info-uri}")
     private String userInfoUri;
 
-    @Value("${app.default-profile-image-url}")
-    private String defaultProfileImageUrl;
-
     // Access Token으로 카카오 사용자 정보 조회
     public KakaoUserInfo getUserInfo(String accessToken) {
         try {
@@ -56,7 +53,6 @@ public class KakaoService {
         String providerId = kakaoUserInfo.getId().toString();
         String email = kakaoUserInfo.getKakaoAccount().getEmail();
         String nickname = kakaoUserInfo.getKakaoAccount().getProfile().getNickname();
-        String profileImage = kakaoUserInfo.getKakaoAccount().getProfile().getProfileImageUrl();
 
         log.info("카카오 로그인 시도 - email: {}, providerId: {}", email, providerId);
 
@@ -65,16 +61,10 @@ public class KakaoService {
                 .orElseGet(() -> {
                     log.info("신규 카카오 회원 자동 가입 - email: {}", email);
 
-                    // 프로필 이미지 결정 (카카오 이미지 있으면 사용, 없으면 기본 이미지)
-                    String finalProfileImage = (profileImage != null && !profileImage.isEmpty())
-                            ? profileImage
-                            : defaultProfileImageUrl;
-
                     User newUser = User.builder()
                             .email(email)
                             .password(null)  // 소셜 로그인은 비밀번호 없음
                             .name(nickname)
-                            .imageUrl(finalProfileImage)
                             .provider("KAKAO")
                             .providerId(providerId)
                             .build();

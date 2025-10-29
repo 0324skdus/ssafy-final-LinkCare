@@ -40,9 +40,6 @@ public class AuthService {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
-    @Value("${app.default-profile-image-url}")
-    private String defaultProfileImageUrl;
-
     // 이메일 중복 확인
     public boolean checkEmailDuplicate(String email) {
         return userRepository.existsByEmail(email);
@@ -92,7 +89,6 @@ public class AuthService {
                 .email(request.email())
                 .password(encodedPassword)
                 .name(request.name())
-                .imageUrl(defaultProfileImageUrl)
                 .provider("LOCAL")
                 .providerId(null)
                 .build();

@@ -18,7 +18,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     List<GroupMember> findByGroup(Group group);
 
     // 특정 그룹의 멤버 수 카운트
-    long countByGroup(Group group);
+    int countByGroup(Group group);
 
     // 특정 사용자가 속한 모든 그룹 조회
     List<GroupMember> findByUser(User user);

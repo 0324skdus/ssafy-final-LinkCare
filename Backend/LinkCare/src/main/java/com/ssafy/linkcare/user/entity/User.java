@@ -33,9 +33,6 @@ public class User {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "image_url", length = 255)
-    private String imageUrl;
-
     private Float height;
 
     private Float weight;
@@ -65,11 +62,10 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String name, String imageUrl, Float height, Float weight, LocalDate birth, String gender, String provider, String providerId, Integer exerciseStartYear) {
+    public User(String email, String password, String name, Float height, Float weight, LocalDate birth, String gender, String provider, String providerId, Integer exerciseStartYear) {
         this.email = email;
         this.password = password;
         this.name = name;
-        this.imageUrl = imageUrl;
         this.height = height;
         this.weight = weight;
         this.birth = birth;
@@ -85,9 +81,8 @@ public class User {
     }
 
     // 프로필 정보 수정 (운동 시작 년도 포함!)
-    public void updateProfile(String name, String imageUrl, Float height, Float weight, LocalDate birth, String gender, Integer exerciseStartYear) {
+    public void updateProfile(String name, Float height, Float weight, LocalDate birth, String gender, Integer exerciseStartYear) {
         this.name = name;
-        this.imageUrl = imageUrl;
         this.height = height;
         this.weight = weight;
         this.birth = birth;
