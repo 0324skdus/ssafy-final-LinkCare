@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 "/api/auth/send-verification-code",
                                 "/api/auth/verify-code",
                                 "/api/auth/google",
-                                "/api/auth/kakao"
+                                "/api/auth/kakao",
+                                "/health"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
