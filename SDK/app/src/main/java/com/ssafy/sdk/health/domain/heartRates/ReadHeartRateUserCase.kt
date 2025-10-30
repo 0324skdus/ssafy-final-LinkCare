@@ -2,7 +2,7 @@ package com.ssafy.sdk.health.domain.heartRates
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.HeartRatesData
+import com.ssafy.sdk.health.data.test.HeartRatesData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset

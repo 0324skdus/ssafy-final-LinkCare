@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ssafy.sdk.health.data.model
+package com.ssafy.sdk.health.data.test
 
-import com.samsung.android.sdk.health.data.error.HealthDataException
+import java.time.LocalDateTime
 
-data class HealthError(
-    var error: HealthDataException,
-    var code: String,
-    var description: String,
-    var resolvable: Boolean
+data class GroupedData(
+    val count: Long,
+    val startTime: LocalDateTime,
+)
+
+data class StepData(
+    val count: Long,
+    var goal: Int,
+    val hourly: ArrayList<GroupedData>
 )

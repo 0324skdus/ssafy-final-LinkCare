@@ -6,9 +6,9 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.model.SleepSessionData
-import com.ssafy.sdk.health.data.model.SleepStageData
-import com.ssafy.sdk.health.data.model.SleepTypeData
+import com.ssafy.sdk.health.data.test.SleepSessionData
+import com.ssafy.sdk.health.data.test.SleepStageData
+import com.ssafy.sdk.health.data.test.SleepTypeData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject

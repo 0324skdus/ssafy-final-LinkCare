@@ -48,9 +48,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ssafy.sdk.health.R
-import com.ssafy.sdk.health.data.model.GroupedData
-import com.ssafy.sdk.health.data.model.StepData
-import com.ssafy.sdk.health.presentation.ui.TopBar
+import com.ssafy.sdk.health.data.test.GroupedData
+import com.ssafy.sdk.health.data.test.StepData
 import com.ssafy.sdk.health.presentation.ui.theme.PhoneAppTheme
 import java.time.LocalDateTime
 

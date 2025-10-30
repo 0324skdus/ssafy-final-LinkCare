@@ -17,7 +17,7 @@ package com.ssafy.sdk.health.domain.steps
 
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.LocalTimeGroupUnit
-import com.ssafy.sdk.health.data.model.GroupedData
+import com.ssafy.sdk.health.data.test.GroupedData
 import java.time.LocalDateTime
 import javax.inject.Inject
 

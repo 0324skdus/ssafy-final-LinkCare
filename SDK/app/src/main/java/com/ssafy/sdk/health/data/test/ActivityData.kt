@@ -1,4 +1,4 @@
-package com.ssafy.sdk.health.data.model
+package com.ssafy.sdk.health.data.test
 
 import java.time.LocalDateTime
 

@@ -2,9 +2,7 @@ package com.ssafy.sdk.health.domain.exercise
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.ExerciseData
-import com.ssafy.sdk.health.data.model.SleepData
-import com.ssafy.sdk.health.data.model.SleepGoalData
+import com.ssafy.sdk.health.data.test.ExerciseData
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject

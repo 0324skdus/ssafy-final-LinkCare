@@ -1,4 +1,4 @@
-package com.ssafy.sdk.health.data.model
+package com.ssafy.sdk.health.data.test
 
 import com.samsung.android.sdk.health.data.data.DataSource
 import com.samsung.android.sdk.health.data.request.DataType

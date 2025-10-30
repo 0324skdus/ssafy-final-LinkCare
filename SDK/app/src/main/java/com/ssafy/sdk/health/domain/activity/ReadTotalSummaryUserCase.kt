@@ -2,7 +2,7 @@ package com.ssafy.sdk.health.domain.activity
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.ActivityData
+import com.ssafy.sdk.health.data.test.ActivityData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset

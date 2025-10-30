@@ -1,11 +1,9 @@
 package com.ssafy.sdk.health.domain.sleeps
 
 import android.util.Log
-import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.SleepData
-import com.ssafy.sdk.health.data.model.SleepGoalData
-import java.time.LocalDate
+import com.ssafy.sdk.health.data.test.SleepData
+import com.ssafy.sdk.health.data.test.SleepGoalData
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject

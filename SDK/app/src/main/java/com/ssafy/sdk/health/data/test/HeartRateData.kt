@@ -1,10 +1,8 @@
-package com.ssafy.sdk.health.data.model
+package com.ssafy.sdk.health.data.test
 
 import com.samsung.android.sdk.health.data.data.DataSource
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.time.Instant
-import java.time.LocalDate
 
 data class HeartRateSeriesData(
     val startTime: LocalDateTime,

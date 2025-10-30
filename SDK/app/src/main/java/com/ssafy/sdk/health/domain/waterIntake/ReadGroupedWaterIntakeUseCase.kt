@@ -6,7 +6,7 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.model.WaterIntakeGroupedData
+import com.ssafy.sdk.health.data.test.WaterIntakeGroupedData
 import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject

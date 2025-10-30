@@ -36,7 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ssafy.sdk.health.R
-import com.ssafy.sdk.health.data.model.GroupedData
+import com.ssafy.sdk.health.data.test.GroupedData
 import java.time.format.DateTimeFormatter
 
 private const val TAG = "StepsByHourList"

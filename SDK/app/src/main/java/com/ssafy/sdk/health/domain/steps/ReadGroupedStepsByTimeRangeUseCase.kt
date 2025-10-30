@@ -23,7 +23,7 @@ import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
 import com.samsung.android.sdk.health.data.request.LocalTimeGroup
 import com.samsung.android.sdk.health.data.request.LocalTimeGroupUnit
-import com.ssafy.sdk.health.data.model.GroupedData
+import com.ssafy.sdk.health.data.test.GroupedData
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject

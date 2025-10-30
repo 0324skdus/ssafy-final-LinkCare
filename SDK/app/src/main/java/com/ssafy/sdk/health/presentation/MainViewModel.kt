@@ -18,20 +18,21 @@ package com.ssafy.sdk.health.presentation
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.AuthorizationException
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.InvalidRequestException
 import com.samsung.android.sdk.health.data.error.PlatformInternalException
 import com.samsung.android.sdk.health.data.error.ResolvablePlatformException
-import com.ssafy.sdk.health.data.model.ActivityData
-import com.ssafy.sdk.health.data.model.BloodPressureData
-import com.ssafy.sdk.health.data.model.ExerciseData
-import com.ssafy.sdk.health.data.model.HealthError
-import com.ssafy.sdk.health.data.model.HeartRatesData
-import com.ssafy.sdk.health.data.model.SleepData
-import com.ssafy.sdk.health.data.model.SleepGoalData
-import com.ssafy.sdk.health.data.model.StepData
-import com.ssafy.sdk.health.data.model.WaterIntakeData
+import com.ssafy.sdk.health.data.test.ActivityData
+import com.ssafy.sdk.health.data.test.BloodPressureData
+import com.ssafy.sdk.health.data.test.ExerciseData
+import com.ssafy.sdk.health.data.test.HealthError
+import com.ssafy.sdk.health.data.test.HeartRatesData
+import com.ssafy.sdk.health.data.test.SleepData
+import com.ssafy.sdk.health.data.test.SleepGoalData
+import com.ssafy.sdk.health.data.test.StepData
+import com.ssafy.sdk.health.data.test.WaterIntakeData
 import com.ssafy.sdk.health.domain.ArePermissionsGrantedUseCase
 import com.ssafy.sdk.health.domain.activity.ReadTotalSummaryUserCase
 import com.ssafy.sdk.health.domain.bloodPressures.ReadBloodPressureUseCase
@@ -39,16 +40,13 @@ import com.ssafy.sdk.health.domain.exercise.ReadExerciseUseCase
 import com.ssafy.sdk.health.domain.heartRates.ReadHeartRateUserCase
 import com.ssafy.sdk.health.domain.sleeps.ReadTotalSleepsUseCase
 import com.ssafy.sdk.health.domain.steps.ReadStepDataUseCase
-import com.ssafy.sdk.health.domain.waterIntake.ReadGroupedWaterIntakeUseCase
+import com.ssafy.sdk.health.domain.sync.HeartRateReader
 import com.ssafy.sdk.health.domain.waterIntake.ReadWaterIntakeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneOffset
 import javax.inject.Inject
@@ -349,6 +347,68 @@ class MainViewModel @Inject constructor(
             currentState.copy(errorLevel = healthError)
         }
     }
+
+    suspend fun runHeartRateSmokeTests(
+        healthDataStore: HealthDataStore,
+        reader: HeartRateReader
+    ) {
+        val TAGs = "RunHeartRateSmokeTests"
+        val reader = HeartRateReader(healthDataStore)
+
+        // 1) 당일 데이터
+        val today = reader.readToday()
+        Log.i(TAGs, "[TODAY] count=${today.size}")
+        today.take(5).forEachIndexed { i, hr ->
+            Log.i(TAGs, "[TODAY][$i] uid=${hr.uid} start=${hr.startTime} end=${hr.endTime} bpm=${hr.heartRate} min=${hr.minHeartRate} max=${hr.maxHeartRate}")
+        }
+
+        // 품질체크: 시간/범위/값
+        validateHr("TODAY", today)
+
+        // 2) 최초 전체 수집 (큰 창) — 진행률 로깅
+        val all = reader.readAll(
+            yearsPerChunk = 1L,
+            onProgress = { done, total -> Log.i(TAGs, "[ALL] window $done/$total done") }
+        )
+        Log.i(TAGs, "[ALL] totalCount=${all.size}")
+        all.take(5).forEachIndexed { i, hr ->
+            Log.i(TAGs, "[ALL][$i] uid=${hr.uid} start=${hr.startTime} end=${hr.endTime} bpm=${hr.heartRate}")
+        }
+
+        validateHr("ALL", all)
+
+        // 3) 간단 통계
+        val avg = all.mapNotNull { it.heartRate as? Number }.map { it.toDouble() }.average()
+        val min = all.mapNotNull { it.minHeartRate }.minOrNull()
+        val max = all.mapNotNull { it.maxHeartRate }.maxOrNull()
+        Log.i(TAGs, "[ALL][STATS] avg=${"%.1f".format(avg)} min=$min max=$max")
+    }
+
+    private fun validateHr(tag: String, items: List<HeartRatesData>) {
+        if (items.isEmpty()) {
+            Log.w("HR_SMOKE", "[$tag] empty. 권한/동기화/기간(필터) 확인 필요")
+            return
+        }
+        // 시간 역전/미종료 데이터 검사
+        val badTime = items.filter { it.endTime != null && it.startTime?.isAfter(it.endTime) == true }
+        if (badTime.isNotEmpty()) Log.w("HR_SMOKE", "[$tag] time order invalid count=${badTime.size}")
+
+        // BPM 범위(대략적): 20~240 밖이면 경고
+        val outOfRange = items.filter {
+            val bpm = (it.heartRate as? Number)?.toDouble() ?: return@filter false
+            bpm < 20.0 || bpm > 240.0
+        }
+        if (outOfRange.isNotEmpty()) Log.w("HR_SMOKE", "[$tag] out-of-range bpm count=${outOfRange.size}")
+
+        // min/max 논리 체크
+        val badMinMax = items.filter {
+            val min = (it.minHeartRate as? Number)?.toDouble()
+            val max = (it.maxHeartRate as? Number)?.toDouble()
+            min != null && max != null && min > max
+        }
+        if (badMinMax.isNotEmpty()) Log.w("HR_SMOKE", "[$tag] min>max count=${badMinMax.size}")
+    }
+
 }
 
 data class State(

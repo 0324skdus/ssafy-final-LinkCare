@@ -7,12 +7,11 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.model.ExerciseLogData
-import com.ssafy.sdk.health.data.model.ExerciseSessionData
-import com.ssafy.sdk.health.data.model.ExerciseTypeData
+import com.ssafy.sdk.health.data.test.ExerciseLogData
+import com.ssafy.sdk.health.data.test.ExerciseSessionData
+import com.ssafy.sdk.health.data.test.ExerciseTypeData
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneOffset
 import javax.inject.Inject
 import kotlin.jvm.Throws

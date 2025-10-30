@@ -1,8 +1,8 @@
 package com.ssafy.sdk.health.domain.waterIntake
 
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.WaterIntakeData
-import com.ssafy.sdk.health.data.model.WaterIntakeGroupedData
+import com.ssafy.sdk.health.data.test.WaterIntakeData
+import com.ssafy.sdk.health.data.test.WaterIntakeGroupedData
 import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject

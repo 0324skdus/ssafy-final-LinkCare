@@ -5,14 +5,10 @@ import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
-import com.samsung.android.sdk.health.data.request.InstantTimeFilter
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.model.HeartRateSeriesData
-import com.ssafy.sdk.health.data.model.HeartRatesData
-import java.time.Instant
+import com.ssafy.sdk.health.data.test.HeartRateSeriesData
+import com.ssafy.sdk.health.data.test.HeartRatesData
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneOffset
 import javax.inject.Inject
 

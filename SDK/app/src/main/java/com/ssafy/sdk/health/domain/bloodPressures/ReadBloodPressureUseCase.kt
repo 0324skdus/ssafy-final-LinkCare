@@ -2,13 +2,7 @@ package com.ssafy.sdk.health.domain.bloodPressures
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.BloodPressureData
-import com.ssafy.sdk.health.data.model.ExerciseData
-import com.ssafy.sdk.health.data.model.SleepData
-import com.ssafy.sdk.health.data.model.SleepGoalData
-import com.ssafy.sdk.health.domain.exercise.ReadExerciseTotalCaloriesUseCase
-import com.ssafy.sdk.health.domain.exercise.ReadExerciseTotalDurationUseCase
-import com.ssafy.sdk.health.domain.exercise.ReadExerciseTypeUseCase
+import com.ssafy.sdk.health.data.test.BloodPressureData
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject

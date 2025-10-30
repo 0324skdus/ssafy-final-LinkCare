@@ -17,7 +17,7 @@ package com.ssafy.sdk.health.domain.steps
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.error.HealthDataException
-import com.ssafy.sdk.health.data.model.StepData
+import com.ssafy.sdk.health.data.test.StepData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject

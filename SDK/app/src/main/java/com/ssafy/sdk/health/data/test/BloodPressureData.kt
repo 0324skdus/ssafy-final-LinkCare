@@ -1,22 +1,24 @@
-package com.ssafy.sdk.health.data.model
+package com.ssafy.sdk.health.data.test
 
 import com.samsung.android.sdk.health.data.data.DataSource
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-data class WaterIntakeGroupedData (
+data class BloodPressureTypeData (
     val uid: String,
     val startTime: LocalDateTime?,
     val endTime: LocalDateTime?,
     val zoneOffset: ZoneOffset?,
     val dataSource: DataSource?,
-    val amount: Float?
+    val systolic: Float?,
+    val diastolic: Float?,
+    val mean: Float?,
+    val pulseRate: Int?,
+    val medicationTaken: Boolean?
 )
 
-data class WaterIntakeData (
+data class BloodPressureData (
     val startTime: LocalDateTime?,
-    val waterIntakes: List<WaterIntakeGroupedData>?,
-    val goal: Float,
-    val total: Float
+    val bloodPressures: List<BloodPressureTypeData>
 )
+

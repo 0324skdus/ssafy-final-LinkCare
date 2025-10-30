@@ -5,7 +5,7 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.model.BloodPressureTypeData
+import com.ssafy.sdk.health.data.test.BloodPressureTypeData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject

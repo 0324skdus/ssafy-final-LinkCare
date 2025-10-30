@@ -31,6 +31,8 @@ import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.ResolvablePlatformException
 import com.ssafy.sdk.health.domain.Permissions.PERMISSIONS
+import com.ssafy.sdk.health.domain.sync.HeartRateReader
+import com.ssafy.sdk.health.domain.sync.RunHeartRateSmokeTests
 import com.ssafy.sdk.health.presentation.ui.Main
 import com.ssafy.sdk.health.presentation.ui.theme.PhoneAppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,9 +44,8 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "MainActivity"
-
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity() : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     @Inject
@@ -67,8 +68,12 @@ class MainActivity : ComponentActivity() {
                     launch { viewModel.readSleep() }
                     launch { viewModel.readExercises() }
                     launch { viewModel.readBloodPressures() }
+                    launch {
+                        val reader = HeartRateReader(healthDataStore)
+                        viewModel.runHeartRateSmokeTests(healthDataStore, reader) }
                 }
             }
+
 
             val refresh = state.refresh
 
