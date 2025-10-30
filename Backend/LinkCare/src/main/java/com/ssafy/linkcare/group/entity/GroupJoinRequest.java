@@ -43,11 +43,30 @@ public class GroupJoinRequest {
     @Column(name = "responded_at")
     private LocalDateTime respondedAt;
 
+    // 선택 권한 동의 정보 (신청 시 사용자가 선택)
+    @Column(name = "agreed_sleep")
+    private Boolean agreedSleep;
+
+    @Column(name = "agreed_water_intake")
+    private Boolean agreedWaterIntake;
+
+    @Column(name = "agreed_blood_pressure")
+    private Boolean agreedBloodPressure;
+
+    @Column(name = "agreed_blood_sugar")
+    private Boolean agreedBloodSugar;
+
     @Builder
-    public GroupJoinRequest(Group group, User user) {
+    public GroupJoinRequest(Group group, User user, Boolean agreedSleep,
+                            Boolean agreedWaterIntake, Boolean agreedBloodPressure,
+                            Boolean agreedBloodSugar) {
         this.group = group;
         this.user = user;
         this.status = RequestStatus.PENDING;
+        this.agreedSleep = agreedSleep;
+        this.agreedWaterIntake = agreedWaterIntake;
+        this.agreedBloodPressure = agreedBloodPressure;
+        this.agreedBloodSugar = agreedBloodSugar;
     }
 
     // 승인 처리

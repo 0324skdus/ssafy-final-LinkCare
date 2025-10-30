@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -164,5 +163,137 @@ public class GroupController {
 
         log.info("그룹 정보 수정 API 호출: userId={}, groupSeq={}, imageAction={}", userId, groupSeq, imageAction);
         return ResponseEntity.ok(response);
+    }
+
+    // ============== 초대 링크 관련 API ==============
+
+    @Operation(summary = "초대 링크 생성", description = "그룹 초대 링크를 생성합니다. 방장만 생성 가능하며, 정원이 가득 차면 생성할 수 없습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "초대 링크 생성 성공"),
+            @ApiResponse(responseCode = "403", description = "방장 권한 없음"),
+            @ApiResponse(responseCode = "409", description = "그룹 정원이 가득 참")
+    })
+    @PostMapping("/{groupSeq}/invitations")
+    public ResponseEntity<InvitationResponse> createInvitation(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        InvitationResponse response = groupService.createInvitation(userId, groupSeq);
+
+        log.info("초대 링크 생성 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "초대 링크로 그룹 정보 미리보기", description = "초대 링크 토큰으로 그룹 정보를 조회합니다. 참여 전 그룹 정보와 필요한 권한을 확인할 수 있습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "그룹 정보 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "초대 링크를 찾을 수 없음")
+    })
+    @GetMapping("/invitations/{token}/preview")
+    public ResponseEntity<InvitationPreviewResponse> getInvitationPreview(
+            @PathVariable String token) {
+
+        log.info("초대 링크 미리보기 API 호출: token={}", token);
+        InvitationPreviewResponse response = groupService.getInvitationPreview(token);
+        return ResponseEntity.ok(response);
+    }
+
+// ============== 그룹 참가 신청 API ==============
+
+    @Operation(summary = "초대 링크로 그룹 참가 신청", description = "초대 링크를 통해 그룹 참가를 신청합니다. 건강 정보 공유 동의가 필요합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "참가 신청 완료"),
+            @ApiResponse(responseCode = "400", description = "권한 동의 정보가 유효하지 않음"),
+            @ApiResponse(responseCode = "403", description = "이미 그룹 멤버임"),
+            @ApiResponse(responseCode = "409", description = "그룹 정원 초과 또는 중복 신청")
+    })
+    @PostMapping("/invitations/{token}/join")
+    public ResponseEntity<Void> joinByInvitation(
+            Authentication authentication,
+            @PathVariable String token,
+            @RequestBody PermissionAgreementDto agreement) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.joinByInvitation(userId, token, agreement);
+
+        log.info("초대 링크로 참가 신청 API 호출: userId={}, token={}", userId, token);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "검색으로 그룹 참가 신청", description = "그룹 검색 후 참가를 신청합니다. 건강 정보 공유 동의가 필요합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "참가 신청 완료"),
+            @ApiResponse(responseCode = "400", description = "권한 동의 정보가 유효하지 않음"),
+            @ApiResponse(responseCode = "403", description = "이미 그룹 멤버임"),
+            @ApiResponse(responseCode = "409", description = "그룹 정원 초과 또는 중복 신청")
+    })
+    @PostMapping("/{groupSeq}/join")
+    public ResponseEntity<Void> joinBySearch(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestBody PermissionAgreementDto agreement) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.joinBySearch(userId, groupSeq, agreement);
+
+        log.info("검색으로 참가 신청 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok().build();
+    }
+
+// ============== 방장 전용: 참가 신청 관리 API ==============
+
+    @Operation(summary = "대기 중인 참가 신청 목록 조회", description = "방장이 대기 중인 참가 신청 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "403", description = "방장 권한 없음")
+    })
+    @GetMapping("/{groupSeq}/join-requests")
+    public ResponseEntity<List<JoinRequestResponse>> getPendingJoinRequests(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        List<JoinRequestResponse> response = groupService.getPendingJoinRequests(userId, groupSeq);
+
+        log.info("대기 중인 참가 신청 목록 조회 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "참가 신청 승인", description = "방장이 참가 신청을 승인합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "승인 완료"),
+            @ApiResponse(responseCode = "400", description = "이미 처리된 신청"),
+            @ApiResponse(responseCode = "403", description = "방장 권한 없음"),
+            @ApiResponse(responseCode = "409", description = "그룹 정원 초과")
+    })
+    @PostMapping("/join-requests/{requestSeq}/approve")
+    public ResponseEntity<Void> approveJoinRequest(
+            Authentication authentication,
+            @PathVariable Long requestSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.approveJoinRequest(userId, requestSeq);
+
+        log.info("참가 신청 승인 API 호출: userId={}, requestSeq={}", userId, requestSeq);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "참가 신청 거절", description = "방장이 참가 신청을 거절합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "거절 완료"),
+            @ApiResponse(responseCode = "400", description = "이미 처리된 신청"),
+            @ApiResponse(responseCode = "403", description = "방장 권한 없음")
+    })
+    @PostMapping("/join-requests/{requestSeq}/reject")
+    public ResponseEntity<Void> rejectJoinRequest(
+            Authentication authentication,
+            @PathVariable Long requestSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.rejectJoinRequest(userId, requestSeq);
+
+        log.info("참가 신청 거절 API 호출: userId={}, requestSeq={}", userId, requestSeq);
+        return ResponseEntity.ok().build();
     }
 }
