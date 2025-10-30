@@ -4,10 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import com.a307.linkcare.common.theme.LinkCareTheme
-import com.a307.linkcare.feature.auth.LinkCareLoginScreen
+import com.a307.linkcare.navigation.AppNavGraph
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,20 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LinkCareTheme {
-                var isLoggedIn by rememberSaveable { mutableStateOf(false) }
-
-                if (!isLoggedIn) {
-                    LinkCareLoginScreen(
-                        onLoginSuccess = {
-                            isLoggedIn = true
-                        },
-                        onSignupClick = {
-                            // TODO: 회원가입 화면 연결
-                        }
-                    )
-                } else {
-                    LinkCareApp()
-                }
+                AppNavGraph()
             }
         }
     }

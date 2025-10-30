@@ -4,7 +4,8 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -14,13 +15,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
 import com.a307.linkcare.R
-import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.common.component.atoms.*
+import com.a307.linkcare.common.theme.*
 
 @Composable
-fun LinkCareLoginScreen(
+fun LoginScreen(
     onLoginSuccess: () -> Unit = {},
     onSignupClick: () -> Unit = {}
+
 ) {
+    // Buttons
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -42,70 +49,26 @@ fun LinkCareLoginScreen(
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            val fieldShape = RoundedCornerShape(40.dp)
-            val fieldBorder = Color(0x29000000)
+            // login form
+            LoginForm(
+                email = email,
+                onEmailChange = { email = it },
+                password = password,
+                onPasswordChange = { password = it }
+            )
 
-            // email input
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(fieldShape)
-                    .background(Color.White)
-                    .border(1.dp, fieldBorder, fieldShape)
-            ) {
-                Text(
-                    text = "이메일",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0x29000000),
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 20.dp)
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // pw input
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(fieldShape)
-                    .background(Color.White)
-                    .border(1.dp, fieldBorder, fieldShape)
-            ) {
-                Text(
-                    text = "비밀번호",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0x29000000),
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 20.dp)
-                )
-            }
-
-            Spacer(Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // login button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(fieldShape)
-                    .background(Color(0xFFEAEAEA))
-                    .clickable { onLoginSuccess() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "로그인",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC3C3C3)
-                )
-            }
+            LcBtn(
+                text = "로그인",
+                buttonColor = point,
+                onClick = {
+                    onLoginSuccess()
+                },
+                isEnabled = email.isNotBlank() && password.isNotBlank()
+            )
+
 
             Spacer(Modifier.height(36.dp))
 
@@ -198,4 +161,27 @@ fun LinkCareLoginScreen(
             contentScale = ContentScale.Fit
         )
     }
+}
+
+@Composable
+private fun LoginForm(
+    email: String,
+    onEmailChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit
+) {
+    LcInputField(
+        value = email,
+        onValueChange = onEmailChange,
+        placeholder = "이메일"
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    LcInputField(
+        value = password,
+        onValueChange = onPasswordChange,
+        placeholder = "비밀번호",
+        isPassword = true
+    )
 }
