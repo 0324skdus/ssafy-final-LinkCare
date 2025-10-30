@@ -14,5 +14,6 @@ public record GroupResponse(
         GroupType type,
         Integer capacity,
         Integer currentMembers,  // 현재 멤버 수
+        String imageUrl,
         LocalDateTime createdAt
 ) {}

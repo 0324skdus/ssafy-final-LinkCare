@@ -17,6 +17,7 @@ public record GroupDetailResponse(
         GroupType type,
         Integer capacity,
         Integer currentMembers,  // 현재 인원 수
+        String imageUrl,
         LocalDateTime createdAt,
         GoalCriteriaDto goalCriteria,  // HEALTH 그룹인 경우에만 존재 (nullable)
         List<MemberDto> members

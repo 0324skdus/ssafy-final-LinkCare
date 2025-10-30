@@ -1,9 +1,6 @@
 package com.ssafy.linkcare.group.controller;
 
-import com.ssafy.linkcare.group.dto.CreateCareGroupRequest;
-import com.ssafy.linkcare.group.dto.CreateHealthGroupRequest;
-import com.ssafy.linkcare.group.dto.GroupDetailResponse;
-import com.ssafy.linkcare.group.dto.GroupResponse;
+import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.service.GroupService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,9 +10,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -36,16 +35,29 @@ public class GroupController {
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
-    @PostMapping("/health")
+    @PostMapping(value = "/health", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GroupResponse> createHealthGroup(
             Authentication authentication,
-            @Valid @RequestBody CreateHealthGroupRequest request) {
+            @RequestParam("groupName") String groupName,
+            @RequestParam("groupDescription") String groupDescription,
+            @RequestParam("capacity") Integer capacity,
+            @RequestParam(value = "minCalorie", required = false) Float minCalorie,
+            @RequestParam(value = "minStep", required = false) Integer minStep,
+            @RequestParam(value = "minDistance", required = false) Float minDistance,
+            @RequestParam(value = "minDuration", required = false) Integer minDuration,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
 
         Long userId = Long.parseLong(authentication.getName());
-        GroupResponse response = groupService.createHealthGroup(userId, request);
 
-        log.info("헬스 그룹 생성 API 호출: userId={}, groupName={}", userId, request.groupName());
+        // DTO 생성
+        GoalCriteriaDto goalCriteria = null;
+        if (minCalorie != null || minStep != null || minDistance != null || minDuration != null) {
+            goalCriteria = new GoalCriteriaDto(minCalorie, minStep, minDistance, minDuration);
+        }
+        CreateHealthGroupRequest request = new CreateHealthGroupRequest(groupName, groupDescription, capacity, goalCriteria);
 
+        GroupResponse response = groupService.createHealthGroup(userId, request, image);
+        log.info("헬스 그룹 생성 API 호출: userId={}, groupName={}", userId, groupName);
         return ResponseEntity.ok(response);
     }
 
@@ -57,15 +69,37 @@ public class GroupController {
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
-    @PostMapping("/care")
+    @PostMapping(value = "/care", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GroupResponse> createCareGroup(
             Authentication authentication,
-            @Valid @RequestBody CreateCareGroupRequest request) {
+            @RequestParam("groupName") String groupName,
+            @RequestParam("groupDescription") String groupDescription,
+            @RequestParam("capacity") Integer capacity,
+            @RequestParam(value = "isSleepAllowed", required = false, defaultValue = "false") Boolean isSleepAllowed,
+            @RequestParam(value = "isWaterIntakeAllowed", required = false, defaultValue = "false") Boolean isWaterIntakeAllowed,
+            @RequestParam(value = "isBloodPressureAllowed", required = false, defaultValue = "false") Boolean isBloodPressureAllowed,
+            @RequestParam(value = "isBloodSugarAllowed", required = false, defaultValue = "false") Boolean isBloodSugarAllowed,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
 
         Long userId = Long.parseLong(authentication.getName());
-        GroupResponse response = groupService.createCareGroup(userId, request);
 
-        log.info("케어 그룹 생성 API 호출: userId={}, groupName={}", userId, request.groupName());
+        // DTO 생성
+        HealthPermissionDto permissions = new HealthPermissionDto(
+                isSleepAllowed,
+                isWaterIntakeAllowed,
+                isBloodPressureAllowed,
+                isBloodSugarAllowed
+        );
+        CreateCareGroupRequest request = new CreateCareGroupRequest(
+                groupName,
+                groupDescription,
+                capacity,
+                permissions
+        );
+
+        GroupResponse response = groupService.createCareGroup(userId, request, image);
+
+        log.info("케어 그룹 생성 API 호출: userId={}, groupName={}", userId, groupName);
 
         return ResponseEntity.ok(response);
     }
@@ -103,6 +137,32 @@ public class GroupController {
 
         log.info("그룹 상세 조회 요청: groupSeq={}", groupSeq);
         GroupDetailResponse response = groupService.getGroupDetail(groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
+    // 그룹 정보 수정
+    @Operation(summary = "그룹 정보 수정", description = "그룹 이름, 소개, 이미지를 수정합니다. 방장만 수정 가능합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "그룹 수정 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "방장 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @PutMapping(value = "/{groupSeq}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GroupResponse> updateGroup(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestParam("groupName") String groupName,
+            @RequestParam("groupDescription") String groupDescription,
+            @RequestParam(value = "imageAction", required = false, defaultValue = "keep") String imageAction,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        UpdateGroupRequest request = new UpdateGroupRequest(groupName, groupDescription);
+        GroupResponse response = groupService.updateGroup(userId, groupSeq, request, imageAction, image);
+
+        log.info("그룹 정보 수정 API 호출: userId={}, groupSeq={}, imageAction={}", userId, groupSeq, imageAction);
         return ResponseEntity.ok(response);
     }
 }

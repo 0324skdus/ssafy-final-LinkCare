@@ -37,6 +37,9 @@ public class Group {
     @Column(name = "capacity", nullable = false)
     private Integer capacity;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -46,10 +49,20 @@ public class Group {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Group(String groupName, String groupDescription, GroupType type, Integer capacity) {
+    public Group(String groupName, String groupDescription, GroupType type, Integer capacity, String imageUrl) {
         this.groupName = groupName;
         this.groupDescription = groupDescription;
         this.type = type;
         this.capacity = capacity;
+        this.imageUrl = imageUrl;
+    }
+
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public void updateGroupInfo(String groupName, String groupDescription) {
+        this.groupName = groupName;
+        this.groupDescription = groupDescription;
     }
 }

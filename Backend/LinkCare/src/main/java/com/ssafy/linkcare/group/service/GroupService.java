@@ -6,12 +6,15 @@ import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.entity.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.repository.*;
+import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,11 +25,15 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class GroupService {
 
-    private final GroupRepository groupRepository;
-    private final GroupGoalCriteriaRepository goalCriteriaRepository;
-    private final GroupMemberRepository groupMemberRepository;
-    private final GroupHealthPermissionRepository healthPermissionRepository;
+    private final S3Service s3Service;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
+    private final GroupMemberRepository groupMemberRepository;
+    private final GroupGoalCriteriaRepository goalCriteriaRepository;
+    private final GroupHealthPermissionRepository healthPermissionRepository;
+
+    @Value("${app.default-group-image-url}")
+    private String defaultGroupImageUrl;
 
     /*
         * 헬스 그룹 생성
@@ -36,21 +43,27 @@ public class GroupService {
             * - 필수 권한 설정 (걸음수, 심박수, 운동)
     */
     @Transactional
-    public GroupResponse createHealthGroup(Long userId, CreateHealthGroupRequest request) {
+    public GroupResponse createHealthGroup(Long userId, CreateHealthGroupRequest request, MultipartFile image) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 그룹 생성
+        // 2. 이미지 업로드 (있으면 업로드, 없으면 기본 이미지)
+        String imageUrl = (image != null && !image.isEmpty())
+                ? s3Service.uploadGroupImage(image)
+                : defaultGroupImageUrl;
+
+        // 3. 그룹 생성
         Group group = Group.builder()
                 .groupName(request.groupName())
                 .groupDescription(request.groupDescription())
                 .type(GroupType.HEALTH)
                 .capacity(request.capacity())
+                .imageUrl(imageUrl)
                 .build();
         groupRepository.save(group);
 
-        // 3. 목표 기준 생성 (있는 경우만)
+        // 4. 목표 기준 생성 (있는 경우만)
         if (request.goalCriteria() != null) {
             GoalCriteriaDto criteria = request.goalCriteria();
             GroupGoalCriteria goalCriteria = GroupGoalCriteria.builder()
@@ -63,7 +76,7 @@ public class GroupService {
             goalCriteriaRepository.save(goalCriteria);
         }
 
-        // 4. 생성자를 방장으로 등록
+        // 5. 생성자를 방장으로 등록
         GroupMember leader = GroupMember.builder()
                 .group(group)
                 .user(user)
@@ -71,7 +84,7 @@ public class GroupService {
                 .build();
         groupMemberRepository.save(leader);
 
-        // 5. 필수 권한 설정 (헬스 그룹: 걸음수, 심박수, 운동 필수)
+        // 6. 필수 권한 설정 (헬스 그룹: 걸음수, 심박수, 운동 필수)
         GroupHealthPermission permission = GroupHealthPermission.builder()
                 .groupMember(leader)
                 .isDailyStepAllowed(true)
@@ -86,7 +99,7 @@ public class GroupService {
 
         log.info("헬스 그룹 생성 완료: groupSeq={}, userId={}", group.getGroupSeq(), userId);
 
-        // 6. 응답 생성
+        // 7. 응답 생성
         return new GroupResponse(
                 group.getGroupSeq(),
                 group.getGroupName(),
@@ -94,6 +107,7 @@ public class GroupService {
                 group.getType(),
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
+                group.getImageUrl(),
                 group.getCreatedAt()
         );
     }
@@ -105,21 +119,27 @@ public class GroupService {
             * - 권한 설정 (필수 + 선택 동의 항목)
     */
     @Transactional
-    public GroupResponse createCareGroup(Long userId, CreateCareGroupRequest request) {
+    public GroupResponse createCareGroup(Long userId, CreateCareGroupRequest request, MultipartFile image) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 그룹 생성
+        // 2. 이미지 업로드 (있으면 업로드, 없으면 기본 이미지)
+        String imageUrl = (image != null && !image.isEmpty())
+                ? s3Service.uploadGroupImage(image)
+                : defaultGroupImageUrl;
+
+        // 3. 그룹 생성
         Group group = Group.builder()
                 .groupName(request.groupName())
                 .groupDescription(request.groupDescription())
                 .type(GroupType.CARE)
                 .capacity(request.capacity())
+                .imageUrl(imageUrl)
                 .build();
         groupRepository.save(group);
 
-        // 3. 생성자를 방장으로 등록
+        // 4. 생성자를 방장으로 등록
         GroupMember leader = GroupMember.builder()
                 .group(group)
                 .user(user)
@@ -127,7 +147,7 @@ public class GroupService {
                 .build();
         groupMemberRepository.save(leader);
 
-        // 4. 권한 설정 (필수 + 선택 항목)
+        // 5. 권한 설정 (필수 + 선택 항목)
         HealthPermissionDto permissions = request.permissions() != null
                 ? request.permissions()
                 : new HealthPermissionDto();  // 기본값 (선택 항목 모두 false)
@@ -148,7 +168,7 @@ public class GroupService {
 
         log.info("케어 그룹 생성 완료: groupSeq={}, userId={}", group.getGroupSeq(), userId);
 
-        // 5. 응답 생성
+        // 6. 응답 생성
         return new GroupResponse(
                 group.getGroupSeq(),
                 group.getGroupName(),
@@ -156,6 +176,7 @@ public class GroupService {
                 group.getType(),
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
+                group.getImageUrl(),
                 group.getCreatedAt()
         );
     }
@@ -209,6 +230,7 @@ public class GroupService {
                 group.getType(),
                 group.getCapacity(),
                 members.size(), // 현재 인원
+                group.getImageUrl(),
                 group.getCreatedAt(),
                 finalGoalCriteria,
                 memberDtos
@@ -236,6 +258,7 @@ public class GroupService {
                             group.getType(),
                             group.getCapacity(),
                             currentMembers,
+                            group.getImageUrl(),
                             group.getCreatedAt()
                     );
                 })
@@ -261,10 +284,87 @@ public class GroupService {
                             group.getType(),
                             group.getCapacity(),
                             currentMembers,
+                            group.getImageUrl(),
                             group.getCreatedAt()
                     );
                 })
                 .toList();
+    }
+
+    /*
+        * 그룹 정보 수정
+            * - 방장만 수정 가능
+            * - 그룹명, 소개, 이미지 수정 가능
+    */
+    @Transactional
+    public GroupResponse updateGroup(Long userId, Long groupSeq, UpdateGroupRequest request, String imageAction, MultipartFile newImage) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 방장 권한 확인
+        GroupMember member = groupMemberRepository.findByGroupAndUser_UserPk(group, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        if (!member.getIsLeader()) {
+            throw new CustomException(ErrorCode.NOT_GROUP_LEADER);
+        }
+
+        // 3. 이미지 처리 - imageAction에 따라 분기
+        String newImageUrl = group.getImageUrl(); // 기본값: 기존 이미지
+
+        switch (imageAction) {
+            case "default":
+                // 기본 이미지로 변경
+                if (group.getImageUrl() != null && !group.getImageUrl().equals(defaultGroupImageUrl)) {
+                    s3Service.deleteFile(group.getImageUrl()); // 기존 이미지 삭제
+                }
+                newImageUrl = defaultGroupImageUrl;
+                log.info("그룹 이미지를 기본 이미지로 변경: groupSeq={}", groupSeq);
+                break;
+
+            case "upload":
+                // 새 이미지 업로드
+                if (newImage != null && !newImage.isEmpty()) {
+                    String uploadedUrl = s3Service.uploadGroupImage(newImage);
+
+                    // 기존 이미지 삭제 (기본 이미지가 아닌 경우만)
+                    if (group.getImageUrl() != null && !group.getImageUrl().equals(defaultGroupImageUrl)) {
+                        s3Service.deleteFile(group.getImageUrl());
+                    }
+
+                    newImageUrl = uploadedUrl;
+                    log.info("그룹 이미지 업로드 완료: groupSeq={}, newUrl={}", groupSeq, uploadedUrl);
+                } else {
+                    log.warn("imageAction=upload이지만 이미지 파일이 없음. 기존 이미지 유지");
+                }
+                break;
+
+            case "keep":
+            default:
+                // 기존 이미지 유지
+                log.info("그룹 이미지 유지: groupSeq={}", groupSeq);
+                break;
+        }
+
+        // 4. 그룹 정보 업데이트
+        group.updateGroupInfo(request.groupName(), request.groupDescription());
+        group.updateImageUrl(newImageUrl);
+
+        log.info("그룹 정보 수정 완료: groupSeq={}, userId={}", groupSeq, userId);
+
+        // 5. 응답 생성
+        int currentMembers = groupMemberRepository.countByGroup(group);
+        return new GroupResponse(
+                group.getGroupSeq(),
+                group.getGroupName(),
+                group.getGroupDescription(),
+                group.getType(),
+                group.getCapacity(),
+                currentMembers,
+                group.getImageUrl(),
+                group.getCreatedAt()
+        );
     }
 
 }

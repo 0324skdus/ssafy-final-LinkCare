@@ -37,4 +37,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "JOIN FETCH gm.group " +
             "WHERE gm.user.userPk = :userId")
     List<GroupMember> findByUserWithGroup(@Param("userId") Long userId);
+
+    // 특정 그룹에서 특정 사용자의 멤버 정보 조회
+    Optional<GroupMember> findByGroupAndUser_UserPk(Group group, Long userPk);
 }
