@@ -52,6 +52,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.foundation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -59,4 +61,17 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+//    // Retrofit
+//    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+//    // JSON 변환을 위해 GSON 컨버터
+//    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+//    // OkHttp
+//    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+//    // Google Sign-In
+//    implementation("com.google.android.gms:play-services-auth:21.2.0")
+//    // Kakao SDK
+//    implementation("com.kakao.sdk:v2-user:2.20.6")
 }

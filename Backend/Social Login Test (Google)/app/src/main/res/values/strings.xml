@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">LinkCareTest</string>
+
+    <!-- Google 웹 클라이언트 ID (백엔드 검증용) -->
+    <string name="web_client_id">506179385321-pjhjarj5r4ru9bhsq6ernugh34jgsmg6.apps.googleusercontent.com</string>
+</resources>
