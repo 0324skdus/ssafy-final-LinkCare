@@ -64,4 +64,14 @@ dependencies {
 
     // navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
+//    // Retrofit
+//    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+//    // JSON 변환을 위해 GSON 컨버터
+//    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+//    // OkHttp
+//    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+//    // Google Sign-In
+//    implementation("com.google.android.gms:play-services-auth:21.2.0")
+//    // Kakao SDK
+//    implementation("com.kakao.sdk:v2-user:2.20.6")
 }

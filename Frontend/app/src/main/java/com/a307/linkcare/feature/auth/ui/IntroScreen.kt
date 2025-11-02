@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

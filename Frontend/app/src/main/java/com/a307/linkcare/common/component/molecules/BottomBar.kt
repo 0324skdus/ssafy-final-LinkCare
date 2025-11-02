@@ -1,9 +1,12 @@
 package com.a307.linkcare.common.component.molecules
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
@@ -39,7 +42,7 @@ fun LinkCareBottomBar(
                         popUpTo(Route.Care.route) { saveState = true }
                     }
                 },
-                icon = { Icon(painterResource(item.iconRes), contentDescription = item.label) },
+                icon = { Icon(painterResource(item.iconRes), contentDescription = item.label, modifier = Modifier.size(30.dp)) },
                 label = { Text(item.label) }
             )
         }

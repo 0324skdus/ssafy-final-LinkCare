@@ -5,10 +5,20 @@ package com.a307.linkcare.navigation
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.a307.linkcare.LinkCareApp
-import com.a307.linkcare.feature.auth.*
+import com.a307.linkcare.feature.auth.OnboardingViewModel
+import com.a307.linkcare.feature.auth.ui.IntroScreen
+import com.a307.linkcare.feature.auth.ui.LoginScreen
+import com.a307.linkcare.feature.auth.ui.SignupBirthScreen
+import com.a307.linkcare.feature.auth.ui.SignupCharacterScreen
+import com.a307.linkcare.feature.auth.ui.SignupGenderScreen
+import com.a307.linkcare.feature.auth.ui.SignupHeightScreen
+import com.a307.linkcare.feature.auth.ui.SignupNameScreen
+import com.a307.linkcare.feature.auth.ui.SignupScreen
+import com.a307.linkcare.feature.intro.IntroTourScreen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -87,20 +97,36 @@ fun AppNavGraph(
             val pagerCount = 5
             val pagerState = rememberPagerState(initialPage = 0) { pagerCount }
 
+//            val vm: OnboardingViewModel = viewModel()
+
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
-                    0 -> SignupNameScreen(pagerState, pageCount = pagerCount) { }
+                    0 -> SignupNameScreen(pagerState) { }
                     1 -> SignupGenderScreen(pagerState, pageCount = pagerCount) { }
                     2 -> SignupBirthScreen(pagerState, pageCount = pagerCount) { }
                     3 -> SignupHeightScreen(pagerState, pageCount = pagerCount) { }
-                    4 -> SignupCharacterScreen(pagerState, pageCount = pagerCount) { _, _ ->
-                        // 온보딩 완료 후 메인 이동
-                        navController.navigate(Route.Main.route) {
-                            popUpTo(Route.Onboarding.route) { inclusive = true }
+                    4 -> SignupCharacterScreen(
+                        pagerState = pagerState,
+                        pageCount = pagerCount,
+                        onStart = { idx, _ -> /* vm.setCharacter(idx) */ },
+                        onNavigateToIntro = {
+                            navController.navigate(Route.IntroTour.route) {
+                                popUpTo(Route.Onboarding.route) { inclusive = true } // 온보딩 스택 제거
+                            }
                         }
-                    }
+                    )
                 }
             }
+        }
+
+        composable(Route.IntroTour.route) {
+            IntroTourScreen(
+                onDone = {
+                    navController.navigate(Route.Main.route) {
+                        popUpTo(Route.IntroTour.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // 메인 화면

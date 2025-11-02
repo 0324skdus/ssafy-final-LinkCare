@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
@@ -30,6 +30,7 @@ import androidx.compose.ui.zIndex
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
+import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
 import kotlinx.coroutines.launch
 
@@ -44,7 +45,9 @@ fun SignupCharacterScreen(
         R.drawable.char_duck_1,
         R.drawable.char_duck_2
     ),
-    onStart: (selectedIndex: Int, name: String) -> Unit = { _, _ -> }
+    onStart: (selectedIndex: Int, name: String) -> Unit = { _, _ -> },
+    onNavigateToIntro: () -> Unit = {}
+
 ) {
     require(characterImages.isNotEmpty()) { "characterImages must not be empty" }
 
@@ -53,32 +56,19 @@ fun SignupCharacterScreen(
     var name by rememberSaveable { mutableStateOf("") }
     val canStart = name.isNotBlank()
 
+    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(white)
     ) {
         // 상단 도트
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 50.dp)
-                .zIndex(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(pageCount) { index ->
-                val selected = index == pagerState.currentPage
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .width(if (selected) 20.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(if (selected) main else Color.LightGray)
-                        .clickable { scope.launch { pagerState.animateScrollToPage(index) } }
-                )
-                if (index != pageCount - 1) Spacer(Modifier.width(8.dp))
-            }
-        }
+        PagerDots(
+            total = 5,
+            current = pagerState.currentPage,
+            onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
+        )
 
         // 본문
         Column(
@@ -114,7 +104,7 @@ fun SignupCharacterScreen(
             ) {
                 // 좌측 화살표
                 ArrowPill(
-                    text = "〈",
+                    text = "〈 ",
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .padding(start = 8.dp)
@@ -154,7 +144,7 @@ fun SignupCharacterScreen(
 
                 // 우측 화살표
                 ArrowPill(
-                    text = "〉",
+                    text = " 〉",
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .padding(end = 8.dp)
@@ -184,7 +174,21 @@ fun SignupCharacterScreen(
                 buttonColor = if (canStart) main else unActiveBtn,
                 buttonTextColor = if (canStart) white else unActiveField,
                 isEnabled = canStart,
-                onClick = { onStart(selectedIndex, name) }
+                onClick = {
+                    onStart(selectedIndex, name)
+                    showPermissionDialog = true
+                }
+            )
+        }
+
+        // Samsung Health 권한 팝업
+        if (showPermissionDialog) {
+            SamsungHealthPermissionDialog(
+                onDismiss = { showPermissionDialog = false },
+                onConnectClick = {
+                    showPermissionDialog = false
+                    onNavigateToIntro()
+                }
             )
         }
     }

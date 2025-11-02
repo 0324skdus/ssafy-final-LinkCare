@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -28,6 +28,7 @@ import androidx.compose.ui.zIndex
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
+import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
 import kotlinx.coroutines.launch
 
@@ -159,28 +160,11 @@ fun SignupHeightScreen(
         )
 
         // 상단 페이지 도트
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 50.dp)
-                .zIndex(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(pageCount) { index ->
-                val selected = index == pagerState.currentPage
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .width(if (selected) 20.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(if (selected) main else Color.LightGray)
-                        .clickable {
-                            scope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                )
-                if (index != pageCount - 1) Spacer(Modifier.width(8.dp))
-            }
-        }
+        PagerDots(
+            total = 5,
+            current = pagerState.currentPage,
+            onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
+        )
     }
 }
 

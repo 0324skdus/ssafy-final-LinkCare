@@ -1,10 +1,11 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
@@ -26,19 +27,21 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
-import com.a307.linkcare.common.component.atoms.LcInputField
+import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
 import kotlinx.coroutines.launch
 
+private enum class Gender { MALE, FEMALE }
+
 @Composable
-fun SignupNameScreen(
+fun SignupGenderScreen(
     pagerState: PagerState,
     pageCount: Int,
     onSubmit: (String) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
-    var nameCheck by rememberSaveable { mutableStateOf("") }
-    val canSubmit = nameCheck.isNotBlank()
+    var selectedGender by rememberSaveable { mutableStateOf<Gender?>(null) }
+    val canSubmit = selectedGender != null
 
     val duckAspect = 462f / 281f
 
@@ -73,48 +76,78 @@ fun SignupNameScreen(
                     .align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "당신을 편하게 부르고 싶지만",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = black,
-                    textAlign = TextAlign.Center
-                )
+                // 제목
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "이름",
+                        text = "싸피님의",
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = black
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "성별",
                         fontSize = 25.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = main
                     )
                     Text(
-                        text = "을 알지 못합니다",
+                        text = "은 무엇인가요?",
                         fontSize = 25.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = black
                     )
                 }
 
-                Spacer(Modifier.height(35.dp))
-
-                LcInputField(
-                    value = nameCheck,
-                    onValueChange = { nameCheck = it },
-                    placeholder = "이름을 입력하세요"
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "* 스마트한 건강관리를 위해 정확한 정보를 입력해주세요",
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF),
+                    textAlign = TextAlign.Center
                 )
+
+                Spacer(Modifier.height(24.dp))
+
+                // 성별 선택 칩
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GenderChip(
+                        text = "남성",
+                        selected = selectedGender == Gender.MALE,
+                        onClick = { selectedGender = Gender.MALE }
+                    )
+                    GenderChip(
+                        text = "여성",
+                        selected = selectedGender == Gender.FEMALE,
+                        onClick = { selectedGender = Gender.FEMALE }
+                    )
+                }
 
                 Spacer(Modifier.height(20.dp))
 
+                // 확인 버튼
                 LcBtn(
                     text = "확인",
                     modifier = Modifier.fillMaxWidth(),
                     buttonColor = if (canSubmit) main else unActiveBtn,
                     buttonTextColor = if (canSubmit) white else unActiveField,
                     isEnabled = canSubmit,
-                    onClick = { onSubmit(nameCheck) }
+                    onClick = {
+                        onSubmit(
+                            when (selectedGender) {
+                                Gender.MALE -> "male"
+                                Gender.FEMALE -> "female"
+                                null -> ""
+                            }
+                        )
+                    }
                 )
             }
         }
@@ -131,28 +164,40 @@ fun SignupNameScreen(
         )
 
         // 상단 dots
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 50.dp)
-                .zIndex(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(pageCount) { index ->
-                val selected = index == pagerState.currentPage
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .width(if (selected) 20.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(if (selected) main else Color.LightGray)
-                        .clickable {
-                            scope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                )
-                if (index != pageCount - 1) Spacer(Modifier.width(8.dp))
-            }
-        }
+        PagerDots(
+            total = 5,
+            current = pagerState.currentPage,
+            onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
+        )
+    }
+}
+
+@Composable
+private fun RowScope.GenderChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (selected) main else Color(0xFFE5E7EB)
+    val bg = if (selected) Color(0x1A4A89F6) else white
+    val txt = if (selected) main else black
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(bg)
+            .border(1.dp, borderColor, RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = txt
+        )
     }
 }
 

@@ -1,11 +1,10 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
@@ -27,21 +26,41 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
+import com.a307.linkcare.common.component.atoms.LcInputField
+import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
 import kotlinx.coroutines.launch
 
-private enum class Gender { MALE, FEMALE }
-
 @Composable
-fun SignupGenderScreen(
+fun SignupBirthScreen(
     pagerState: PagerState,
     pageCount: Int,
     onSubmit: (String) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
-    var selectedGender by rememberSaveable { mutableStateOf<Gender?>(null) }
-    val canSubmit = selectedGender != null
 
+    // 입력 상태
+    var year by rememberSaveable { mutableStateOf("") }
+    var month by rememberSaveable { mutableStateOf("") }
+    var day by rememberSaveable { mutableStateOf("") }
+
+    fun isValidDate(y: String, m: String, d: String): Boolean {
+        val yy = y.toIntOrNull() ?: return false
+        val mm = m.toIntOrNull() ?: return false
+        val dd = d.toIntOrNull() ?: return false
+        if (yy !in 1900..2100) return false
+        if (mm !in 1..12) return false
+        val maxDay = when (mm) {
+            1,3,5,7,8,10,12 -> 31
+            4,6,9,11 -> 30
+            2 -> if ((yy % 400 == 0) || (yy % 4 == 0 && yy % 100 != 0)) 29 else 28
+            else -> 30
+        }
+        return dd in 1..maxDay
+    }
+    val canSubmit = isValidDate(year, month, day)
+
+    // 오리 이미지 비율
     val duckAspect = 462f / 281f
 
     BoxWithConstraints(
@@ -76,29 +95,31 @@ fun SignupGenderScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 제목
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "싸피님의",
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = black
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "성별",
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = main
-                    )
-                    Text(
-                        text = "은 무엇인가요?",
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = black
-                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "싸피님이",
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = black
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "태어난 연도",
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = main
+                        )
+                        Text(
+                            text = "를 알려주세요",
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = black
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(6.dp))
@@ -111,21 +132,35 @@ fun SignupGenderScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // 성별 선택 칩
+                // 연/월/일 입력칩
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GenderChip(
-                        text = "남성",
-                        selected = selectedGender == Gender.MALE,
-                        onClick = { selectedGender = Gender.MALE }
+                    BirthField(
+                        modifier = Modifier.weight(1f),
+                        value = year,
+                        onValueChange = { year = it.filter { ch -> ch.isDigit() }.take(4) },
+                        placeholder = "1999"
                     )
-                    GenderChip(
-                        text = "여성",
-                        selected = selectedGender == Gender.FEMALE,
-                        onClick = { selectedGender = Gender.FEMALE }
+                    BirthField(
+                        modifier = Modifier.weight(1f),
+                        value = month,
+                        onValueChange = { s ->
+                            val onlyNum = s.filter { it.isDigit() }.take(2)
+                            month = onlyNum
+                        },
+                        placeholder = "02"
+                    )
+                    BirthField(
+                        modifier = Modifier.weight(1f),
+                        value = day,
+                        onValueChange = { s ->
+                            val onlyNum = s.filter { it.isDigit() }.take(2)
+                            day = onlyNum
+                        },
+                        placeholder = "28"
                     )
                 }
 
@@ -139,13 +174,7 @@ fun SignupGenderScreen(
                     buttonTextColor = if (canSubmit) white else unActiveField,
                     isEnabled = canSubmit,
                     onClick = {
-                        onSubmit(
-                            when (selectedGender) {
-                                Gender.MALE -> "male"
-                                Gender.FEMALE -> "female"
-                                null -> ""
-                            }
-                        )
+                        onSubmit(String.format("%s-%s-%s", year, month.padStart(2, '0'), day.padStart(2, '0')))
                     }
                 )
             }
@@ -162,57 +191,31 @@ fun SignupGenderScreen(
             contentScale = ContentScale.Fit
         )
 
-        // 상단 dots
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 50.dp)
-                .zIndex(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(pageCount) { index ->
-                val selected = index == pagerState.currentPage
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .width(if (selected) 20.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(if (selected) main else Color.LightGray)
-                        .clickable {
-                            scope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                )
-                if (index != pageCount - 1) Spacer(Modifier.width(8.dp))
-            }
-        }
+        // 상단 페이지 도트
+        PagerDots(
+            total = 5,
+            current = pagerState.currentPage,
+            onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
+        )
     }
 }
 
 @Composable
-private fun RowScope.GenderChip(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit
+private fun BirthField(
+    modifier: Modifier = Modifier,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String
 ) {
-    val borderColor = if (selected) main else Color(0xFFE5E7EB)
-    val bg = if (selected) Color(0x1A4A89F6) else white
-    val txt = if (selected) main else black
-
     Box(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(bg)
-            .border(1.dp, borderColor, RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = txt
+        LcInputField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
