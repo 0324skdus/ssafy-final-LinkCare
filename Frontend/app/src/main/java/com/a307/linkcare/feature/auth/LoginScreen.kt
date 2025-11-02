@@ -20,148 +20,145 @@ import com.a307.linkcare.common.theme.*
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit = {},
+    onLoginSuccess: (isFirstLogin: Boolean) -> Unit = {},
     onSignupClick: () -> Unit = {}
-
 ) {
-    // Buttons
+    val isFirstLogin = true
+
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    Box(
+    val duckAspect = 462f / 281f
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(main)
     ) {
-        Column(
+        val duckHeight = maxWidth / duckAspect
+        val contentHeight = (maxHeight - duckHeight).coerceAtLeast(0.dp)
+
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(contentHeight)
         ) {
-            // logo
-            Text(
-                text = "LinkCare",
-                fontSize = 56.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
 
-            // login form
-            LoginForm(
-                email = email,
-                onEmailChange = { email = it },
-                password = password,
-                onPasswordChange = { password = it }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // login button
-            LcBtn(
-                text = "로그인",
-                buttonColor = point,
-                onClick = {
-                    onLoginSuccess()
-                },
-                isEnabled = email.isNotBlank() && password.isNotBlank()
-            )
-
-
-            Spacer(Modifier.height(36.dp))
-
-            // line
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Divider(
-                    color = Color.White,
-                    thickness = 1.dp,
-                    modifier = Modifier.weight(1f)
-                )
                 Text(
-                    text = "또는",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    text = "LinkCare",
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = white,
+                    modifier = Modifier.padding(top = 150.dp, bottom = 32.dp)
                 )
-                Divider(
-                    color = Color.White,
-                    thickness = 1.dp,
-                    modifier = Modifier.weight(1f)
-                )
-            }
 
-            Spacer(Modifier.height(20.dp))
-
-            // SNS login buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.google_login),
-                    contentDescription = "google",
-                    modifier = Modifier.size(44.dp),
-                    contentScale = ContentScale.Crop
+                LoginForm(
+                    email = email,
+                    onEmailChange = { email = it },
+                    password = password,
+                    onPasswordChange = { password = it }
                 )
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Color(0xFFFEE500)),
-                    contentAlignment = Alignment.Center
+
+                Spacer(Modifier.height(20.dp))
+
+                LcBtn(
+                    text = "로그인",
+                    buttonColor = point,
+                    onClick = { onLoginSuccess(isFirstLogin) },
+                    isEnabled = email.isNotBlank() && password.isNotBlank()
+                )
+
+                Spacer(Modifier.height(36.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Divider(color = white, thickness = 1.dp, modifier = Modifier.weight(1f))
+                    Text(
+                        text = "또는",
+                        color = white,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    Divider(color = white, thickness = 1.dp, modifier = Modifier.weight(1f))
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.kakao_login),
-                        contentDescription = "kakao",
+                        painter = painterResource(id = R.drawable.google_login),
+                        contentDescription = "google",
                         modifier = Modifier.size(44.dp),
                         contentScale = ContentScale.Crop
                     )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Color(0xFFFEE500)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.kakao_login),
+                            contentDescription = "kakao",
+                            modifier = Modifier.size(44.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-            // signup description
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "계정이 없으신가요?",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = "회원가입",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable { onSignupClick() }
-                )
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "계정이 없으신가요?",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = white
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "회원가입",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = white,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { onSignupClick() }
+                    )
+                }
             }
         }
 
-        // main duck image
+        // 오리 이미지
         Image(
             painter = painterResource(id = R.drawable.main_duck),
             contentDescription = "main_duck",
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .size(width = 420.dp, height = 288.dp)
-                .offset(y = 20.dp),
+                .fillMaxWidth()
+                .height(duckHeight),
             contentScale = ContentScale.Fit
         )
     }
 }
+
 
 @Composable
 private fun LoginForm(
@@ -175,9 +172,7 @@ private fun LoginForm(
         onValueChange = onEmailChange,
         placeholder = "이메일"
     )
-
     Spacer(modifier = Modifier.height(16.dp))
-
     LcInputField(
         value = password,
         onValueChange = onPasswordChange,

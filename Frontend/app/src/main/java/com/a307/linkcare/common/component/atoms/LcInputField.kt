@@ -29,7 +29,7 @@ fun LcInputField(
     isPassword: Boolean = false,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    backgroundColor: Color = Color.White,
+    backgroundColor: Color = white,
     inactiveBorderColor: Color = unActiveBtn,
     activeBorderColor: Color = main,
 ) {

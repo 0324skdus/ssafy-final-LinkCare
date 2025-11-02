@@ -1,14 +1,15 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.a307.linkcare.navigation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.*
+import androidx.compose.runtime.*
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import com.a307.linkcare.LinkCareApp
-import com.a307.linkcare.feature.auth.IntroScreen
-import com.a307.linkcare.feature.auth.LoginScreen
-import com.a307.linkcare.feature.auth.SignupScreen
+import com.a307.linkcare.feature.auth.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun AppNavGraph(
@@ -22,12 +23,21 @@ fun AppNavGraph(
         // 로그인 화면
         composable(Route.Login.route) {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Route.Main.route) {
-                        popUpTo(Route.Login.route) { inclusive = true }
+                onLoginSuccess = { isFirstLogin ->
+                    if (isFirstLogin) {
+                        // 첫 로그인 시: Intro로 이동
+                        navController.navigate(Route.Intro.route) {
+                            popUpTo(Route.Login.route) { inclusive = true }
+                        }
+                    } else {
+                        // 기존 사용자: 바로 메인으로 이동
+                        navController.navigate(Route.Main.route) {
+                            popUpTo(Route.Login.route) { inclusive = true }
+                        }
                     }
                 },
                 onSignupClick = {
+                    // 회원가입 버튼 클릭 시
                     navController.navigate(Route.Signup.route)
                 }
             )
@@ -36,11 +46,8 @@ fun AppNavGraph(
         // 회원가입 화면
         composable(Route.Signup.route) {
             SignupScreen(
-                onVerifyEmail = { email ->
-                    // TODO: 이메일 인증 로직
-                },
-                onSubmit = { email, password ->
-                    // TODO: 회원가입 완료 처리 후 로그인 화면으로 돌아가기
+                onVerifyEmail = { _ -> /* TODO: 이메일 인증 로직 */ },
+                onSubmit = { _, _ ->
                     navController.navigate(Route.Login.route) {
                         popUpTo(Route.Signup.route) { inclusive = true }
                     }
@@ -48,23 +55,57 @@ fun AppNavGraph(
             )
         }
 
-        // 인트로
+        // 인트로 화면 (2초 후 자동으로 Onboarding 이동)
         composable(Route.Intro.route) {
+            var navigated by remember { mutableStateOf(false) }
+
             IntroScreen(
                 onDone = {
-                    // 인트로 완료 후 메인으로
-                    navController.navigate(Route.Main.route) {
-                        popUpTo(Route.Intro.route) { inclusive = true }
+                    if (!navigated) {
+                        navigated = true
+                        navController.navigate(Route.Onboarding.route) {
+                            popUpTo(Route.Intro.route) { inclusive = true }
+                        }
                     }
                 }
             )
+
+            // 2초 뒤 자동 이동
+            LaunchedEffect(Unit) {
+                delay(2000)
+                if (!navigated) {
+                    navigated = true
+                    navController.navigate(Route.Onboarding.route) {
+                        popUpTo(Route.Intro.route) { inclusive = true }
+                    }
+                }
+            }
         }
 
-        // 메인
-        composable(Route.Main.route) {
-//            LinkCareApp()
-            IntroScreen()
+        // 온보딩 (회원정보 수집 Flow)
+        composable(Route.Onboarding.route) {
+            val pagerCount = 5
+            val pagerState = rememberPagerState(initialPage = 0) { pagerCount }
 
+            HorizontalPager(state = pagerState) { page ->
+                when (page) {
+                    0 -> SignupNameScreen(pagerState, pageCount = pagerCount) { }
+                    1 -> SignupGenderScreen(pagerState, pageCount = pagerCount) { }
+                    2 -> SignupBirthScreen(pagerState, pageCount = pagerCount) { }
+                    3 -> SignupHeightScreen(pagerState, pageCount = pagerCount) { }
+                    4 -> SignupCharacterScreen(pagerState, pageCount = pagerCount) { _, _ ->
+                        // 온보딩 완료 후 메인 이동
+                        navController.navigate(Route.Main.route) {
+                            popUpTo(Route.Onboarding.route) { inclusive = true }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 메인 화면
+        composable(Route.Main.route) {
+            LinkCareApp()
         }
     }
 }
