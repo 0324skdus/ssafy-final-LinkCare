@@ -6,9 +6,8 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.test.SleepSessionData
-import com.ssafy.sdk.health.data.test.SleepStageData
-import com.ssafy.sdk.health.data.test.SleepTypeData
+import com.ssafy.sdk.health.data.model.SleepSessionData
+import com.ssafy.sdk.health.data.model.SleepData
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -21,11 +20,11 @@ class ReadSleepTypeUseCase @Inject constructor(
 ) {
 
     @Throws(HealthDataException::class)
-    suspend operator fun invoke(): List<SleepTypeData> {
+    suspend operator fun invoke(): List<SleepData> {
         return readSleepType()
     }
 
-    private suspend fun readSleepType(): List<SleepTypeData> {
+    private suspend fun readSleepType(): List<SleepData> {
         val startTime = LocalDate.now().atStartOfDay()
         val now = LocalDateTime.now()
 
@@ -43,31 +42,21 @@ class ReadSleepTypeUseCase @Inject constructor(
             val sessionsData = rawSessions?.map { rs ->
                 val rawStages: List<SleepSession.SleepStage>? = rs.stages
 
-                val stagesData: List<SleepStageData> = rawStages?.map { stageData ->
-                    SleepStageData(
-                        startTime = stageData.startTime,
-                        endTime = stageData.endTime,
-                        stage = stageData.stage
-                    )
-                }?: emptyList()
-
                 SleepSessionData(
                     startTime = rs.startTime,
                     endTime = rs.endTime,
-                    duration = rs.duration.toMillis(),
-                    stages = stagesData
+                    duration = rs.duration.toMillis()
                 )
             }
 
-            SleepTypeData(
+            SleepData(
                 uid = dataPoint.uid,
-                startTime = dataPoint.startTime.atOffset(dataPoint.zoneOffset).toLocalDateTime(),
-                endTime = dataPoint.endTime?.atOffset(dataPoint.zoneOffset)?.toLocalDateTime(),
+                startTime = dataPoint.startTime,
+                endTime = dataPoint.endTime,
                 zoneOffset = dataPoint.zoneOffset,
                 dataSource = dataPoint.dataSource,
                 duration = dataPoint.getValue(DataType.SleepType.DURATION)?.toMillis(),
-                sessions = sessionsData,
-                sleepScore = dataPoint.getValue(DataType.SleepType.SLEEP_SCORE)
+                sessions = sessionsData
             )
         }
 

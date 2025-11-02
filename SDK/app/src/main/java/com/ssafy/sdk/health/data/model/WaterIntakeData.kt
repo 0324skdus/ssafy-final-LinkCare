@@ -1,0 +1,21 @@
+package com.ssafy.sdk.health.data.model
+
+import com.samsung.android.sdk.health.data.data.DataSource
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+
+data class WaterIntakeGroupedData (
+    val uid: String,
+    val startTime: Instant?,
+    val endTime: Instant?,
+    val zoneOffset: ZoneOffset?,
+    val dataSource: DataSource?,
+    val amount: Float?
+)
+
+data class WaterIntakeData (
+    val waterIntakes: List<WaterIntakeGroupedData>?,
+    val goal: Float,
+    val total: Float
+)

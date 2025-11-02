@@ -1,0 +1,190 @@
+package com.ssafy.sdk.health.presentation
+
+import UploadDailyHealthDataUseCase
+import android.content.SharedPreferences
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ssafy.sdk.health.domain.upload.UploadAllHealthDataUseCase
+import com.ssafy.sdk.health.domain.ArePermissionsGrantedUseCase
+import com.ssafy.sdk.health.domain.sync.SyncAllHealthDataUseCase
+import com.ssafy.sdk.health.domain.sync.SyncDailyHealthDataUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+/**
+ * 동기화 진행 상태
+ */
+sealed class SyncProgress {
+    object Idle : SyncProgress()
+    object PermissionRequired : SyncProgress()
+    object CollectingData : SyncProgress()
+    data class FullSyncInProgress(
+        val dataType: String,
+        val current: Int,
+        val total: Int,
+        val percentage: Int
+    ) : SyncProgress()
+    data class Uploading(val message: String) : SyncProgress()
+    data class Success(val message: String) : SyncProgress()
+    data class Error(val message: String) : SyncProgress()
+}
+
+@HiltViewModel
+class HealthSyncViewModel @Inject constructor(
+    private val arePermissionsGrantedUseCase: ArePermissionsGrantedUseCase,
+    private val syncDailyHealthDataUseCase: SyncDailyHealthDataUseCase,
+    private val syncAllHealthDataUseCase: SyncAllHealthDataUseCase,
+    private val uploadDailyHealthDataUseCase: UploadDailyHealthDataUseCase,
+    private val uploadAllHealthDataUseCase: UploadAllHealthDataUseCase,
+    private val sharedPreferences: SharedPreferences
+) : ViewModel() {
+
+    private val _syncProgress = MutableStateFlow<SyncProgress>(SyncProgress.Idle)
+    val syncProgress: StateFlow<SyncProgress> = _syncProgress.asStateFlow()
+
+    companion object {
+        private const val PREF_IS_FIRST_SYNC = "is_first_sync"
+        private const val PREF_LAST_SYNC_TIME = "last_sync_time"
+    }
+
+    /**
+     * 건강 데이터 동기화 & 업로드
+     * 1. 권한 체크
+     * 2. 데이터 수집 (권한 기반, userId 불필요)
+     * 3. 서버 전송 (userId 필요)
+     */
+    fun syncHealthData(userId: String) {
+        viewModelScope.launch {
+            try {
+                // 1단계: 권한 확인
+                if (!arePermissionsGrantedUseCase()) {
+                    _syncProgress.value = SyncProgress.PermissionRequired
+                    return@launch
+                }
+
+                val isFirstSync = sharedPreferences.getBoolean(PREF_IS_FIRST_SYNC, true)
+
+                if (isFirstSync) {
+                    performFullSyncAndUpload(userId)
+                } else {
+                    performDailySyncAndUpload(userId)
+                }
+            } catch (e: Exception) {
+                _syncProgress.value = SyncProgress.Error(e.message ?: "동기화 실패")
+            }
+        }
+    }
+
+    /**
+     * 전체 동기화 강제 실행
+     */
+    fun forceFullSync(userId: String) {
+        viewModelScope.launch {
+            try {
+                if (!arePermissionsGrantedUseCase()) {
+                    _syncProgress.value = SyncProgress.PermissionRequired
+                    return@launch
+                }
+
+                performFullSyncAndUpload(userId)
+            } catch (e: Exception) {
+                _syncProgress.value = SyncProgress.Error(e.message ?: "전체 동기화 실패")
+            }
+        }
+    }
+
+    /**
+     * 오늘 데이터만 동기화 & 업로드
+     */
+    private suspend fun performDailySyncAndUpload(userId: String) {
+        _syncProgress.value = SyncProgress.CollectingData
+
+        // 1. 데이터 수집 (권한 기반)
+        val dailyData = syncDailyHealthDataUseCase()
+
+        // 2. 서버 전송 (userId 사용)
+        _syncProgress.value = SyncProgress.Uploading("서버에 전송 중...")
+
+        val result = uploadDailyHealthDataUseCase(userId, dailyData)
+
+        result.fold(
+            onSuccess = {
+                sharedPreferences.edit()
+                    .putLong(PREF_LAST_SYNC_TIME, System.currentTimeMillis())
+                    .apply()
+
+                _syncProgress.value = SyncProgress.Success("오늘 데이터 동기화 & 업로드 완료!")
+            },
+            onFailure = { error ->
+                _syncProgress.value = SyncProgress.Error(error.message ?: "업로드 실패")
+            }
+        )
+    }
+
+    /**
+     * 전체 데이터 동기화 & 업로드
+     */
+    private suspend fun performFullSyncAndUpload(userId: String) {
+        // 1. 전체 데이터 수집 (권한 기반)
+        val allData = syncAllHealthDataUseCase(
+            onProgress = { dataType, current, total ->
+                val percentage = if (total > 0) {
+                    (current.toFloat() / total * 100).toInt()
+                } else 0
+
+                _syncProgress.value = SyncProgress.FullSyncInProgress(
+                    dataType = dataType,
+                    current = current,
+                    total = total,
+                    percentage = percentage
+                )
+            },
+            useParallel = true,
+            yearsPerChunk = 1L
+        )
+
+        // 2. 서버 전송 (userId 사용)
+        _syncProgress.value = SyncProgress.Uploading("서버에 전송 중...")
+
+        val result = uploadAllHealthDataUseCase(userId, allData)
+
+        result.fold(
+            onSuccess = {
+                sharedPreferences.edit()
+                    .putBoolean(PREF_IS_FIRST_SYNC, false)
+                    .putLong(PREF_LAST_SYNC_TIME, System.currentTimeMillis())
+                    .apply()
+
+                _syncProgress.value = SyncProgress.Success("전체 동기화 & 업로드 완료!")
+            },
+            onFailure = { error ->
+                _syncProgress.value = SyncProgress.Error(error.message ?: "업로드 실패")
+            }
+        )
+    }
+
+    /**
+     * 동기화 상태 초기화
+     */
+    fun resetSyncStatus() {
+        _syncProgress.value = SyncProgress.Idle
+    }
+
+    /**
+     * 최초 동기화 여부 확인
+     */
+    fun isFirstSync(): Boolean {
+        return sharedPreferences.getBoolean(PREF_IS_FIRST_SYNC, true)
+    }
+
+    /**
+     * 마지막 동기화 시간 조회
+     */
+    fun getLastSyncTime(): Long {
+        return sharedPreferences.getLong(PREF_LAST_SYNC_TIME, 0L)
+    }
+}

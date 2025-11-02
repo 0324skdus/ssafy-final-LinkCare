@@ -1,4 +1,4 @@
-package com.ssafy.sdk.health.domain.sync
+package com.ssafy.sdk.health.domain.backup.sync.heartRate
 
 import android.util.Log
 import com.samsung.android.sdk.health.data.HealthDataStore

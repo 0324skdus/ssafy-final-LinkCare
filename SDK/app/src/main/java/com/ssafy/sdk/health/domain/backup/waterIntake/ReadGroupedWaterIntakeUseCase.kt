@@ -6,13 +6,16 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.ssafy.sdk.health.data.test.WaterIntakeGroupedData
+import com.ssafy.sdk.health.data.model.WaterIntakeGroupedData
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
 private const val TAG = "ReadTotalWaterIntakeUserCase"
+private val KST: ZoneId = ZoneId.of("Asia/Seoul")
+
 
 class ReadGroupedWaterIntakeUseCase @Inject constructor(
     private val healthDataStore: HealthDataStore
@@ -24,8 +27,7 @@ class ReadGroupedWaterIntakeUseCase @Inject constructor(
     }
 
     private suspend fun readTotalWaterIntake(): List<WaterIntakeGroupedData> {
-        val zone = ZoneOffset.systemDefault()
-        val startDate = LocalDate.now(zone).atStartOfDay()
+        val startDate = LocalDate.now(KST).atStartOfDay()
         val end = startDate.plusDays(1)
 
         Log.i(TAG, "StartDate: $${startDate}, End: $end")

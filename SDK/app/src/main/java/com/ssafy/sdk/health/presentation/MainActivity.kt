@@ -31,8 +31,7 @@ import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.ResolvablePlatformException
 import com.ssafy.sdk.health.domain.Permissions.PERMISSIONS
-import com.ssafy.sdk.health.domain.sync.HeartRateReader
-import com.ssafy.sdk.health.domain.sync.RunHeartRateSmokeTests
+import com.ssafy.sdk.health.domain.backup.sync.heartRate.HeartRateReader
 import com.ssafy.sdk.health.presentation.ui.Main
 import com.ssafy.sdk.health.presentation.ui.theme.PhoneAppTheme
 import dagger.hilt.android.AndroidEntryPoint

@@ -8,10 +8,13 @@ import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
 private const val TAG = "ReadTotalWaterIntakeUseCase"
+private val KST: ZoneId = ZoneId.of("Asia/Seoul")
+
 class ReadTotalWaterIntakeUseCase @Inject constructor(
     private val healthDataStore: HealthDataStore
 ) {
@@ -25,13 +28,13 @@ class ReadTotalWaterIntakeUseCase @Inject constructor(
 
     private suspend fun readTotalWaterIntake(): Float {
         val startDate = LocalDate.now().atStartOfDay()
-        val now = LocalDateTime.now()
+        val end = startDate.plusDays(1)
 
-        Log.i(TAG, "StartDate : $startDate, Now: $now")
+        Log.i(TAG, "StartDate : $startDate, Now: $end")
 
         val readRequest = DataType.WaterIntakeType.TOTAL
             .requestBuilder
-            .setLocalTimeFilter(LocalTimeFilter.of(startDate, now))
+            .setLocalTimeFilter(LocalTimeFilter.of(startDate, end))
             .build()
 
         val result = healthDataStore.aggregateData(readRequest)

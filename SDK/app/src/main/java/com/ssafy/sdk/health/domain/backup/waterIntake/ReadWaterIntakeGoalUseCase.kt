@@ -6,10 +6,13 @@ import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.LocalDateFilter
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.jvm.Throws
 
 private const val TAG = "ReadWaterIntakeGoalUseCase"
+private val KST: ZoneId = ZoneId.of("Asia/Seoul")
+
 
 class ReadWaterIntakeGoalUseCase @Inject constructor(
     private val healthDataStore: HealthDataStore
@@ -21,7 +24,7 @@ class ReadWaterIntakeGoalUseCase @Inject constructor(
     }
 
     private suspend fun readWaterIntakeGoal(): Float {
-        val startDate = LocalDate.now()
+        val startDate = LocalDate.now(KST)
         val endDate = startDate.plusDays(1)
 
         Log.i(TAG, "StartDate: $startDate, EndDate: $endDate")
@@ -34,7 +37,6 @@ class ReadWaterIntakeGoalUseCase @Inject constructor(
         var waterIntakeGoal = 0f
 
         result.dataList.forEach { data ->
-            Log.i("Water Intake Goal : ", "${data.value}")
             data.value?.let { waterIntakeGoal = it }
         }
 

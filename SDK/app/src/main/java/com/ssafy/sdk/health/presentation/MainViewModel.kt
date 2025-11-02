@@ -40,7 +40,7 @@ import com.ssafy.sdk.health.domain.exercise.ReadExerciseUseCase
 import com.ssafy.sdk.health.domain.heartRates.ReadHeartRateUserCase
 import com.ssafy.sdk.health.domain.sleeps.ReadTotalSleepsUseCase
 import com.ssafy.sdk.health.domain.steps.ReadStepDataUseCase
-import com.ssafy.sdk.health.domain.sync.HeartRateReader
+import com.ssafy.sdk.health.domain.backup.sync.heartRate.HeartRateReader
 import com.ssafy.sdk.health.domain.waterIntake.ReadWaterIntakeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
