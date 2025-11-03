@@ -5,11 +5,8 @@ package com.a307.linkcare.navigation
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.a307.linkcare.LinkCareApp
-import com.a307.linkcare.feature.auth.OnboardingViewModel
 import com.a307.linkcare.feature.auth.ui.IntroScreen
 import com.a307.linkcare.feature.auth.ui.LoginScreen
 import com.a307.linkcare.feature.auth.ui.SignupBirthScreen
@@ -131,7 +128,7 @@ fun AppNavGraph(
 
         // 메인 화면
         composable(Route.Main.route) {
-            LinkCareApp()
+            MainTabs()
         }
     }
 }

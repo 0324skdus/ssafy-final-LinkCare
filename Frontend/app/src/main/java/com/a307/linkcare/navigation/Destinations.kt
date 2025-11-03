@@ -1,8 +1,6 @@
 package com.a307.linkcare.navigation
 
 sealed class Route(val route: String) {
-    object Main  : Route("main")
-
     // Auth 영역
     object Intro  : Route("intro")
     object Login  : Route("login")
@@ -12,9 +10,13 @@ sealed class Route(val route: String) {
     // Intro 영역
     object IntroTour : Route("intro_tour")
 
-    // Main 탭 영역
+    // 탭을 감싸는 쉘
+    object Main  : Route("main")
+
+    // Main 탭
     object Care    : Route("care")
     object Health  : Route("health")
     object Alarm   : Route("alarm")
     object MyPage  : Route("mypage")
+
 }

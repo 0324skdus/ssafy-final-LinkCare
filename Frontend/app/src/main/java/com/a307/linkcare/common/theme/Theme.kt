@@ -13,29 +13,27 @@ import androidx.compose.ui.platform.LocalContext
 private val DarkColorScheme = darkColorScheme(
     primary = main,
     secondary = point,
-    tertiary = background1
+    tertiary = white,
+    background = white,
+    surface = white
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = main,
     secondary = point,
-    tertiary = background1
+    tertiary = white,
+    background = white,
+    surface = white
 )
 
 @Composable
 fun LinkCareTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true, // Android 12 이상에서 시스템 색상 적용 여부
+    darkTheme: Boolean = false,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme =
+        if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
