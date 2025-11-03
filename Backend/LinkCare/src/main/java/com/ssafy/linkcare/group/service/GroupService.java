@@ -7,6 +7,8 @@ import com.ssafy.linkcare.group.entity.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
+import com.ssafy.linkcare.notification.enums.NotificationType;
+import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -30,6 +32,7 @@ public class GroupService {
     private final S3Service s3Service;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final NotificationService notificationService;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupInvitationRepository invitationRepository;
     private final GroupGoalCriteriaRepository goalCriteriaRepository;
@@ -487,6 +490,17 @@ public class GroupService {
 
         groupJoinRequestRepository.save(joinRequest);
 
+        // 7. 방장에게 알림 전송 (4번에서 이미 조회한 leader 재사용)
+        String notificationContent = user.getName() + "님이 가입 신청을 했습니다.";
+        notificationService.createNotification(
+                leader.getUser(),
+                NotificationType.GROUP_JOIN_REQUEST,
+                group.getGroupName(),
+                notificationContent,
+                group,
+                joinRequest
+        );
+
         log.info("그룹 참가 신청 완료 ({}): userId={}, groupSeq={}, agreedPermissions=[sleep={}, water={}, bp={}, bs={}]",
                 joinMethod, user.getUserPk(), group.getGroupSeq(),
                 agreement.isSleepAllowed(), agreement.isWaterIntakeAllowed(),
@@ -762,6 +776,17 @@ public class GroupService {
         // 8. 신청 상태를 APPROVED로 변경
         joinRequest.approve();
 
+        // 9. 신청자에게 승인 알림 전송
+        String approvalContent = "참가 신청이 승인되었습니다.";
+        notificationService.createNotification(
+                newUser,
+                NotificationType.GROUP_JOIN_APPROVED,
+                group.getGroupName(),
+                approvalContent,
+                group,
+                null
+        );
+
         log.info("참가 신청 승인 완료: requestSeq={}, userId={}, groupSeq={}",
                 requestSeq, newUser.getUserPk(), group.getGroupSeq());
     }
@@ -795,6 +820,18 @@ public class GroupService {
 
         // 5. 신청 거절 처리
         joinRequest.reject();
+
+        // 6. 신청자에게 거절 알림 전송
+        User applicant = joinRequest.getUser();
+        String rejectionContent = "참가 신청이 거절되었습니다.";
+        notificationService.createNotification(
+                applicant,
+                NotificationType.GROUP_JOIN_REJECTED,
+                group.getGroupName(),
+                rejectionContent,
+                group,
+                null
+        );
 
         log.info("참가 신청 거절 완료: requestSeq={}, userId={}, groupSeq={}",
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());

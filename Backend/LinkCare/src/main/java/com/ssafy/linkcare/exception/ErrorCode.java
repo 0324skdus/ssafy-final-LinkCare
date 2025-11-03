@@ -68,7 +68,11 @@ public enum ErrorCode {
     JOIN_REQUEST_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 가입 신청입니다"),
 
     PERMISSION_AGREEMENT_INVALID(HttpStatus.BAD_REQUEST, "권한 동의 정보가 유효하지 않습니다"),
-    HEALTH_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 정보 권한 설정을 찾을 수 없습니다");
+    HEALTH_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 정보 권한 설정을 찾을 수 없습니다"),
+
+    // 알림 관련 에러 (Notification)
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다"),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다");
 
     private final HttpStatus status;
     private final String message;

@@ -1,12 +1,16 @@
 package com.ssafy.linkcaretest
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,9 +25,11 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Task
+import com.google.firebase.messaging.FirebaseMessaging
 import com.ssafy.linkcaretest.api.GoogleLoginRequest
 import com.ssafy.linkcaretest.api.KakaoLoginRequest
 import com.ssafy.linkcaretest.api.RetrofitClient
+import com.ssafy.linkcaretest.api.UpdateFcmTokenRequest
 import com.ssafy.linkcaretest.ui.theme.LinkCareTestTheme
 import kotlinx.coroutines.launch
 import com.kakao.sdk.auth.model.OAuthToken
@@ -34,6 +40,7 @@ import com.kakao.sdk.user.UserApiClient
 class MainActivity : ComponentActivity() {
 
     private lateinit var googleSignInClient: GoogleSignInClient
+    private var jwtToken: String? = null // JWT 토큰 저장
 
     // Google Sign-In Result Launcher
     private val googleSignInLauncher = registerForActivityResult(
@@ -45,6 +52,19 @@ class MainActivity : ComponentActivity() {
         } else {
             Log.e("GoogleLogin", "Google Sign-In cancelled")
             Toast.makeText(this, "Google 로그인이 취소되었습니다", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 알림 권한 요청 (Android 13 이상)
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("FCM", "알림 권한 허용됨")
+            getFCMToken()
+        } else {
+            Log.w("FCM", "알림 권한 거부됨")
+            Toast.makeText(this, "알림 권한이 거부되었습니다", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -104,13 +124,27 @@ class MainActivity : ComponentActivity() {
                         val loginResponse = response.body()
                         Log.d("GoogleLogin", "백엔드 로그인 성공: ${loginResponse?.email}")
 
+                        // JWT 토큰 저장 (body의 accessToken 필드에서 가져오기)
+                        jwtToken = loginResponse?.accessToken
+                        Log.d("GoogleLogin", "JWT 토큰 저장: $jwtToken")
+
+                        // Postman 테스트용 토큰 출력
+                        Log.d("GoogleLogin", "========================================")
+                        Log.d("GoogleLogin", "📋 Postman용 토큰 정보")
+                        Log.d("GoogleLogin", "========================================")
+                        Log.d("GoogleLogin", "Access Token: ${loginResponse?.accessToken}")
+                        Log.d("GoogleLogin", "Refresh Token: ${loginResponse?.refreshToken}")
+                        Log.d("GoogleLogin", "User PK: ${loginResponse?.userPk}")
+                        Log.d("GoogleLogin", "========================================")
+
                         Toast.makeText(
                             this@MainActivity,
                             "Google 로그인 성공!\n이름: ${loginResponse?.name}\n이메일: ${loginResponse?.email}",
                             Toast.LENGTH_LONG
                         ).show()
 
-                        // TODO: JWT 토큰 저장, 메인 화면 이동 등
+                        // 로그인 성공 후 알림 권한 요청 및 FCM 토큰 전송
+                        requestNotificationPermissionAndGetToken()
 
                     } else {
                         Log.e("GoogleLogin", "백엔드 에러: ${response.code()} - ${response.message()}")
@@ -200,13 +234,18 @@ class MainActivity : ComponentActivity() {
                         val loginResponse = response.body()
                         Log.d("KakaoLogin", "백엔드 로그인 성공: ${loginResponse?.email}")
 
+                        // JWT 토큰 저장 (body의 accessToken 필드에서 가져오기)
+                        jwtToken = loginResponse?.accessToken
+                        Log.d("KakaoLogin", "JWT 토큰 저장: $jwtToken")
+
                         Toast.makeText(
                             this@MainActivity,
                             "카카오 로그인 성공!\n이름: ${loginResponse?.name}\n이메일: ${loginResponse?.email}",
                             Toast.LENGTH_LONG
                         ).show()
 
-                        // TODO: JWT 토큰 저장, 메인 화면 이동 등
+                        // 로그인 성공 후 알림 권한 요청 및 FCM 토큰 전송
+                        requestNotificationPermissionAndGetToken()
 
                     } else {
                         Log.e("KakaoLogin", "백엔드 에러: ${response.code()} - ${response.message()}")
@@ -227,6 +266,79 @@ class MainActivity : ComponentActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+            }
+        }
+    }
+
+    // 알림 권한 요청 및 FCM 토큰 가져오기
+    private fun requestNotificationPermissionAndGetToken() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13 이상: 알림 권한 확인
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // 권한이 이미 허용됨
+                    Log.d("FCM", "알림 권한이 이미 허용됨")
+                    getFCMToken()
+                }
+                else -> {
+                    // 권한 요청
+                    Log.d("FCM", "알림 권한 요청")
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            // Android 12 이하: 권한 필요 없음
+            getFCMToken()
+        }
+    }
+
+    // FCM 토큰 가져오기
+    private fun getFCMToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM", "FCM 토큰 가져오기 실패", task.exception)
+                return@addOnCompleteListener
+            }
+
+            // FCM 토큰 획득
+            val fcmToken = task.result
+            Log.d("FCM", "FCM 토큰: $fcmToken")
+
+            // 백엔드로 FCM 토큰 전송
+            sendFCMTokenToBackend(fcmToken)
+        }
+    }
+
+    // FCM 토큰을 백엔드로 전송
+    private fun sendFCMTokenToBackend(fcmToken: String) {
+        val token = jwtToken
+        if (token == null) {
+            Log.e("FCM", "JWT 토큰이 없어서 FCM 토큰을 전송할 수 없습니다")
+            return
+        }
+
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val request = UpdateFcmTokenRequest(fcmToken)
+                val response = RetrofitClient.authApi.updateFcmToken("Bearer $token", request)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Log.d("FCM", "FCM 토큰 백엔드 전송 성공")
+                        Toast.makeText(
+                            this@MainActivity,
+                            "푸시 알림이 활성화되었습니다",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Log.e("FCM", "FCM 토큰 백엔드 전송 실패: ${response.code()}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FCM", "FCM 토큰 전송 중 에러", e)
             }
         }
     }

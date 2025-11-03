@@ -53,6 +53,10 @@ public class User {
     @Column(name = "exercise_start_year")
     private Integer exerciseStartYear;  // 예: 2020
 
+    // FCM 토큰 (푸시 알림용)
+    @Column(name = "fcm_token", length = 255)
+    private String fcmToken;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -88,6 +92,11 @@ public class User {
         this.birth = birth;
         this.gender = gender;
         this.exerciseStartYear = exerciseStartYear;
+    }
+
+    // FCM 토큰 업데이트
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 
 }
