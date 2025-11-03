@@ -12,6 +12,37 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/*
+    * 사용자 엔티티
+
+    * 역할: LinkCare 서비스의 사용자 정보를 저장
+
+    * 로그인 방식:
+        * - LOCAL: 이메일/비밀번호 (password 필수)
+        * - GOOGLE: 구글 소셜 로그인 (providerId에 구글 고유 ID 저장)
+        * - KAKAO: 카카오 소셜 로그인 (providerId에 카카오 고유 ID 저장)
+
+    * 주요 기능:
+        * - 그룹 참여: GroupMember를 통해 여러 그룹에 소속 가능
+        * - 알림 수신: FCM 토큰으로 푸시 알림 받기
+        * - 프로필 관리: 신체 정보, 운동 시작 년도 등
+
+    * 필수 필드:
+        * - email: 로그인 ID (unique)
+        * - name: 사용자 이름
+        * - provider: 로그인 방식 (GOOGLE, KAKAO, LOCAL)
+
+    * 선택 필드:
+        * - password: LOCAL 로그인만 사용
+        * - height, weight, birth, gender: 프로필 정보
+        * - exerciseStartYear: 운동 시작 년도 (통계용)
+        * - fcmToken: 푸시 알림 수신용 토큰
+
+    * 연관 엔티티:
+        * - GroupMember (1:N) - 사용자가 속한 그룹들
+        * - GroupJoinRequest (1:N) - 사용자가 신청한 참가 신청들
+        * - Notification (1:N) - 사용자가 받은 알림들
+*/
 @Entity
 @Table(name = "users")
 @Getter
