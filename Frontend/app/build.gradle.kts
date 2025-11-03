@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.compose.runtime)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -75,4 +76,6 @@ dependencies {
 //    implementation("com.google.android.gms:play-services-auth:21.2.0")
 //    // Kakao SDK
 //    implementation("com.kakao.sdk:v2-user:2.20.6")
+    // image
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }

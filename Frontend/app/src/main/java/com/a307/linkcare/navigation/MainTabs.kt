@@ -9,8 +9,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import com.a307.linkcare.common.component.molecules.*
-import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.feature.commongroup.MainWithNoGroup
+import com.a307.linkcare.feature.caregroup.CareGroupCreate
+import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +34,7 @@ fun MainTabs(
 
     // 케어/헬스 그룹 리스트 - 더미 데이터
     /** TO DO : 그룹 조회 API 연결 */
-    val careGroups = listOf("") //"307", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹"
+    val careGroups = listOf("307", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
     val currentGroupCare = if (careGroups.isNotEmpty() && careGroups.any { it.isNotBlank() }) careGroups[selectedIndexCare] else "케어"
 
     val healthGroups = listOf("만수무강", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
@@ -61,7 +62,7 @@ fun MainTabs(
                                     title = currentGroupCare,
                                     menuItems = careGroups,
                                     onMenuSelect = { idx, _ -> selectedIndexCare = idx },
-                                    onAddClick = onAddGroup,
+                                    onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { isSearchingCare = true },
                                     moreMenu = { dismiss ->
                                         DropdownMenuItem(
@@ -102,7 +103,7 @@ fun MainTabs(
                                     title = currentGroupHealth,
                                     menuItems = healthGroups,
                                     onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
-                                    onAddClick = onAddGroup,
+                                    onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { isSearchingHealth = true },
                                     moreMenu = { dismiss ->
                                         DropdownMenuItem(
@@ -155,7 +156,8 @@ fun MainTabs(
                 MainWithNoGroup(
                     navController = navController,
                     onCreateGroupClick = { /* TODO */ },
-                    onExploreGroupClick = { isSearchingCare = true }
+                    onExploreGroupClick = { isSearchingCare = true },
+                    currentTab = "care"
                 )
             }
 
@@ -163,12 +165,24 @@ fun MainTabs(
                 MainWithNoGroup(
                     navController = navController,
                     onCreateGroupClick = { /* TODO */ },
-                    onExploreGroupClick = { isSearchingHealth = true }
+                    onExploreGroupClick = { isSearchingHealth = true },
+                    currentTab = "health"
                 )
             }
 
             composable(Route.Alarm.route)  { /* TODO */ }
             composable(Route.MyPage.route) { /* TODO */ }
+
+            composable(Route.CreateCareGroup.route) {
+                CareGroupCreate(
+                    navController = navController
+                )
+            }
+            composable(Route.CreateHealthGroup.route) {
+                HealthGroupCreate(
+                    navController = navController
+                )
+            }
         }
     }
 }

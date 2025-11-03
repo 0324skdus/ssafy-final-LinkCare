@@ -14,13 +14,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.navigation.Route
+import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
+import com.a307.linkcare.feature.caregroup.CareGroupCreate
 
 @Composable
 fun MainWithNoGroup(
     navController: NavHostController,
+    currentTab: String,
     @DrawableRes duckRes: Int = R.drawable.empty_duck,
     onCreateGroupClick: () -> Unit = {},
     onExploreGroupClick: () -> Unit = {}
@@ -46,7 +51,8 @@ fun MainWithNoGroup(
         Text(
             text = "아직 가입된 그룹이 없습니다.",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = black
         )
 
         Spacer(Modifier.height(20.dp))
@@ -56,14 +62,21 @@ fun MainWithNoGroup(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = onCreateGroupClick,
+                onClick = {
+                    // 현재 탭에 따라 이동 경로 분기
+                    when (currentTab) {
+                        "care" -> navController.navigate(Route.CreateCareGroup.route)
+                        "health" -> navController.navigate(Route.CreateHealthGroup.route)
+                        else -> navController.navigate(Route.CreateCareGroup.route)
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.width(140.dp).height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                         containerColor = main,
                         contentColor = white
                 )
-            ) { Text("새 그룹 만들기") }
+            ) { Text("그룹 생성하기") }
 
             Button(
                 onClick = onExploreGroupClick,
