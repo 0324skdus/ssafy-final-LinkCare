@@ -1,21 +1,23 @@
 package com.ssafy.linkcare.user.controller;
 
-import com.ssafy.linkcare.s3.S3Service;
+import com.ssafy.linkcare.exception.CustomException;
+import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
-import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @Slf4j
 @RestController
@@ -24,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
-    private final S3Service s3Service;
 
     /*
      * 프로필 업데이트
@@ -45,37 +46,67 @@ public class UserController {
         @RequestParam("height") Float height,
         @RequestParam("weight") Float weight,
         @RequestParam("gender") String gender,
-        @RequestParam("exerciseStartYear") Integer exerciseStartYear,
-        @RequestPart(value = "image", required = false) MultipartFile image) {
+        @RequestParam("exerciseStartYear") Integer exerciseStartYear) {
 
         String userId = authentication.getName();
 
+        // 검증
+        LocalDate birthDate = validateAndParseBirth(birth);
+        validateHeight(height);
+        validateWeight(weight);
+        validateGender(gender);
+        validateExerciseStartYear(exerciseStartYear);
+
         // 1. ProfileUpdateRequest 생성
         ProfileUpdateRequest request = new ProfileUpdateRequest(
-            LocalDate.parse(birth),
+            birthDate,
             height,
             weight,
             gender,
             exerciseStartYear
         );
 
-        // 2. 이미지가 있으면 S3 업로드
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            // 기존 이미지 삭제 (기본 이미지 제외)
-            User user = userService.getUserById(Long.parseLong(userId));
-            if (user.getImageUrl() != null &&
-                !user.getImageUrl().contains("default_profile.png")) {
-                s3Service.deleteFile(user.getImageUrl());
-            }
-
-            // 새 이미지 업로드
-            imageUrl = s3Service.uploadFile(image);
-        }
-
-        // 3. 프로필 정보 + 이미지 URL 업데이트
-        userService.updateProfile(Long.parseLong(userId), request, imageUrl);
+        // 2. 프로필 정보 + 이미지 URL 업데이트
+        userService.updateProfile(Long.parseLong(userId), request);
 
         return ResponseEntity.ok("프로필 업데이트 성공");
+    }
+
+    // 검증 메서드들
+    private LocalDate validateAndParseBirth(String birth) {
+        try {
+            LocalDate birthDate = LocalDate.parse(birth);
+            if (birthDate.isAfter(LocalDate.now())) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "생년월일은 미래일 수 없습니다");
+            }
+            return birthDate;
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "생년월일 형식이 올바르지 않습니다");
+        }
+    }
+
+    private void validateHeight(Float height) {
+        if (height != null && (height <= 0 || height > 300)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "키는 0~300 사이여야 합니다");
+        }
+    }
+
+    private void validateWeight(Float weight) {
+        if (weight != null && (weight <= 0 || weight > 500)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "몸무게는 0~500 사이여야 합니다");
+        }
+    }
+
+    private void validateGender(String gender) {
+        if (gender != null && !gender.trim().matches("남|여")) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "성별은 남, 여 중 하나여야 합니다");
+        }
+    }
+
+    private void validateExerciseStartYear(Integer year) {
+        int currentYear = LocalDate.now().getYear();
+        if (year != null && (year < 1900 || year > currentYear)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "운동 시작 년도가 올바르지 않습니다");
+        }
     }
 }

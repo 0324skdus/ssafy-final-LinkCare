@@ -19,4 +19,7 @@ sealed class Route(val route: String) {
     object Alarm   : Route("alarm")
     object MyPage  : Route("mypage")
 
+    // 새 그룹 생성 페이지
+    object CreateCareGroup : Route("create_care_group")
+    object CreateHealthGroup : Route("create_health_group")
 }

@@ -23,67 +23,64 @@ public class S3Service {
     private final S3Client s3Client;
 
     @Value("${spring.cloud.aws.s3.bucket}")
-    private String bucket;
+    private String bucketName;
 
     @Value("${spring.cloud.aws.region.static}")
     private String region;
 
-    /**
-     * S3에 파일 업로드 (profile/ 폴더 아래에 저장)
-     * @param file 업로드할 파일
-     * @return 업로드된 파일의 URL
-     */
-    public String uploadFile(MultipartFile file) {
+    /*
+        * 그룹 이미지 업로드
+    */
+    public String uploadGroupImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
         String originalFilename = file.getOriginalFilename();
-        String filename = "profile/" + UUID.randomUUID() + "_" + originalFilename;
+        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String fileName = "Group-Image/" + UUID.randomUUID() + extension;
 
         try {
-            // S3에 업로드
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(filename)
-                .contentType(file.getContentType())
-                .contentLength(file.getSize())
-                .build();
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .contentType(file.getContentType())
+                    .build();
 
             s3Client.putObject(putObjectRequest,
-                RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-            // 업로드된 파일의 URL 반환
-            String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s",
-                bucket, region, filename);
-
-            log.info("S3 파일 업로드 성공: {}", fileUrl);
-            return fileUrl;
+            return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, fileName);
 
         } catch (IOException e) {
-            log.error("S3 파일 업로드 실패", e);
+            log.error("S3 파일 업로드 실패: {}", e.getMessage());
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
     }
 
-    /**
-     * S3에서 파일 삭제
-     * @param fileUrl 삭제할 파일의 URL
-     */
+    /*
+        * S3 파일 삭제 (기본 이미지는 삭제 안함)
+    */
     public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.contains("default-image.jpg")) {
+            return; // 기본 이미지는 삭제하지 않음
+        }
+
         try {
-            // URL에서 파일명 추출 (profile/UUID_filename.jpg)
-            String filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            // profile/ 포함해서 추출하려면:
-            String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
+            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            String key = "Group-Image/" + fileName;
 
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .build();
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
 
             s3Client.deleteObject(deleteObjectRequest);
-            log.info("S3 파일 삭제 성공: {}", key);
+            log.info("S3 파일 삭제 완료: {}", key);
 
         } catch (Exception e) {
-            log.error("S3 파일 삭제 실패", e);
-            throw new CustomException(ErrorCode.FILE_DELETE_FAILED);
+            log.error("S3 파일 삭제 실패: {}", e.getMessage());
+            // 삭제 실패해도 예외 던지지 않음 (이미 삭제됐거나 존재하지 않을 수 있음)
         }
     }
 }

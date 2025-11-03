@@ -40,9 +40,6 @@ public class AuthService {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
-    @Value("${app.default-profile-image-url}")
-    private String defaultProfileImageUrl;
-
     // 이메일 중복 확인
     public boolean checkEmailDuplicate(String email) {
         return userRepository.existsByEmail(email);
@@ -92,7 +89,8 @@ public class AuthService {
                 .email(request.email())
                 .password(encodedPassword)
                 .name(request.name())
-                .imageUrl(defaultProfileImageUrl)
+                .provider("LOCAL")
+                .providerId(null)
                 .build();
 
         // 4. DB 저장
@@ -108,14 +106,23 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
-        // 2. 비밀번호 확인
+        // 2. 소셜 로그인 사용자는 일반 로그인 불가
+        if (user.getPassword() == null) {
+            String provider = user.getProvider();
+            if ("GOOGLE".equals(provider)) {
+                throw new CustomException(ErrorCode.INVALID_CREDENTIALS, "Google 로그인을 사용해주세요");
+            } else if ("KAKAO".equals(provider)) {
+                throw new CustomException(ErrorCode.INVALID_CREDENTIALS, "Kakao 로그인을 사용해주세요");
+            }
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS, "소셜 로그인으로 가입된 계정입니다");
+        }
+
+        // 3. 비밀번호 확인
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        log.info("로그인 성공: {}", request.email());
-
-        // 3. 토큰 생성 및 응답
+        // 4. 토큰 생성 및 응답
         return generateTokenResponse(user);
     }
 
@@ -186,7 +193,7 @@ public class AuthService {
         * @param idToken Android 앱에서 받은 Google ID Token
         * @return LoginResponse (JWT 토큰 포함)
     */
-    @Transactional(readOnly = false)
+    @Transactional
     public LoginResponse googleLogin(String idToken) {
 
         // 1. OAuth2Service로 Google ID Token 검증 및 사용자 정보 가져오기
@@ -203,7 +210,7 @@ public class AuthService {
         * @param code Android 앱에서 받은 인가 코드
         * @return LoginResponse (JWT 토큰 포함)
     */
-    @Transactional(readOnly = false)
+    @Transactional
     public LoginResponse kakaoLogin(String accessToken) {
         // 1. Access Token으로 사용자 정보 직접 조회 (토큰 발급 단계 생략!)
         KakaoUserInfo kakaoUserInfo = kakaoService.getUserInfo(accessToken);
