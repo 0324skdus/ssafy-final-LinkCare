@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Slf4j
@@ -20,7 +22,7 @@ public class JwtUtil {
     public JwtUtil(@Value("${jwt.secret}") String secret,
                    @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
                    @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
@@ -68,13 +70,13 @@ public class JwtUtil {
                     .parseSignedClaims(token);
             return true;
         } catch (SecurityException | MalformedJwtException e) {
-            log.error("잘못된 JWT 서명입니다. token: {}", token);
+            log.error("잘못된 JWT 서명입니다.");  
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT 토큰입니다. token: {}", token);
+            log.error("만료된 JWT 토큰입니다.");  
         } catch (UnsupportedJwtException e) {
-            log.error("지원되지 않는 JWT 토큰입니다. token: {}", token);
+            log.error("지원되지 않는 JWT 토큰입니다.");  
         } catch (IllegalArgumentException e) {
-            log.error("JWT 토큰이 잘못되었습니다. token: {}", token);
+            log.error("JWT 토큰이 잘못되었습니다.");  
         }
         return false;
     }
