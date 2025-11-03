@@ -21,6 +21,7 @@ abstract class CompositeHealthReader<T> {
      * @param onProgress 진행 상황 콜백
      */
     abstract suspend fun readAll(
+        yearsPerChunk: Long = 1L,
         onProgress: ((done: Int, total: Int) -> Unit)? = null
     ): List<T>
 }

@@ -1,13 +1,16 @@
 package com.ssafy.sdk.health.presentation
 
-import UploadDailyHealthDataUseCase
+import android.app.Activity
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.ssafy.sdk.health.domain.upload.UploadAllHealthDataUseCase
 import com.ssafy.sdk.health.domain.ArePermissionsGrantedUseCase
+import com.ssafy.sdk.health.domain.RequestPermissionsUseCase
 import com.ssafy.sdk.health.domain.sync.SyncAllHealthDataUseCase
 import com.ssafy.sdk.health.domain.sync.SyncDailyHealthDataUseCase
+import com.ssafy.sdk.health.domain.upload.UploadDailyHealthDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,11 +43,46 @@ class HealthSyncViewModel @Inject constructor(
     private val syncAllHealthDataUseCase: SyncAllHealthDataUseCase,
     private val uploadDailyHealthDataUseCase: UploadDailyHealthDataUseCase,
     private val uploadAllHealthDataUseCase: UploadAllHealthDataUseCase,
-    private val sharedPreferences: SharedPreferences
+    private val sharedPreferences: SharedPreferences,
+    private val requestPermissionsUseCase: RequestPermissionsUseCase,
 ) : ViewModel() {
 
     private val _syncProgress = MutableStateFlow<SyncProgress>(SyncProgress.Idle)
     val syncProgress: StateFlow<SyncProgress> = _syncProgress.asStateFlow()
+
+    private val _permissionsGranted = MutableStateFlow(false)
+    val permissionsGranted: StateFlow<Boolean> = _permissionsGranted.asStateFlow()
+
+    /**
+     * 권한 요청
+     */
+    fun requestPermissions(activity: Activity) {
+        viewModelScope.launch {
+            try {
+                val granted = requestPermissionsUseCase(activity)
+                _permissionsGranted.value = granted
+
+                if (!granted) {
+                    _syncProgress.value = SyncProgress.PermissionRequired
+                }
+            } catch (e: HealthDataException) {
+                _syncProgress.value = SyncProgress.Error("권한 요청 실패: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * 앱 시작 시 권한 체크
+     */
+    fun checkPermissions() {
+        viewModelScope.launch {
+            try {
+                _permissionsGranted.value = arePermissionsGrantedUseCase()
+            } catch (e: HealthDataException) {
+                _permissionsGranted.value = false
+            }
+        }
+    }
 
     companion object {
         private const val PREF_IS_FIRST_SYNC = "is_first_sync"

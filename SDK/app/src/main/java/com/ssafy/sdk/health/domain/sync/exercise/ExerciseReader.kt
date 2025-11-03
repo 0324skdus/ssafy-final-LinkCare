@@ -15,6 +15,7 @@ import com.ssafy.sdk.health.domain.sync.common.CompositeHealthReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -41,6 +42,7 @@ class ExerciseReader @Inject constructor(
     }
 
     override suspend fun readAll(
+        yearsPerChunk: Long,
         onProgress: ((done: Int, total: Int) -> Unit)?
     ): List<ExerciseData> = withContext(Dispatchers.IO) {
         // 전체 기간을 1년 단위로 조회
@@ -157,7 +159,7 @@ class ExerciseReader @Inject constructor(
 
     private fun generateYearWindows(yearsPerChunk: Long): List<Pair<Instant, Instant>> {
         val now = Instant.now()
-        var cursor = Instant.EPOCH
+        var cursor = Instant.now().minus(Duration.ofDays(20 * 365L))
         val windows = mutableListOf<Pair<Instant, Instant>>()
 
         while (cursor < now) {

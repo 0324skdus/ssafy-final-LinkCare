@@ -1,6 +1,5 @@
 package com.ssafy.sdk.health.domain.upload
 
-import UploadDailyHealthDataUseCase
 import com.ssafy.sdk.health.domain.sync.SyncAllHealthDataUseCase
 import com.ssafy.sdk.health.domain.sync.SyncDailyHealthDataUseCase
 import javax.inject.Inject

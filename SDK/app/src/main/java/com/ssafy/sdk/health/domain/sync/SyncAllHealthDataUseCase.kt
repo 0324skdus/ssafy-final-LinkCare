@@ -5,6 +5,7 @@ import com.ssafy.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.ssafy.sdk.health.domain.sync.exercise.ExerciseReader
 import com.ssafy.sdk.health.domain.sync.heartRate.HeartRateReader
 import com.ssafy.sdk.health.domain.sync.sleep.SleepReader
+import com.ssafy.sdk.health.domain.sync.step.StepReader
 import com.ssafy.sdk.health.domain.sync.waterIntake.WaterIntakeReader
 import javax.inject.Inject
 import kotlinx.coroutines.async
@@ -22,7 +23,8 @@ class SyncAllHealthDataUseCase @Inject constructor(
     private val sleepReader: SleepReader,
     private val waterIntakeReader: WaterIntakeReader,
     private val bloodPressureReader: BloodPressureReader,
-    private val exerciseReader: ExerciseReader
+    private val exerciseReader: ExerciseReader,
+    private val stepReader: StepReader,
 ) {
     /**
      * @param onProgress 진행 상황 콜백 (데이터 타입, 현재 진행, 전체)
@@ -72,6 +74,7 @@ class SyncAllHealthDataUseCase @Inject constructor(
 
         val waterIntakeDeferred = async {
             waterIntakeReader.readAll(
+                yearsPerChunk = yearsPerChunk,
                 onProgress = { done, total ->
                     onProgress("음수량", done, total)
                 }
@@ -95,12 +98,21 @@ class SyncAllHealthDataUseCase @Inject constructor(
             )
         }
 
+        val stepDeferred = async {
+            stepReader.readAll(
+                onProgress = { done, total ->
+                    onProgress("걸음수", done, total)
+                }
+            )
+        }
+
         AllHealthData(
             heartRate = heartRateDeferred.await(),
             sleep = sleepDeferred.await(),
             waterIntake = waterIntakeDeferred.await(),
             bloodPressure = bloodPressureDeferred.await(),
-            exercise = exerciseDeferred.await()
+            exercise = exerciseDeferred.await(),
+            step = stepDeferred.await(),
         )
     }
 
@@ -146,12 +158,19 @@ class SyncAllHealthDataUseCase @Inject constructor(
             }
         )
 
+        val step = stepReader.readAll(
+            onProgress = { done, total ->
+                onProgress("걸음수", done, total)
+            }
+        )
+
         return AllHealthData(
             heartRate = heartRate,
             sleep = sleep,
             waterIntake = waterIntake,
             bloodPressure = bloodPressure,
-            exercise = exercise
+            exercise = exercise,
+            step = step,
         )
     }
 }

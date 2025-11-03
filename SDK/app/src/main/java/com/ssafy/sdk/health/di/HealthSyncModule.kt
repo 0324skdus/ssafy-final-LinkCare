@@ -8,6 +8,7 @@ import com.ssafy.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.ssafy.sdk.health.domain.sync.exercise.ExerciseReader
 import com.ssafy.sdk.health.domain.sync.heartRate.HeartRateReader
 import com.ssafy.sdk.health.domain.sync.sleep.SleepReader
+import com.ssafy.sdk.health.domain.sync.step.StepReader
 import com.ssafy.sdk.health.domain.sync.waterIntake.WaterIntakeReader
 import dagger.Module
 import dagger.Provides
@@ -74,5 +75,13 @@ object HealthSyncModule {
         healthDataStore: HealthDataStore
     ): ExerciseReader {
         return ExerciseReader(healthDataStore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStepReader(
+        healthDataStore: HealthDataStore
+    ): StepReader {
+        return StepReader(healthDataStore)
     }
 }

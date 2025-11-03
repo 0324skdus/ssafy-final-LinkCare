@@ -1,3 +1,5 @@
+package com.ssafy.sdk.health.domain.upload
+
 import com.ssafy.sdk.health.data.repository.HealthRepository
 import com.ssafy.sdk.health.domain.sync.AllHealthData
 import com.ssafy.sdk.health.domain.sync.DailyHealthData

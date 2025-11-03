@@ -32,45 +32,40 @@ class WaterIntakeReader @Inject constructor(
     }
 
     override suspend fun readAll(
+        yearsPerChunk: Long,
         onProgress: ((done: Int, total: Int) -> Unit)?
     ): List<WaterIntakeData> = withContext(Dispatchers.IO) {
-        val startDate = LocalDate.of(1970, 1, 1)
+        val startDate = LocalDate.now().minusYears(20)
         val endDate = LocalDate.now(KST)
         val result = mutableListOf<WaterIntakeData>()
 
+        val chunkDays = (yearsPerChunk * 365).toLong()
         var current = startDate
-        var dayCount = 0
-        val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt()
+
+        var chunkCount = 0
+        val totalChunks = (ChronoUnit.DAYS.between(startDate, endDate) / chunkDays).toInt() + 1
 
         while (current <= endDate) {
+            val chunkEnd = minOf(current.plusDays(chunkDays), endDate)
             val start = current.atStartOfDay()
-            val end = start.plusDays(1)
+            val end = chunkEnd.atTime(23, 59, 59)
 
+            // chunk 단위로 데이터 가져오기
             val waterIntakes = readWaterIntakeData(start, end)
             val total = readTotalWaterIntake(start, end)
             val goal = readWaterIntakeGoal(current)
 
-            // 데이터가 있는 경우만 추가
             if (waterIntakes.isNotEmpty() || total > 0) {
                 result.add(WaterIntakeData(waterIntakes, goal, total))
             }
 
-            dayCount++
+            chunkCount++
+            onProgress?.invoke(chunkCount, totalChunks)
 
-            // 30일마다 진행상황 알림
-            if (dayCount % 30 == 0) {
-                onProgress?.invoke(dayCount, totalDays)
-            }
-
-            // API 호출 제한 대응: 매 요청마다 짧은 딜레이
-            if (current < endDate) {
-                delay(50) // 50ms 대기
-            }
-
-            current = current.plusDays(1)
+            delay(100)
+            current = chunkEnd.plusDays(1)
         }
 
-        onProgress?.invoke(totalDays, totalDays)
         result
     }
 

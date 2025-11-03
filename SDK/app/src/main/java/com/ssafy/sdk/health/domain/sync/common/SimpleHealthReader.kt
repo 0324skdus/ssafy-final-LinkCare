@@ -6,6 +6,7 @@ import com.samsung.android.sdk.health.data.request.ReadDataRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -65,7 +66,7 @@ abstract class SimpleHealthReader<T>(
 
     private fun generateYearWindows(yearsPerChunk: Long): List<Pair<Instant, Instant>> {
         val now = Instant.now()
-        var cursor = Instant.EPOCH
+        var cursor = Instant.now().minus(Duration.ofDays(20 * 365L))
         val windows = mutableListOf<Pair<Instant, Instant>>()
 
         while (cursor < now) {

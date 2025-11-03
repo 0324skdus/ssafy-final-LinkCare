@@ -4,6 +4,7 @@ import com.ssafy.sdk.health.data.model.BloodPressureTypeData
 import com.ssafy.sdk.health.data.model.ExerciseData
 import com.ssafy.sdk.health.data.model.HeartRatesData
 import com.ssafy.sdk.health.data.model.SleepData
+import com.ssafy.sdk.health.data.model.StepData
 import com.ssafy.sdk.health.data.model.WaterIntakeData
 
 /**
@@ -14,7 +15,8 @@ data class DailyHealthData(
     val sleep: List<SleepData>,
     val waterIntake: WaterIntakeData,
     val bloodPressure: List<BloodPressureTypeData>,
-    val exercise: ExerciseData
+    val exercise: ExerciseData,
+    val step: StepData
 )
 
 /**
@@ -25,5 +27,6 @@ data class AllHealthData(
     val sleep: List<SleepData>,
     val waterIntake: List<WaterIntakeData>,
     val bloodPressure: List<BloodPressureTypeData>,
-    val exercise: List<ExerciseData>
+    val exercise: List<ExerciseData>,
+    val step: List<StepData>
 )
