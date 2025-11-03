@@ -31,8 +31,5 @@ public class KakaoUserInfo {
 
         @JsonProperty("nickname")
         private String nickname;
-
-        @JsonProperty("profile_image_url")
-        private String profileImageUrl;
     }
 }
