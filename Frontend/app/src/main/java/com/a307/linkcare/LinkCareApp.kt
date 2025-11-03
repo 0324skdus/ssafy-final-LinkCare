@@ -7,7 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.a307.linkcare.common.component.molecules.LinkCareBottomBar
+import com.a307.linkcare.common.component.molecules.BottomBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +20,7 @@ fun LinkCareApp() {
             TopAppBar(title = { Text("LinkCare 메인") })
         },
         bottomBar = {
-            LinkCareBottomBar(
+            BottomBar(
                 navController = navController,
                 currentDestination = currentDestination
             )

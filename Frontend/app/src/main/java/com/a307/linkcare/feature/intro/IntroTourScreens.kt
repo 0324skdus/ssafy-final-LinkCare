@@ -45,10 +45,9 @@ fun IntroTourScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(p.bg)
-                    .padding(vertical = 36.dp),
+                    .padding(bottom = 36.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(8.dp))
                 PagerDots(
                     total = 4,
                     current = pagerState.currentPage,

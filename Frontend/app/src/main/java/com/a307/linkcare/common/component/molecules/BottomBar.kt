@@ -1,15 +1,20 @@
 package com.a307.linkcare.common.component.molecules
 
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
+import androidx.compose.material3.RadioButtonDefaults.colors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
+import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.navigation.Route
 
 data class BottomItem(
@@ -26,25 +31,52 @@ private val bottomItems = listOf(
 )
 
 @Composable
-fun LinkCareBottomBar(
+fun BottomBar(
+    containerColor: Color = white,
+    contentColor: Color = black,
     navController: NavHostController,
     currentDestination: NavDestination?
 ) {
-    NavigationBar {
-        bottomItems.forEach { item ->
-            val selected = currentDestination?.route == item.route
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (!selected) navController.navigate(item.route) {
-                        launchSingleTop = true
-                        restoreState = true
-                        popUpTo(Route.Care.route) { saveState = true }
-                    }
-                },
-                icon = { Icon(painterResource(item.iconRes), contentDescription = item.label, modifier = Modifier.size(30.dp)) },
-                label = { Text(item.label) }
-            )
+    Column {
+        Divider(
+            color = Color(0xFFD9D9D9),
+            thickness = 1.dp
+        )
+
+        NavigationBar (
+            containerColor = containerColor,
+            tonalElevation = 0.dp
+        )
+        {
+            bottomItems.forEach { item ->
+                val selected = currentDestination?.route == item.route
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = {
+                        if (!selected) navController.navigate(item.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(Route.Care.route) { saveState = true }
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            painterResource(item.iconRes),
+                            contentDescription = item.label,
+                            modifier = Modifier.size(25.dp)
+                        )
+                    },
+                    label = { Text(item.label) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = main,
+                        unselectedIconColor = Color(0xFF666666),
+                        selectedTextColor = main,
+                        unselectedTextColor = Color(0xFF666666),
+                        indicatorColor = Color.Transparent
+                    )
+                )
+            }
         }
     }
 }
+
