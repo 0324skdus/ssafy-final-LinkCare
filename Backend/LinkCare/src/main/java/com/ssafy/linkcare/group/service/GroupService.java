@@ -38,6 +38,7 @@ public class GroupService {
     private final GroupGoalCriteriaRepository goalCriteriaRepository;
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GroupHealthPermissionRepository healthPermissionRepository;
+    private final GroupRequiredPermissionRepository requiredPermissionRepository;
 
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
@@ -154,24 +155,35 @@ public class GroupService {
                 .build();
         groupMemberRepository.save(leader);
 
-        // 5. 권한 설정 (필수 + 선택 항목)
+        // 5. 그룹 요구 권한 설정 (CARE 그룹만)
         HealthPermissionDto permissions = request.permissions() != null
                 ? request.permissions()
                 : new HealthPermissionDto();  // 기본값 (선택 항목 모두 false)
 
-        GroupHealthPermission permission = GroupHealthPermission.builder()
+        // 5-1. 그룹이 요구하는 권한 저장
+        GroupRequiredPermission requiredPermission = GroupRequiredPermission.builder()
+                .group(group)
+                .isSleepRequired(permissions.isSleepAllowed())
+                .isWaterIntakeRequired(permissions.isWaterIntakeAllowed())
+                .isBloodPressureRequired(permissions.isBloodPressureAllowed())
+                .isBloodSugarRequired(permissions.isBloodSugarAllowed())
+                .build();
+        requiredPermissionRepository.save(requiredPermission);
+
+        // 5-2. 방장의 권한 설정 (그룹 요구사항과 동일)
+        GroupHealthPermission leaderPermission = GroupHealthPermission.builder()
                 .groupMember(leader)
                 // 필수 항목 (항상 true)
                 .isDailyStepAllowed(true)
                 .isHeartRateAllowed(true)
                 .isExerciseAllowed(true)
-                // 선택 항목 (요청값 사용)
-                .isSleepAllowed(permissions.isSleepAllowed())
-                .isWaterIntakeAllowed(permissions.isWaterIntakeAllowed())
-                .isBloodPressureAllowed(permissions.isBloodPressureAllowed())
-                .isBloodSugarAllowed(permissions.isBloodSugarAllowed())
+                // 선택 항목 (그룹 요구사항과 동일)
+                .isSleepAllowed(requiredPermission.getIsSleepRequired())
+                .isWaterIntakeAllowed(requiredPermission.getIsWaterIntakeRequired())
+                .isBloodPressureAllowed(requiredPermission.getIsBloodPressureRequired())
+                .isBloodSugarAllowed(requiredPermission.getIsBloodSugarRequired())
                 .build();
-        healthPermissionRepository.save(permission);
+        healthPermissionRepository.save(leaderPermission);
 
         log.info("케어 그룹 생성 완료: groupSeq={}, userId={}", group.getGroupSeq(), userId);
 
@@ -451,32 +463,31 @@ public class GroupService {
             throw new CustomException(ErrorCode.GROUP_CAPACITY_FULL);
         }
 
-        // 4. 방장의 권한 설정 조회 (검증용)
-        GroupMember leader = groupMemberRepository.findByGroup(group).stream()
-                .filter(GroupMember::getIsLeader)
-                .findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+        // 4. 그룹이 요구하는 권한 조회 및 검증
+        if (group.getType() == GroupType.CARE) {
+            // CARE 그룹: GroupRequiredPermission에서 요구사항 조회
+            GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
 
-        GroupHealthPermission leaderPermission = healthPermissionRepository.findByGroupMember(leader)
-                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
-
-        // 5. 권한 동의 검증: 사용자가 방장보다 많은 권한을 요구할 수 없음
-        if (!leaderPermission.getIsSleepAllowed() && agreement.isSleepAllowed()) {
-            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
-                    "방장이 허용하지 않은 수면 데이터 공유를 요청할 수 없습니다");
+            // 5. 권한 동의 검증: 그룹이 요구하는 권한을 모두 동의했는지 확인
+            if (required.getIsSleepRequired() && !agreement.isSleepAllowed()) {
+                throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                        "이 그룹은 수면 데이터 공유가 필수입니다");
+            }
+            if (required.getIsWaterIntakeRequired() && !agreement.isWaterIntakeAllowed()) {
+                throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                        "이 그룹은 물 섭취량 공유가 필수입니다");
+            }
+            if (required.getIsBloodPressureRequired() && !agreement.isBloodPressureAllowed()) {
+                throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                        "이 그룹은 혈압 데이터 공유가 필수입니다");
+            }
+            if (required.getIsBloodSugarRequired() && !agreement.isBloodSugarAllowed()) {
+                throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                        "이 그룹은 혈당 데이터 공유가 필수입니다");
+            }
         }
-        if (!leaderPermission.getIsWaterIntakeAllowed() && agreement.isWaterIntakeAllowed()) {
-            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
-                    "방장이 허용하지 않은 물 섭취량 공유를 요청할 수 없습니다");
-        }
-        if (!leaderPermission.getIsBloodPressureAllowed() && agreement.isBloodPressureAllowed()) {
-            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
-                    "방장이 허용하지 않은 혈압 데이터 공유를 요청할 수 없습니다");
-        }
-        if (!leaderPermission.getIsBloodSugarAllowed() && agreement.isBloodSugarAllowed()) {
-            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
-                    "방장이 허용하지 않은 혈당 데이터 공유를 요청할 수 없습니다");
-        }
+        // HEALTH 그룹은 선택 권한이 없으므로 검증 불필요
 
         // 6. 참가 신청 생성 (대기열 등록 + 동의한 권한 저장)
         GroupJoinRequest joinRequest = GroupJoinRequest.builder()
@@ -490,7 +501,12 @@ public class GroupService {
 
         groupJoinRequestRepository.save(joinRequest);
 
-        // 7. 방장에게 알림 전송 (4번에서 이미 조회한 leader 재사용)
+        // 7. 방장 찾기 및 알림 전송
+        GroupMember leader = groupMemberRepository.findByGroup(group).stream()
+                .filter(GroupMember::getIsLeader)
+                .findFirst()
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
         String notificationContent = user.getName() + "님이 가입 신청을 했습니다.";
         notificationService.createNotification(
                 leader.getUser(),
@@ -532,16 +548,7 @@ public class GroupService {
         // 5. 정원 초과 여부 체크
         boolean isFull = currentMembers >= group.getCapacity();
 
-        // 6. 방장의 권한 설정 조회
-        GroupMember leader = groupMemberRepository.findByGroup(group).stream()
-                .filter(GroupMember::getIsLeader)
-                .findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
-
-        GroupHealthPermission leaderPermission = healthPermissionRepository.findByGroupMember(leader)
-                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
-
-        // 7. 필수 권한 (항상 true)
+        // 6. 필수 권한 (항상 true)
         InvitationPreviewResponse.RequiredPermissions requiredPermissions =
                 new InvitationPreviewResponse.RequiredPermissions(
                         true,  // isDailyStepAllowed
@@ -549,14 +556,26 @@ public class GroupService {
                         true   // isExerciseAllowed
                 );
 
-        // 8. 선택 권한 (방장이 설정한 값)
-        InvitationPreviewResponse.OptionalPermissions optionalPermissions =
-                new InvitationPreviewResponse.OptionalPermissions(
-                        leaderPermission.getIsSleepAllowed(),
-                        leaderPermission.getIsWaterIntakeAllowed(),
-                        leaderPermission.getIsBloodPressureAllowed(),
-                        leaderPermission.getIsBloodSugarAllowed()
-                );
+// 7. 선택 권한 (그룹이 요구하는 권한 조회)
+        InvitationPreviewResponse.OptionalPermissions optionalPermissions;
+
+        if (group.getType() == GroupType.CARE) {
+            // CARE 그룹: GroupRequiredPermission에서 조회
+            GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+            optionalPermissions = new InvitationPreviewResponse.OptionalPermissions(
+                    required.getIsSleepRequired(),
+                    required.getIsWaterIntakeRequired(),
+                    required.getIsBloodPressureRequired(),
+                    required.getIsBloodSugarRequired()
+            );
+        } else {
+            // HEALTH 그룹: 선택 권한 없음 (모두 false)
+            optionalPermissions = new InvitationPreviewResponse.OptionalPermissions(
+                    false, false, false, false
+            );
+        }
 
         log.info("초대 링크 미리보기: token={}, groupSeq={}, isExpired={}, isFull={}",
                 invitationToken, group.getGroupSeq(), isExpired, isFull);

@@ -61,6 +61,7 @@ public enum ErrorCode {
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
     DUPLICATE_JOIN_REQUEST(HttpStatus.CONFLICT, "이미 가입 신청한 그룹입니다"),
     GROUP_CAPACITY_FULL(HttpStatus.CONFLICT, "그룹 정원이 가득 차서 초대 링크를 생성할 수 없습니다"),
+    GROUP_REQUIRED_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 요구 권한을 찾을 수 없습니다"),
 
     // 400 Bad Request
     INVALID_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 초대 링크입니다"),
