@@ -1,8 +1,10 @@
 package com.ssafy.sdk.health.domain.sync.sleep
 
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.data.entries.SleepSession
+import com.samsung.android.sdk.health.data.device.Device
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.InstantTimeFilter
@@ -15,10 +17,10 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 class SleepReader @Inject constructor(
-    store: HealthDataStore
+    store: HealthDataStore,
 ) : SimpleHealthReader<SleepData>(store) {
 
-    override fun buildTodayRequest() =
+    override suspend fun buildTodayRequest() =
         DataTypes.SLEEP.readDataRequestBuilder
             .setLocalTimeFilter(
                 LocalTimeFilter.of(
@@ -28,12 +30,15 @@ class SleepReader @Inject constructor(
             )
             .build()
 
-    override fun buildRangeRequest(start: Instant, end: Instant) =
+    override suspend fun buildRangeRequest(start: Instant, end: Instant) =
         DataTypes.SLEEP.readDataRequestBuilder
             .setInstantTimeFilter(InstantTimeFilter.of(start, end))
             .build()
 
-    override fun mapToData(dp: HealthDataPoint): SleepData {
+    override suspend fun mapToData(
+        dp: HealthDataPoint,
+        deviceManager: DeviceManager
+    ): SleepData {
         val rawSessions: List<SleepSession>? =
             dp.getValue(DataType.SleepType.SESSIONS)
 
@@ -44,8 +49,10 @@ class SleepReader @Inject constructor(
                 duration = rs.duration.toMillis()
             )
         }
-
+        val device = findDevice(deviceManager)
         return SleepData(
+            deviceId = device.id,
+            deviceType= device.deviceType,
             uid = dp.uid,
             startTime = dp.startTime,
             endTime = dp.endTime,
@@ -55,4 +62,11 @@ class SleepReader @Inject constructor(
             sessions = sessions
         )
     }
+
+//    private suspend fun findDevice(
+//        deviceManager: DeviceManager
+//    ): Device {
+//        val device = deviceManager.getLocalDevice()
+//        return device
+//    }
 }

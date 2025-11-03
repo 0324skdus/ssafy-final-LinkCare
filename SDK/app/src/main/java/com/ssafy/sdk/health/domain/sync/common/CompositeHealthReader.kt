@@ -1,5 +1,7 @@
 package com.ssafy.sdk.health.domain.sync.common
 
+import com.samsung.android.sdk.health.data.DeviceManager
+import com.samsung.android.sdk.health.data.device.Device
 import java.time.ZoneId
 
 /**
@@ -22,6 +24,14 @@ abstract class CompositeHealthReader<T> {
      */
     abstract suspend fun readAll(
         yearsPerChunk: Long = 1L,
-        onProgress: ((done: Int, total: Int) -> Unit)? = null
+        onProgress: ((done: Int, total: Int) -> Unit)? = null,
+        deviceManager: DeviceManager
     ): List<T>
+
+    suspend fun findDevice(
+        deviceManager: DeviceManager
+    ): Device {
+        val device = deviceManager.getLocalDevice()
+        return device
+    }
 }

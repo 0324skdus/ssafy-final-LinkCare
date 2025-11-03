@@ -1,6 +1,7 @@
 package com.ssafy.sdk.health.data.model
 
 import com.samsung.android.sdk.health.data.data.DataSource
+import com.samsung.android.sdk.health.data.device.DeviceType
 import com.samsung.android.sdk.health.data.request.DataType
 import java.time.Instant
 import java.time.LocalDateTime
@@ -16,6 +17,8 @@ data class ExerciseSessionData (
 )
 
 data class ExerciseTypeData (
+    val deviceId: String,
+    val deviceType: DeviceType,
     val uid: String,
     val startTime: Instant,
     val endTime: Instant?,

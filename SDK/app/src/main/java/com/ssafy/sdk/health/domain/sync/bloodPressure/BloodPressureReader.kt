@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync.bloodPressure
 
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.request.DataType
@@ -16,7 +17,7 @@ class BloodPressureReader @Inject constructor(
     store: HealthDataStore
 ) : SimpleHealthReader<BloodPressureTypeData>(store) {
 
-    override fun buildTodayRequest() =
+    override suspend fun buildTodayRequest() =
         DataTypes.BLOOD_PRESSURE.readDataRequestBuilder
             .setLocalTimeFilter(
                 LocalTimeFilter.of(
@@ -26,13 +27,17 @@ class BloodPressureReader @Inject constructor(
             )
             .build()
 
-    override fun buildRangeRequest(start: Instant, end: Instant) =
+    override suspend fun buildRangeRequest(start: Instant, end: Instant) =
         DataTypes.BLOOD_PRESSURE.readDataRequestBuilder
             .setInstantTimeFilter(InstantTimeFilter.of(start, end))
             .build()
 
-    override fun mapToData(dp: HealthDataPoint): BloodPressureTypeData {
+    override suspend fun mapToData(dp: HealthDataPoint,
+                                   deviceManager: DeviceManager): BloodPressureTypeData {
+        val device = findDevice(deviceManager)
         return BloodPressureTypeData(
+            deviceId = device.id,
+            deviceType = device.deviceType,
             uid = dp.uid,
             startTime = dp.startTime.atOffset(dp.zoneOffset).toLocalDateTime(),
             endTime = dp.endTime?.atOffset(dp.zoneOffset)?.toLocalDateTime(),

@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync.heartRate
 
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.request.DataType
@@ -16,7 +17,7 @@ class HeartRateReader @Inject constructor(
     store: HealthDataStore
 ) : SimpleHealthReader<HeartRatesData>(store) {
 
-    override fun buildTodayRequest() =
+    override suspend fun buildTodayRequest() =
         DataTypes.HEART_RATE.readDataRequestBuilder
             .setLocalTimeFilter(
                 LocalTimeFilter.of(
@@ -26,13 +27,16 @@ class HeartRateReader @Inject constructor(
             )
             .build()
 
-    override fun buildRangeRequest(start: Instant, end: Instant) =
+    override suspend fun buildRangeRequest(start: Instant, end: Instant) =
         DataTypes.HEART_RATE.readDataRequestBuilder
             .setInstantTimeFilter(InstantTimeFilter.of(start, end))
             .build()
 
-    override fun mapToData(dp: HealthDataPoint): HeartRatesData {
+    override suspend fun mapToData(dp: HealthDataPoint, deviceManager: DeviceManager): HeartRatesData {
+        val device = findDevice(deviceManager)
         return HeartRatesData(
+            deviceId = device.id,
+            deviceType = device.deviceType,
             uid = dp.uid,
             startTime = dp.startTime.atOffset(dp.zoneOffset).toLocalDateTime(),
             endTime = dp.endTime?.atOffset(dp.zoneOffset)?.toLocalDateTime(),

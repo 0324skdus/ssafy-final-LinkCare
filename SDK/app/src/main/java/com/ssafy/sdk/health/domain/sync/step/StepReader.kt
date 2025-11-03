@@ -1,6 +1,7 @@
 package com.ssafy.sdk.health.domain.sync.step
 
 import android.util.Log
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
@@ -23,7 +24,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 class StepReader @Inject constructor(
-    private val store: HealthDataStore
+    private val store: HealthDataStore,
+    private val deviceManager: DeviceManager
 ): CompositeHealthReader<StepData>() {
 
     override suspend fun readToday(): StepData {
@@ -32,15 +34,17 @@ class StepReader @Inject constructor(
 
         val goal = readStepGoal(startDate, endDate)
         val steps = readSteps(startDate.atStartOfDay(), endDate.atStartOfDay())
+        val device = findDevice(deviceManager)
 
         val instantStartDate = startDate.atStartOfDay(KST).toInstant()
         val instantEndDate = startDate.atStartOfDay(KST).plusDays(1).toInstant()
-        return StepData(instantStartDate, instantEndDate, steps,  goal)
+        return StepData(device.id, device.deviceType, instantStartDate, instantEndDate, steps,  goal)
     }
 
     override suspend fun readAll(
         yearsPerChunk: Long,
-        onProgress: ((done: Int, total: Int) -> Unit)?
+        onProgress: ((done: Int, total: Int) -> Unit)?,
+        deviceManager: DeviceManager
     ): List<StepData> = withContext(Dispatchers.IO) {
         val startDate = LocalDate.now().minusYears(20)
         val endDate = LocalDate.now(KST)
@@ -51,6 +55,8 @@ class StepReader @Inject constructor(
 
         var processedDays = 0
         val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt()
+
+        val device = findDevice(deviceManager)
 
         while (current <= endDate) {
             val chunkEnd = minOf(current.plusDays(chunkDays), endDate)
@@ -68,6 +74,8 @@ class StepReader @Inject constructor(
                 // 데이터가 있는 날만 추가
                 if (totalSteps > 0L) {
                     result.add(StepData(
+                        deviceId = device.id,
+                        deviceType = device.deviceType,
                         startDate= dayStart.atZone(KST).toInstant(),
                         endDate = dayEnd.atZone(KST).toInstant(),
                         count = totalSteps,

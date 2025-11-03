@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync.waterIntake
 
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
@@ -17,14 +18,15 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 class WaterIntakeReader @Inject constructor(
-    private val store: HealthDataStore
+    private val store: HealthDataStore,
+    private val deviceManager: DeviceManager
 ) : CompositeHealthReader<WaterIntakeData>() {
 
     override suspend fun readToday(): WaterIntakeData {
         val startDate = LocalDate.now(KST).atStartOfDay()
         val endDate = startDate.plusDays(1)
 
-        val waterIntakes = readWaterIntakeData(startDate, endDate)
+        val waterIntakes = readWaterIntakeData(startDate, endDate, deviceManager)
         val total = readTotalWaterIntake(startDate, endDate)
         val goal = readWaterIntakeGoal(LocalDate.now(KST))
 
@@ -33,7 +35,8 @@ class WaterIntakeReader @Inject constructor(
 
     override suspend fun readAll(
         yearsPerChunk: Long,
-        onProgress: ((done: Int, total: Int) -> Unit)?
+        onProgress: ((done: Int, total: Int) -> Unit)?,
+        deviceManager: DeviceManager
     ): List<WaterIntakeData> = withContext(Dispatchers.IO) {
         val startDate = LocalDate.now().minusYears(20)
         val endDate = LocalDate.now(KST)
@@ -51,7 +54,7 @@ class WaterIntakeReader @Inject constructor(
             val end = chunkEnd.atTime(23, 59, 59)
 
             // chunk 단위로 데이터 가져오기
-            val waterIntakes = readWaterIntakeData(start, end)
+            val waterIntakes = readWaterIntakeData(start, end, deviceManager)
             val total = readTotalWaterIntake(start, end)
             val goal = readWaterIntakeGoal(current)
 
@@ -71,15 +74,20 @@ class WaterIntakeReader @Inject constructor(
 
     private suspend fun readWaterIntakeData(
         start: LocalDateTime,
-        end: LocalDateTime
+        end: LocalDateTime,
+        deviceManager: DeviceManager
     ): List<WaterIntakeGroupedData> = withContext(Dispatchers.IO) {
         val req = DataTypes.WATER_INTAKE.readDataRequestBuilder
             .setLocalTimeFilter(LocalTimeFilter.of(start, end))
             .build()
 
+        val device = findDevice(deviceManager)
+
         val result = store.readData(req)
         result.dataList.map { dp ->
             WaterIntakeGroupedData(
+                deviceId = device.id,
+                deviceType = device.deviceType,
                 uid = dp.uid,
                 startTime = dp.startTime,
                 endTime = dp.endTime,

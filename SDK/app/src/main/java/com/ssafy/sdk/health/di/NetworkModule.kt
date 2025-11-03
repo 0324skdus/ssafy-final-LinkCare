@@ -24,8 +24,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // TODO: 실제 서버 URL로 변경
-    private const val BASE_URL = "http://localhost:8080"
+    private const val BASE_URL = "http://70.12.247.101:8080"
 
     @Provides
     @Singleton

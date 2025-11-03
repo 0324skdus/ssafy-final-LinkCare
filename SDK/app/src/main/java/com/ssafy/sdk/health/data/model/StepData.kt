@@ -15,6 +15,7 @@
  */
 package com.ssafy.sdk.health.data.model
 
+import com.samsung.android.sdk.health.data.device.DeviceType
 import java.time.Instant
 import java.time.LocalDateTime
 
@@ -24,6 +25,8 @@ import java.time.LocalDateTime
 //)
 
 data class StepData(
+    val deviceId: String,
+    val deviceType: DeviceType,
     val startDate: Instant,
     val endDate: Instant,
     val count: Long,

@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync.exercise
 
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.data.entries.ExerciseSession
@@ -23,14 +24,15 @@ import java.time.ZoneOffset
 import javax.inject.Inject
 
 class ExerciseReader @Inject constructor(
-    private val store: HealthDataStore
+    private val store: HealthDataStore,
+    private val deviceManager: DeviceManager,
 ) : CompositeHealthReader<ExerciseData>() {
 
     override suspend fun readToday(): ExerciseData {
         val startDate = LocalDate.now(KST).atStartOfDay()
         val endDate = startDate.plusDays(1)
 
-        val exercises = readExerciseData(startDate, endDate)
+        val exercises = readExerciseData(startDate, endDate, deviceManager)
         val totalDuration = readTotalDuration(LocalDate.now(KST))
         val totalCalories = readTotalCalories(startDate, endDate)
 
@@ -43,7 +45,8 @@ class ExerciseReader @Inject constructor(
 
     override suspend fun readAll(
         yearsPerChunk: Long,
-        onProgress: ((done: Int, total: Int) -> Unit)?
+        onProgress: ((done: Int, total: Int) -> Unit)?,
+        deviceManager: DeviceManager
     ): List<ExerciseData> = withContext(Dispatchers.IO) {
         // 전체 기간을 1년 단위로 조회
         val windows = generateYearWindows(1L)
@@ -51,7 +54,7 @@ class ExerciseReader @Inject constructor(
 
         windows.forEachIndexed { index, (start, end) ->
             // 각 구간의 운동 데이터 조회
-            val exercises = readExerciseDataByRange(start, end)
+            val exercises = readExerciseDataByRange(start, end, deviceManager)
 
             // 날짜별로 그룹화
             exercises.forEach { exercise ->
@@ -87,26 +90,28 @@ class ExerciseReader @Inject constructor(
 
     private suspend fun readExerciseData(
         start: LocalDateTime,
-        end: LocalDateTime
+        end: LocalDateTime,
+        deviceManager: DeviceManager
     ): List<ExerciseTypeData> = withContext(Dispatchers.IO) {
         val req = DataTypes.EXERCISE.readDataRequestBuilder
             .setLocalTimeFilter(LocalTimeFilter.of(start, end))
             .build()
 
         val result = store.readData(req)
-        result.dataList.map { dp -> mapToExerciseData(dp) }
+        result.dataList.map { dp -> mapToExerciseData(dp, deviceManager) }
     }
 
     private suspend fun readExerciseDataByRange(
         start: Instant,
-        end: Instant
+        end: Instant,
+        deviceManager: DeviceManager
     ): List<ExerciseTypeData> = withContext(Dispatchers.IO) {
         val req = DataTypes.EXERCISE.readDataRequestBuilder
             .setInstantTimeFilter(InstantTimeFilter.of(start, end))
             .build()
 
         val result = store.readData(req)
-        result.dataList.map { dp -> mapToExerciseData(dp) }
+        result.dataList.map { dp -> mapToExerciseData(dp, deviceManager) }
     }
 
     private suspend fun readTotalDuration(date: LocalDate): Long = withContext(Dispatchers.IO) {
@@ -130,7 +135,8 @@ class ExerciseReader @Inject constructor(
         result.dataList.firstOrNull()?.value ?: 0f
     }
 
-    private fun mapToExerciseData(dp: HealthDataPoint): ExerciseTypeData {
+    private suspend fun mapToExerciseData(dp: HealthDataPoint,
+                                  deviceManager: DeviceManager): ExerciseTypeData {
         val rawSessions: List<ExerciseSession>? =
             dp.getValue(DataType.ExerciseType.SESSIONS)
 
@@ -146,7 +152,10 @@ class ExerciseReader @Inject constructor(
             )
         }
 
+        val device = findDevice(deviceManager)
         return ExerciseTypeData(
+            deviceId = device.id,
+            deviceType = device.deviceType,
             uid = dp.uid,
             startTime = dp.startTime,
             endTime = dp.endTime,
