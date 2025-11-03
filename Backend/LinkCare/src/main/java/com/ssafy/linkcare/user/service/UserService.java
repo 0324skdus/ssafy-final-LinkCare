@@ -42,4 +42,18 @@ public class UserService {
         return userRepository.findById(userPk)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
+
+    /*
+        * FCM 토큰 업데이트
+            * - 안드로이드 앱이 FCM 토큰을 받으면 서버에 저장
+    */
+    @Transactional
+    public void updateFcmToken(Long userId, String fcmToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        user.updateFcmToken(fcmToken);
+
+        log.info("FCM 토큰 업데이트 완료: userId={}", userId);
+    }
 }

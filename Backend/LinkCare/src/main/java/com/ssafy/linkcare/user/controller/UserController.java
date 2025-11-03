@@ -3,6 +3,7 @@ package com.ssafy.linkcare.user.controller;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
+import com.ssafy.linkcare.user.dto.UpdateFcmTokenRequest;
 import com.ssafy.linkcare.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,10 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
@@ -108,5 +106,23 @@ public class UserController {
         if (year != null && (year < 1900 || year > currentYear)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "운동 시작 년도가 올바르지 않습니다");
         }
+    }
+
+    @Operation(summary = "FCM 토큰 업데이트", description = "안드로이드 앱에서 FCM 토큰을 서버에 저장합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "FCM 토큰 저장 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @PutMapping("/fcm-token")
+    public ResponseEntity<Void> updateFcmToken(
+            Authentication authentication,
+            @RequestBody UpdateFcmTokenRequest request) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        userService.updateFcmToken(userId, request.fcmToken());
+
+        log.info("FCM 토큰 업데이트 API 호출: userId={}", userId);
+        return ResponseEntity.ok().build();
     }
 }
