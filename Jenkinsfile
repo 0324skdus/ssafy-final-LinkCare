@@ -21,6 +21,8 @@ pipeline {
 
         AWS_ACCESS_KEY = credentials('AWS_ACCESS_KEY')
         AWS_SECRET_KEY = credentials('AWS_SECRET_KEY')
+
+        FIREBASE_CREDENTIALS_JSON = credentials('FIREBASE_CREDENTIALS_JSON')
     }
 
   stages {
@@ -78,7 +80,7 @@ pipeline {
                      sshagent(['ec2-ssh-key']) {
                          // 1. .env 파일 로컬에서 생성
                          sh """
-                             cat > /tmp/deploy.env << EOF
+                             cat > /tmp/deploy.env << 'EOF'
                              DOCKER_REGISTRY=${DOCKER_REGISTRY}
                              DOCKER_USERNAME=${DOCKER_USERNAME}
                              DOCKER_TAG=${DOCKER_TAG}
@@ -91,6 +93,7 @@ pipeline {
                              KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
                              AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
                              AWS_SECRET_KEY=${AWS_SECRET_KEY}
+                             FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON}
                              EOF
                          """
 
