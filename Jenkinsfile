@@ -21,8 +21,6 @@ pipeline {
 
         AWS_ACCESS_KEY = credentials('AWS_ACCESS_KEY')
         AWS_SECRET_KEY = credentials('AWS_SECRET_KEY')
-
-        FIREBASE_CREDENTIALS_JSON = credentials('FIREBASE_CREDENTIALS_JSON')
     }
 
   stages {
@@ -30,13 +28,12 @@ pipeline {
                steps {
                    script {
                        def backendChanged = sh(
-                           script: "git diff --name-only HEAD~1 HEAD | grep '^backend/' || true",
+                           script: "git diff --name-only HEAD~1 HEAD | grep -E '^(Backend|backend)/' || true",
                            returnStdout: true
                        ).trim()
                        if (!backendChanged) {
                            echo "No backend changes. Skipping pipeline."
-                           currentBuild.result = 'SUCCESS'
-                           return
+                           catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') { error('No backend changes') }
                        }
                    }
                }
@@ -80,7 +77,6 @@ pipeline {
                      sshagent(['ec2-ssh-key']) {
                          // 1.  .env 파일 로컬에서 생성 (Firebase JSON → Base64)
                          sh """
-                                FIREBASE_B64=\$(printf "%s" "${FIREBASE_CREDENTIALS_JSON}" | base64 | tr -d '\\n')
                                 cat > /tmp/deploy.env <<-EOF
                                 DOCKER_REGISTRY=${DOCKER_REGISTRY}
                                 DOCKER_USERNAME=${DOCKER_USERNAME}
@@ -94,7 +90,8 @@ pipeline {
                                 KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
                                 AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
                                 AWS_SECRET_KEY=${AWS_SECRET_KEY}
-                                FIREBASE_CREDENTIALS_B64=\${FIREBASE_B64}
+                                SPRING_PROFILES_ACTIVE=prod
+                                FIREBASE_CREDENTIALS_PATH=file:/run/secrets/firebase.json
                                 EOF
                             """
 

@@ -7,6 +7,8 @@ services:
     ports:
       - "9090:9090"
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH}
       JWT_SECRET: ${JWT_SECRET}
       DB_USER_PASSWORD: ${DB_USER_PASSWORD}
       GMAIL_PASSWORD: ${GMAIL_PASSWORD}
@@ -15,7 +17,8 @@ services:
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      FIREBASE_CREDENTIALS_B64: ${FIREBASE_CREDENTIALS_B64}
+      volumes:
+        - /home/ubuntu/app/secret/firebase-service-account.json:/run/secrets/firebase.json:ro
     depends_on:
       - mysql
       - redis
