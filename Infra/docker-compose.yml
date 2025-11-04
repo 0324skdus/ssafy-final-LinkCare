@@ -17,8 +17,8 @@ services:
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      volumes:
-        - /home/ubuntu/app/secret/firebase-service-account.json:/run/secrets/firebase.json:ro
+    volumes:
+      - /home/ubuntu/app/secret/firebase-service-account.json:/run/secrets/firebase.json:ro
     depends_on:
       - mysql
       - redis
