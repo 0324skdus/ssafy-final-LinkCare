@@ -80,22 +80,23 @@ pipeline {
                      sshagent(['ec2-ssh-key']) {
                          // 1. .env 파일 로컬에서 생성
                          sh """
-                             cat > /tmp/deploy.env << 'MAINEOF'
-                             DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                             DOCKER_USERNAME=${DOCKER_USERNAME}
-                             DOCKER_TAG=${DOCKER_TAG}
-                             DOCKER_PASSWORD=${DOCKER_PASSWORD}
-                             JWT_SECRET=${JWT_SECRET}
-                             DB_USER_PASSWORD=${DB_USER_PASSWORD}
-                             GMAIL_PASSWORD=${GMAIL_PASSWORD}
-                             GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-                             KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-                             KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
-                             AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-                             AWS_SECRET_KEY=${AWS_SECRET_KEY}
-                             MAINEOF
-                                echo "FIREBASE_CREDENTIALS_JSON=\${FIREBASE_CREDENTIALS_JSON}" >> /tmp/deploy.env
-                         """
+                                cat > /tmp/deploy.env <<-'MAINEOF'
+                                DOCKER_REGISTRY=${DOCKER_REGISTRY}
+                                DOCKER_USERNAME=${DOCKER_USERNAME}
+                                DOCKER_TAG=${DOCKER_TAG}
+                                DOCKER_PASSWORD=${DOCKER_PASSWORD}
+                                JWT_SECRET=${JWT_SECRET}
+                                DB_USER_PASSWORD=${DB_USER_PASSWORD}
+                                GMAIL_PASSWORD=${GMAIL_PASSWORD}
+                                GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+                                KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+                                KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+                                AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+                                AWS_SECRET_KEY=${AWS_SECRET_KEY}
+                                MAINEOF
+
+                                    echo "FIREBASE_CREDENTIALS_JSON=\${FIREBASE_CREDENTIALS_JSON}" >> /tmp/deploy.env
+                            """
 
                          // 2. 디렉토리 생성
                          sh """
