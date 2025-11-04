@@ -1,69 +1,68 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2022 The Android Open Source Project
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      https://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- For receiving exercise metrics. -->
-    <uses-permission android:name="android.permission.BODY_SENSORS" android:maxSdkVersion="35" />
-
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Sensor & location permissions -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <uses-feature android:name="android.hardware.type.watch" />
-
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Foreground services for health tracking -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
-    <queries>
-        <package android:name="com.google.android.wearable.healthservices" />
-    </queries>
+    <!-- Declare this as a Wear OS app -->
+    <uses-feature android:name="android.hardware.type.watch" />
+
     <application
-        android:name="com.linkcare.linkcarewear.app.LinkCareExerciseApplication"
+        android:name=".app.LinkCareExerciseApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <!-- Required Wear OS runtime -->
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
+
+        <!-- Independent (standalone) execution -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <!-- Main entry activity -->
         <activity
-            android:name="com.linkcare.linkcarewear.app.MainActivity"
+            android:name=".app.MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity=".main">
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Add foreground service location permission for exercise tracking -->
+
+        <!-- Exercise tracking service -->
         <service
             android:name=".service.ExerciseService"
             android:exported="false"
             android:foregroundServiceType="health|location" />
+
+        <!-- Optional: Data Layer listener (워치가 모바일로부터 메시지를 수신할 경우 필요)
+             현재는 워치가 송신만 하므로 제거 가능하지만, 양방향 대비해 주석 형태로 남김 -->
+        <!--
+        <service
+            android:name=".service.WatchDataLayerListener"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/mission/update" />
+            </intent-filter>
+        </service>
+        -->
     </application>
 </manifest>

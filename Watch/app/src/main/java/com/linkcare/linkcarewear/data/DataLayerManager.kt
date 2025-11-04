@@ -1,0 +1,61 @@
+package com.linkcare.linkcarewear.data
+
+import android.content.Context
+import android.util.Log
+import com.google.android.gms.wearable.*
+import com.linkcare.linkcarewear.model.WorkoutSummary
+
+object DataLayerManager {
+    private lateinit var dataClient: DataClient
+    private lateinit var messageClient: MessageClient
+    private lateinit var nodeClient: NodeClient
+    private lateinit var appContext: Context
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        dataClient = Wearable.getDataClient(appContext)
+        messageClient = Wearable.getMessageClient(appContext)
+        nodeClient = Wearable.getNodeClient(appContext)
+    }
+
+    fun sendMetrics(heartRate: Int, distance: Int) {
+        val dataMap = PutDataMapRequest.create("/linkcare/metrics").apply {
+            dataMap.putInt("heartRate", heartRate)
+            dataMap.putInt("distance", distance)
+            dataMap.putLong("timestamp", System.currentTimeMillis())
+        }
+        dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
+            .addOnSuccessListener { Log.d("DataLayer", "✅ metrics sent") }
+            .addOnFailureListener { Log.e("DataLayer", "❌ metrics send failed", it) }
+    }
+
+    fun sendSessionState(state: String) {
+        nodeClient.connectedNodes
+            .addOnSuccessListener { nodes ->
+                nodes.forEach { node ->
+                    messageClient.sendMessage(
+                        node.id,
+                        "/linkcare/session",
+                        state.toByteArray()
+                    ).addOnSuccessListener {
+                        Log.d("DataLayer", "✅ session message sent to ${node.displayName}")
+                    }.addOnFailureListener {
+                        Log.e("DataLayer", "❌ failed to send session to ${node.displayName}", it)
+                    }
+                }
+            }
+            .addOnFailureListener { Log.e("DataLayer", "❌ node lookup failed", it) }
+    }
+
+    fun sendWorkoutSummary(context: Context, summary: WorkoutSummary) {
+        val dataMap = PutDataMapRequest.create("/linkcare/workout_summary").apply {
+            dataMap.putString("sessionId", summary.sessionId)
+            dataMap.putInt("avgHeartRate", summary.avgHeartRate)
+            dataMap.putInt("calories", summary.calories)
+            dataMap.putInt("distance", summary.distance)
+            dataMap.putInt("durationSec", summary.durationSec)
+            dataMap.putLong("timestamp", System.currentTimeMillis())
+        }
+        dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
+    }
+}
