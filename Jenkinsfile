@@ -80,7 +80,7 @@ pipeline {
                      sshagent(['ec2-ssh-key']) {
                          // 1. .env 파일 로컬에서 생성
                          sh """
-                                cat > /tmp/deploy.env <<-'MAINEOF'
+                                cat > /tmp/deploy.env <<-MAINEOF
                                 DOCKER_REGISTRY=${DOCKER_REGISTRY}
                                 DOCKER_USERNAME=${DOCKER_USERNAME}
                                 DOCKER_TAG=${DOCKER_TAG}
@@ -92,10 +92,8 @@ pipeline {
                                 KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
                                 KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
                                 AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-                                AWS_SECRET_KEY=${AWS_SECRET_KEY}
-                                MAINEOF
-
-                                    echo "FIREBASE_CREDENTIALS_JSON=\${FIREBASE_CREDENTIALS_JSON}" >> /tmp/deploy.env
+                                FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON}
+                                MAINEOF     
                             """
 
                          // 2. 디렉토리 생성
