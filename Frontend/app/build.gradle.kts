@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -56,6 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.compose.runtime)
+    implementation(libs.transportation.consumer)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -78,4 +80,6 @@ dependencies {
 //    implementation("com.kakao.sdk:v2-user:2.20.6")
     // image
     implementation("io.coil-kt:coil-compose:2.6.0")
+    // character
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 }

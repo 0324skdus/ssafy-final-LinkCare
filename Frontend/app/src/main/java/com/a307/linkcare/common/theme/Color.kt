@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 val main = Color(0xFF4A89F6)
 val point = Color(0xFFFF6B35)
 
-// base
+// walk
 val background1 = Color(0xFFF8F1ED)
 val white = Color(0xFFFAFAF8)
 val black = Color(0xFF1A1A1A)

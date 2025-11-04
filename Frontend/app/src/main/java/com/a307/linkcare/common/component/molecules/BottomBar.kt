@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
@@ -51,12 +53,17 @@ fun BottomBar(
             bottomItems.forEach { item ->
                 val selected = currentDestination?.route == item.route
                 NavigationBarItem(
-                    selected = selected,
+                    selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                     onClick = {
-                        if (!selected) navController.navigate(item.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                            popUpTo(Route.Care.route) { saveState = true }
+                        val alreadySelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        if (!alreadySelected) {
+                            navController.navigate(item.route) {
+                                launchSingleTop = true
+                                restoreState = true
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                            }
                         }
                     },
                     icon = {

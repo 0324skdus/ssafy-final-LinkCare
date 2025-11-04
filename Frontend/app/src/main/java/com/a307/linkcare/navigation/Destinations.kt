@@ -19,7 +19,8 @@ sealed class Route(val route: String) {
     object Alarm   : Route("alarm")
     object MyPage  : Route("mypage")
 
-    // 새 그룹 생성 페이지
-    object CreateCareGroup : Route("create_care_group")
-    object CreateHealthGroup : Route("create_health_group")
+    // 하위 탭
+    object CreateCareGroup : Route("care/create_care_group")
+    object CreateHealthGroup : Route("health/create_health_group")
+
 }

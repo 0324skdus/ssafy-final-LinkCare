@@ -23,7 +23,7 @@ fun LoginScreen(
     onLoginSuccess: (isFirstLogin: Boolean) -> Unit = {},
     onSignupClick: () -> Unit = {}
 ) {
-    val isFirstLogin = true
+    val isFirstLogin = false // TO DO: 첫 로그인
 
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }

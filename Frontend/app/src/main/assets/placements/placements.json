@@ -1,0 +1,23 @@
+{
+  "zOrder": ["hat_front", "base", "glasses", "hat_back"],
+  "duck": {
+    "glasses": {
+      "*": { "offset": [345, 275], "scale": 1.0 }
+    },
+    "hat": {
+      "*":         { "offset": [295, 205], "scale": 1.0, "layer": "hat_back" }
+    }
+  },
+  "bear": {
+    "glasses": {
+      "*": { "offset": [375, 255], "scale": 1.0 }
+    },
+    "hat": {
+      "*":      { "offset": [350, 200], "scale": 1.0, "layer": "hat_back" },
+      "gray":   { "offset": [350, 200], "scale": 1.0, "layer": "hat_front" },
+      "blue":   { "offset": [350, 200], "scale": 1.0, "layer": "hat_front" },
+      "mint":   { "offset": [350, 200], "scale": 1.0, "layer": "hat_front" },
+      "orange": { "offset": [350, 200], "scale": 1.0, "layer": "hat_front" }
+    }
+  }
+}
