@@ -1,21 +1,8 @@
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.linkcare.linkcarewear.data
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.util.Log
 import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServicesClient
@@ -38,7 +25,10 @@ import androidx.health.services.client.pauseExercise
 import androidx.health.services.client.prepareExercise
 import androidx.health.services.client.resumeExercise
 import androidx.health.services.client.startExercise
+import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.Wearable
 import com.linkcare.linkcarewear.service.ExerciseLogger
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -54,6 +44,7 @@ import kotlinx.coroutines.flow.callbackFlow
 class ExerciseClientManager
 @Inject
 constructor(
+    @ApplicationContext private val context: Context,
     healthServicesClient: HealthServicesClient,
     private val logger: ExerciseLogger
 ) {
@@ -148,10 +139,6 @@ constructor(
         logger.log("Started exercise")
     }
 
-    /***
-     * Note: don't call this method from outside of ExerciseService.kt
-     * when acquiring calories or distance.
-     */
     suspend fun prepareExercise() {
         logger.log("Preparing an exercise")
         val warmUpConfig =
@@ -201,6 +188,16 @@ constructor(
                 object : ExerciseUpdateCallback {
                     override fun onExerciseUpdateReceived(update: ExerciseUpdate) {
                         trySendBlocking(ExerciseMessage.ExerciseUpdateMessage(update))
+                        val heartRate =(update.latestMetrics.getData(DataType.HEART_RATE_BPM)).firstOrNull()?.value?.toDouble()
+
+                        val calories = update.latestMetrics.getData(DataType.CALORIES_TOTAL)?.total?.toDouble()
+
+                        val distance = (update.latestMetrics.getData(DataType.DISTANCE_TOTAL))?.total?.toDouble()
+
+
+                        if (heartRate != null && calories != null) {
+                            sendMetricsToMobile(heartRate, calories, distance ?: 0.0)
+                        }
                     }
 
                     override fun onLapSummaryReceived(lapSummary: ExerciseLapSummary) {
@@ -236,6 +233,20 @@ constructor(
     private companion object {
         const val CALORIES_THRESHOLD = 250.0
     }
+    private fun sendMetricsToMobile(heartRate: Double, calories: Double, distance: Double) {
+        val data = PutDataMapRequest.create("/linkcare/metrics").apply {
+            dataMap.putDouble("heartRate", heartRate)
+            dataMap.putDouble("calories", calories)
+            dataMap.putDouble("distance", distance)
+            dataMap.putLong("timestamp", System.currentTimeMillis())
+        }.asPutDataRequest()
+
+        Wearable.getDataClient(context)
+            .putDataItem(data)
+            .addOnSuccessListener { Log.d("LinkCareWear", "실시간 데이터 전송 성공") }
+            .addOnFailureListener { e -> Log.e("LinkCareWear", "전송 실패", e) }
+    }
+
 }
 
 data class Thresholds(

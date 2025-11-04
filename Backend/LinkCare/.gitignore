@@ -1,0 +1,256 @@
+﻿# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+*.vsix
+
+# Gradle
+.gradle/
+**/.gradle/
+build/
+**/build/
+!src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+# Android Studio
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+.navigation/
+
+# APK/Bundle Files
+*.apk
+*.aab
+*.ap_
+output.json
+
+# DEX Files
+*.dex
+
+# Keystore Files (IMPORTANT: Never commit!)
+*.jks
+**/*.jks
+*.keystore
+**/*.keystore
+.signing/
+**/keystore.properties
+**/signing.properties
+
+# Proguard
+proguard/
+
+# NDK
+obj/
+
+# Generated files
+bin/
+gen/
+
+# CocoaPods
+ios/Pods/
+
+# Xcode
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+
+# Dependencies
+node_modules/
+jspm_packages/
+bower_components/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Production
+build/
+dist/
+.next/
+.nuxt/
+out/
+
+# Cache
+.npm/
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# React Native specific
+.expo/
+.expo-shared/
+__generated__/
+
+# Buck build
+buck-out/
+.buckconfig.local
+.buckd/
+.buckversion
+
+# Package manager
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+*.tgz
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Compiled
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+
+# Allow specific backend library jars (if needed)
+!Backend/libs/*.jar
+
+# JVM Crash Logs
+hs_err_pid*
+replay_pid*
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ML Models (large files)
+*.h5
+*.pkl
+*.pth
+*.ckpt
+
+# Python testing & tools
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Terraform
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform lock file (commit this for dependency locking)
+!.terraform.lock.hcl
+
+# Docker
+docker-compose.override.yml
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+*.backup.*
+*.back.*
+
+# Google Services (Firebase - all depths)
+google-services.json
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Git merge files
+*.orig
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+/src/main/resources/application-secret.properties

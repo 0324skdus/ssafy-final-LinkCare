@@ -28,8 +28,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.linkcare.linkcarewear.data.DataLayerManager
 import com.linkcare.linkcarewear.data.ExerciseClientManager
 import com.linkcare.linkcarewear.data.isExerciseInProgress
+import com.linkcare.linkcarewear.model.WorkoutSummary
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.Duration
 import javax.inject.Inject
@@ -70,7 +72,9 @@ class ExerciseService : LifecycleService() {
     /**
      * Start exercise in this service's coroutine context.
      */
+    private var currentSessionId: String = ""
     suspend fun startExercise() {
+        currentSessionId = System.currentTimeMillis().toString()
         postOngoingActivityNotification()
         exerciseClientManager.startExercise()
     }
@@ -95,6 +99,33 @@ class ExerciseService : LifecycleService() {
     suspend fun endExercise() {
         exerciseClientManager.endExercise()
         removeOngoingActivityNotification()
+        // ✅ 현재 운동 상태에서 측정된 메트릭 가져오기
+        val currentState = exerciseServiceMonitor.exerciseServiceState.value
+        val metrics = currentState.exerciseMetrics
+
+        if (metrics != null) {
+            // ✅ Number → Double → Int로 안전하게 변환
+            val avgHeartRate = (metrics.heartRateAverage ?: 0.0).toDouble().toInt()
+            val calories = (metrics.calories ?: 0.0).toDouble().toInt()
+            val distance = (metrics.distance ?: 0.0).toDouble().toInt()
+            val durationSec = (currentState.activeDurationCheckpoint
+                ?.activeDuration
+                ?.seconds ?: 0L).toInt()
+
+            val summary = WorkoutSummary(
+                sessionId = currentSessionId,
+                avgHeartRate = avgHeartRate,
+                calories = calories,
+                distance = distance,
+                durationSec = durationSec
+            )
+
+            // ✅ 워치 → 모바일로 요약 데이터 전송
+            DataLayerManager.sendWorkoutSummary(this, summary)
+            Log.d(TAG, "Workout summary sent: $summary")
+        } else {
+            Log.w(TAG, "No metrics available at end of exercise")
+        }
     }
 
     /** Wear OS 3.0 reserves two buttons for the OS. For devices with more than 2 buttons,
@@ -151,6 +182,11 @@ class ExerciseService : LifecycleService() {
             }
         }
     }
+    override fun onCreate() {
+        super.onCreate()
+        DataLayerManager.init(this)
+    }
+
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)

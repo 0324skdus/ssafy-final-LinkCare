@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,8 @@ import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.compose.ambient.AmbientAware
 import com.google.android.horologist.compose.ambient.AmbientState
 import com.google.android.horologist.health.composables.ActiveDurationText
+import com.linkcare.linkcarewear.data.DataLayerManager
+import com.linkcare.linkcarewear.presentation.summary.toWorkoutSummary
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,10 +64,13 @@ fun ExerciseRoute(
 ) {
     val viewModel = hiltViewModel<ExerciseViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     if (uiState.isEnded) {
         SideEffect {
-            onSummary(uiState.toSummary())
+            val summary = uiState.toSummary(uiState.sessionId)
+            onSummary(summary)
+            DataLayerManager.sendWorkoutSummary(context, summary.toWorkoutSummary())
         }
     }
 
