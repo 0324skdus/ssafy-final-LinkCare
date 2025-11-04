@@ -20,21 +20,26 @@ public class FCMConfig {
     @Value("${firebase.credentials-path}")
     private Resource credentialsPath;
 
-    @Value("${firebase.credentials-json}")
+    @Value("${firebase.credentials-json:}")
     private String credentialsJson;
+
+    @Value("${firebase.credentials-b64:}")
+    private String credentialsB64;
+
 
     @PostConstruct
     public void initialize() {
         try {
             InputStream serviceAccount;
-
-            // 환경 변수에 JSON 문자열이 있으면 사용 (배포 환경)
-            if (credentialsJson != null && !credentialsJson.isEmpty()) {
-                log.info("Firebase 초기화: 환경 변수 JSON 사용 (배포 환경)");
+            if (credentialsB64 != null && !credentialsB64.isEmpty()) {
+                log.info("Firebase 초기화: Base64 환경 변수 사용 (배포)");
+                byte[] bytes = java.util.Base64.getDecoder().decode(credentialsB64);
+                serviceAccount = new ByteArrayInputStream(bytes);
+            } else if (credentialsJson != null && !credentialsJson.isEmpty()) {
+                log.info("Firebase 초기화: JSON 문자열 환경 변수 사용 (배포)");
                 serviceAccount = new ByteArrayInputStream(credentialsJson.getBytes());
             } else {
-                // 파일 경로로 초기화 (로컬 개발 환경)
-                log.info("Firebase 초기화: 파일 경로 사용 (로컬 환경)");
+                log.info("Firebase 초기화: 파일 경로 사용 (로컬)");
                 serviceAccount = credentialsPath.getInputStream();
             }
 

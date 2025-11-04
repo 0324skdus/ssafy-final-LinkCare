@@ -255,3 +255,4 @@ google-services.json
 *.REMOTE.*
 /src/main/resources/application-secret.properties
 /src/main/resources/firebase-service-account.json
+/.claude/
