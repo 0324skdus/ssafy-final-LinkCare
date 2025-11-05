@@ -1,6 +1,6 @@
 package com.a307.linkcare.feature.healthgroup.data
 
-import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.feature.commongroup.domain.Member
 import java.time.LocalDate
 
 object HealthGroupApi {

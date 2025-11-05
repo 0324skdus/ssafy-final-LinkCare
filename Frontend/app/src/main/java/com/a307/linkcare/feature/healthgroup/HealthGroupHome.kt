@@ -12,13 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -34,20 +31,9 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.font.FontWeight
 import java.time.temporal.ChronoUnit
-
-
-/* ---------- 데이터 모델 ---------- */
-data class Member(
-    val name: String,
-    val progresses: Int,
-    val goal: Int,
-    @DrawableRes val avatarRes: Int,
-    val bubbleText: String = "",
-    val isLeader: Boolean = false
-) {
-    val percent: Float get() = (progresses.coerceAtMost(goal)).toFloat() / goal.toFloat()
-}
+import com.a307.linkcare.feature.commongroup.domain.*
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -197,10 +183,24 @@ fun HealthGroupHome(
                 }
 
                 item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "만수무강 그룹의 운동을 분석했어요",
+                            fontWeight = FontWeight.SemiBold,
+                            color = black
+                        )
+                    }
+                }
+
+                item {
                     Spacer(Modifier.height(6.dp))
                     ProgressSummaryCard(
-                        titleGroup = "만수무강",
-                        members = todayMembers,
+                        members = membersAll,
                         totalSteps = todayGroupProgress,
                         totalGoal = totalGroupGoal,
                         modifier = Modifier
@@ -246,7 +246,7 @@ fun HealthGroupHome(
 
 /* ---------- 컴포넌트 ---------- */
 @Composable
-private fun ScreenTitleRow(
+ fun ScreenTitleRow(
     title: String,
     subtitle: String,
     onEditClick: () -> Unit
@@ -273,7 +273,7 @@ private fun ScreenTitleRow(
 }
 
 @Composable
-private fun HeaderCard(
+ fun HeaderCard(
     progress: Float,
     onPrev: () -> Unit,
     onNext: () -> Unit,
