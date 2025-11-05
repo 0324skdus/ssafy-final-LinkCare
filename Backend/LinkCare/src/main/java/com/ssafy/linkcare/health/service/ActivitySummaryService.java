@@ -41,4 +41,25 @@ public class ActivitySummaryService {
         activitySummaryRepository.saveAll(list);
     }
 
+
+    // 데일리 데이터 저장
+    @Transactional
+    public void saveDailyActivitySummaryData(ActivitySummaryDto activityDto, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+
+        if(activityDto == null) {
+            return;
+        }
+
+        activitySummaryRepository.save(ActivitySummary.builder()
+                .startTime(activityDto.getStartTime())
+                .totalDistance(activityDto.getTotalDistance())
+                .totalCaloriesBurned(activityDto.getTotalCaloriesBurned())
+                .user(user)
+                .build());
+    }
+
 }

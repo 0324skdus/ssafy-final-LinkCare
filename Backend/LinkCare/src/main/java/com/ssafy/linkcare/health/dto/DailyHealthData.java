@@ -6,10 +6,11 @@ import java.util.List;
 
 @Data
 public class DailyHealthData {
+    private ActivitySummaryDto activitySummary;
     private List<HeartRateDto> heartRate;
-//    private List<SleepData> sleep;
-//    private WaterIntakeData waterIntake;
-//    private List<BloodPressureTypeData> bloodPressure;
-//    private ExerciseData exercise;
-//    private StepData step;
+    private List<SleepDataDto> sleep;
+    private WaterIntakeDto waterIntake;
+    private List<BloodPressureDto> bloodPressure;
+    private ExerciseDto exercise;
+    private StepDto step;
 }

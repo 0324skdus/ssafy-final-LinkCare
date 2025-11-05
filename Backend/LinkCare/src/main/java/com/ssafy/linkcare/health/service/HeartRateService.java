@@ -42,4 +42,27 @@ public class HeartRateService {
 
         heartRateRepository.saveAll(list);
     }
+
+    @Transactional
+    public void saveDailyHeartRateData(List<HeartRateDto> heartRateList, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<HeartRate> list = heartRateList.stream()
+                .map(dto -> HeartRate.builder()
+                        .deviceId(dto.getDeviceId())
+                        .deviceType(dto.getDeviceType())
+                        .uid(dto.getUid())
+                        .zoneOffset(dto.getZoneOffset())
+                        .startTime(dto.getStartTime())
+                        .endTime(dto.getEndTime())
+                        .dataSource(dto.getDataSource())
+                        .heartRate(dto.getHeartRate())
+                        .user(user)
+                        .build()
+                ).toList();
+
+        heartRateRepository.saveAll(list);
+    }
 }

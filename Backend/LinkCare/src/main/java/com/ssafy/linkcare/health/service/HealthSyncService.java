@@ -1,6 +1,7 @@
 package com.ssafy.linkcare.health.service;
 
 import com.ssafy.linkcare.health.dto.AllHealthDataDto;
+import com.ssafy.linkcare.health.dto.DailyHealthData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,5 +25,15 @@ public class HealthSyncService {
         heartRateService.saveAllHeartRateData(dto.getHeartRate(), userSeq);
         stepService.saveAllStepData(dto.getStep(), userSeq);
         waterIntakeService.saveAllWaterIntakeData(dto.getWaterIntake(), userSeq);
+    }
+
+    // 데일리 데이터 동기화 (매일 1회)
+    public void syncDailyHealthData(DailyHealthData dto, int userSeq) {
+        activitySummaryService.saveDailyActivitySummaryData(dto.getActivitySummary(), userSeq);
+        bloodPressureService.saveDailyBloodPressureData(dto.getBloodPressure(), userSeq);
+        exerciseService.saveDailyExerciseData(dto.getExercise(), userSeq);
+        heartRateService.saveDailyHeartRateData(dto.getHeartRate(), userSeq);
+        stepService.saveDailyStepData(dto.getStep(), userSeq);
+        waterIntakeService.saveDailyWaterIntakeData(dto.getWaterIntake(), userSeq);
     }
 }

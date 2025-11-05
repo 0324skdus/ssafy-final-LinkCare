@@ -20,9 +20,11 @@ public class HealthController {
     // 일별 전체 데이터 동기화
     @PostMapping("/users/{userId}/daily")
     public ResponseEntity<ApiResponse<DailyHealthData>> uploadUserDailyHealthData(
-            @PathVariable Long userId, @RequestBody DailyHealthData data) {
+            @PathVariable int userId, @RequestBody DailyHealthData data) {
 
         System.out.println("받은 데이터: " + data);
+
+        healthSyncService.syncDailyHealthData(data, userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("성공", HttpStatus.OK.value(), data)

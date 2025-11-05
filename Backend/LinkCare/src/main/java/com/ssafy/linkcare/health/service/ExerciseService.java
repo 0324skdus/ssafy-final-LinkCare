@@ -69,4 +69,45 @@ public class ExerciseService {
             });
         });
     }
+
+    public void saveDailyExerciseData(ExerciseDto exerciseDto, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if(exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
+            return;
+        }
+
+        exerciseDto.getExercises().forEach(dto -> {
+            Exercise savedExercise = Exercise.builder()
+                    .deviceId(dto.getDeviceId())
+                    .deviceType(dto.getDeviceType())
+                    .uid(dto.getUid())
+                    .exerciseType(dto.getExerciseType())
+                    .zoneOffset(dto.getZoneOffset())
+                    .dataSource(dto.getDataSource())
+                    .startTime(dto.getStartTime())
+                    .endTime(dto.getEndTime())
+                    .user(user)
+                    .build();
+
+            exerciseRepository.save(savedExercise);
+
+            if(dto.getSessions() != null && !dto.getSessions().isEmpty()) {
+                List<ExerciseSession> sessions = dto.getSessions().stream()
+                        .map(session -> ExerciseSession.builder()
+                                .startTime(session.getStartTime())
+                                .endTime(session.getEndTime())
+                                .exerciseType(session.getExerciseType())
+                                .distance(session.getDistance())
+                                .calories(session.getCalories())
+                                .exercise(savedExercise)
+                                .build()
+                        ).toList();
+
+                exerciseSessionRepository.saveAll(sessions);
+            }
+        });
+    }
 }

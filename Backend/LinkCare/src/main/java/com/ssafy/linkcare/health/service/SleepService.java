@@ -61,4 +61,41 @@ public class SleepService {
         });
     }
 
+    @Transactional
+    public void saveDailySleepData(List<SleepDataDto> sleepList, int userSeq) {
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        sleepList.forEach(dto -> {
+            // 1. Sleep 저장
+            Sleep savedSleep = sleepRepository.save(
+                    Sleep.builder()
+                            .deviceId(dto.getDeviceId())
+                            .deviceType(dto.getDeviceType())
+                            .uid(dto.getUid())
+                            .zoneOffset(dto.getZoneOffset())
+                            .startTime(dto.getStartTime())
+                            .endTime(dto.getEndTime())
+                            .dataSource(dto.getDataSource())
+                            .duration(dto.getDuration())
+                            .user(user)
+                            .build()
+            );
+
+            // 2. Session 저장
+            if(dto.getSessions() != null && !dto.getSessions().isEmpty()) {
+                List<SleepSession> sessions = dto.getSessions().stream()
+                        .map(sessionDto -> SleepSession.builder()
+                                .sleep(savedSleep)
+                                .startTime(sessionDto.getStartTime())
+                                .endTime(sessionDto.getEndTime())
+                                .duration(sessionDto.getDuration())
+                                .build())
+                        .toList();
+
+                sleepSessionRepository.saveAll(sessions);
+            }
+        });
+    }
+
 }

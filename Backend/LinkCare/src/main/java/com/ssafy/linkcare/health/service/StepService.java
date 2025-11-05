@@ -41,4 +41,23 @@ public class StepService {
 
         stepRepository.saveAll(list);
     }
+
+    @Transactional
+    public void saveDailyStepData(StepDto dto, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+
+        stepRepository.save(Step.builder()
+                .deviceId(dto.getDeviceId())
+                .deviceType(dto.getDeviceType())
+                .startTime(dto.getStartTime())
+                .end_time(dto.getEndTime())
+                .count(dto.getCount())
+                .goal(dto.getGoal())
+                .user(user)
+                .build()
+        );
+    }
 }

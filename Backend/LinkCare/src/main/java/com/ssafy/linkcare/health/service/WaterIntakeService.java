@@ -51,4 +51,28 @@ public class WaterIntakeService {
         });
 
     }
-}
+
+    @Transactional
+    public void saveDailyWaterIntakeData(WaterIntakeDto waterIntakeDto, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<WaterIntake> waterIntakes = waterIntakeDto.getWaterIntakes().stream()
+                        .map(dto -> WaterIntake.builder()
+                                .deviceId(dto.getDeviceId())
+                                .deviceType(dto.getDeviceType())
+                                .uid(dto.getUid())
+                                .startTime(dto.getStartTime())
+                                .dataSource(dto.getDataSource())
+                                .zoneOffset(dto.getZoneOffset())
+                                .amount(dto.getAmount())
+                                .goal(waterIntakeDto.getGoal())
+                                .user(user)
+                                .build()
+                        ).toList();
+
+            waterIntakeRepository.saveAll(waterIntakes);
+        };
+    }
+

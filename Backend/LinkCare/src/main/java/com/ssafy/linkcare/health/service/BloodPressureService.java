@@ -44,4 +44,29 @@ public class BloodPressureService {
 
         bloodPressureRepository.saveAll(list);
     }
+
+    @Transactional
+    public void saveDailyBloodPressureData(List<BloodPressureDto> bloodPressureList, int userSeq) {
+
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<BloodPressure> list = bloodPressureList.stream()
+                .map(dto -> BloodPressure.builder()
+                        .deviceId(dto.getDeviceId())
+                        .deviceType(dto.getDeviceType())
+                        .uid(dto.getUid())
+                        .startTime(dto.getStartTime())
+                        .endTime(dto.getEndTime())
+                        .dataSource(dto.getDataSource())
+                        .systolic(dto.getSystolic())
+                        .diastolic(dto.getDiastolic())
+                        .mean(dto.getMean())
+                        .pulseRate(dto.getPulseRate())
+                        .user(user)
+                        .build()
+                ).toList();
+
+        bloodPressureRepository.saveAll(list);
+    }
 }
