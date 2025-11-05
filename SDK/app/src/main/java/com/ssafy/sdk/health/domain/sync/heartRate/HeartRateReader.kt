@@ -14,8 +14,9 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 class HeartRateReader @Inject constructor(
-    store: HealthDataStore
-) : SimpleHealthReader<HeartRatesData>(store) {
+    store: HealthDataStore,
+    deviceManager: DeviceManager
+) : SimpleHealthReader<HeartRatesData>(store, deviceManager) {
 
     override suspend fun buildTodayRequest() =
         DataTypes.HEART_RATE.readDataRequestBuilder

@@ -1,52 +1,43 @@
 package com.ssafy.sdk.health.domain.sync.step
 
-import android.util.Log
 import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.request.DataType
-import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalDateFilter
-import com.samsung.android.sdk.health.data.request.LocalDateGroup
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
-import com.samsung.android.sdk.health.data.request.LocalTimeGroup
-import com.samsung.android.sdk.health.data.request.LocalTimeGroupUnit
 import com.ssafy.sdk.health.data.model.StepData
-import com.ssafy.sdk.health.data.model.WaterIntakeData
 import com.ssafy.sdk.health.domain.sync.common.CompositeHealthReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 class StepReader @Inject constructor(
     private val store: HealthDataStore,
     private val deviceManager: DeviceManager
-): CompositeHealthReader<StepData>() {
+): CompositeHealthReader<StepData>(deviceManager) {
 
     override suspend fun readToday(): StepData {
-        val startDate = LocalDate.now(KST)
+        val startDate = LocalDate.now()
         val endDate = startDate.plusDays(1)
 
         val goal = readStepGoal(startDate, endDate)
         val steps = readSteps(startDate.atStartOfDay(), endDate.atStartOfDay())
         val device = findDevice(deviceManager)
 
-        val instantStartDate = startDate.atStartOfDay(KST).toInstant()
-        val instantEndDate = startDate.atStartOfDay(KST).plusDays(1).toInstant()
-        return StepData(device.id, device.deviceType, instantStartDate, instantEndDate, steps,  goal)
+        val startTime = startDate.atStartOfDay()
+        val endTime = startTime.plusDays(1)
+        return StepData(device.id, device.deviceType, startTime, endTime, steps,  goal)
     }
 
     override suspend fun readAll(
         yearsPerChunk: Long,
         onProgress: ((done: Int, total: Int) -> Unit)?,
-        deviceManager: DeviceManager
     ): List<StepData> = withContext(Dispatchers.IO) {
-        val startDate = LocalDate.now().minusYears(20)
+        val startDate = LocalDate.now().minusYears(1)
         val endDate = LocalDate.now(KST)
         val result = mutableListOf<StepData>()
 
@@ -76,8 +67,8 @@ class StepReader @Inject constructor(
                     result.add(StepData(
                         deviceId = device.id,
                         deviceType = device.deviceType,
-                        startDate= dayStart.atZone(KST).toInstant(),
-                        endDate = dayEnd.atZone(KST).toInstant(),
+                        startTime= dayStart.atZone(KST).toLocalDateTime(),
+                        endTime = dayEnd.atZone(KST).toLocalDateTime(),
                         count = totalSteps,
                         goal = goal
                     ))

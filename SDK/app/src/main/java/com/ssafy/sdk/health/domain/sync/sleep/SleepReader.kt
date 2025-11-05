@@ -18,7 +18,8 @@ import javax.inject.Inject
 
 class SleepReader @Inject constructor(
     store: HealthDataStore,
-) : SimpleHealthReader<SleepData>(store) {
+    deviceManager: DeviceManager
+) : SimpleHealthReader<SleepData>(store, deviceManager) {
 
     override suspend fun buildTodayRequest() =
         DataTypes.SLEEP.readDataRequestBuilder
@@ -44,8 +45,8 @@ class SleepReader @Inject constructor(
 
         val sessions = rawSessions?.map { rs ->
             SleepSessionData(
-                startTime = rs.startTime,
-                endTime = rs.endTime,
+                startTime = rs.startTime.atZone(KST).toLocalDateTime(),
+                endTime = rs.endTime.atZone(KST).toLocalDateTime(),
                 duration = rs.duration.toMillis()
             )
         }
@@ -54,8 +55,8 @@ class SleepReader @Inject constructor(
             deviceId = device.id,
             deviceType= device.deviceType,
             uid = dp.uid,
-            startTime = dp.startTime,
-            endTime = dp.endTime,
+            startTime = dp.startTime.atOffset(dp.zoneOffset).toLocalDateTime(),
+            endTime = dp.endTime?.atOffset(dp.zoneOffset)?.toLocalDateTime(),
             zoneOffset = dp.zoneOffset,
             dataSource = dp.dataSource,
             duration = dp.getValue(DataType.SleepType.DURATION)?.toMillis(),

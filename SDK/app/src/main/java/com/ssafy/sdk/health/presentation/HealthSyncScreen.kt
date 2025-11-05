@@ -10,7 +10,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun HealthSyncScreen(
-    userId: String,
+    userId: Int,
     viewModel: HealthSyncViewModel = hiltViewModel()
 ) {
     val syncProgress by viewModel.syncProgress.collectAsState()

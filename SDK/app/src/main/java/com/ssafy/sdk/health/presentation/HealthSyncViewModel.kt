@@ -95,7 +95,7 @@ class HealthSyncViewModel @Inject constructor(
      * 2. 데이터 수집 (권한 기반, userId 불필요)
      * 3. 서버 전송 (userId 필요)
      */
-    fun syncHealthData(userId: String) {
+    fun syncHealthData(userId: Int) {
         viewModelScope.launch {
             try {
                 // 1단계: 권한 확인
@@ -120,7 +120,7 @@ class HealthSyncViewModel @Inject constructor(
     /**
      * 전체 동기화 강제 실행
      */
-    fun forceFullSync(userId: String) {
+    fun forceFullSync(userId: Int) {
         viewModelScope.launch {
             try {
                 if (!arePermissionsGrantedUseCase()) {
@@ -138,7 +138,7 @@ class HealthSyncViewModel @Inject constructor(
     /**
      * 오늘 데이터만 동기화 & 업로드
      */
-    private suspend fun performDailySyncAndUpload(userId: String) {
+    private suspend fun performDailySyncAndUpload(userId: Int) {
         _syncProgress.value = SyncProgress.CollectingData
 
         // 1. 데이터 수집 (권한 기반)
@@ -166,7 +166,7 @@ class HealthSyncViewModel @Inject constructor(
     /**
      * 전체 데이터 동기화 & 업로드
      */
-    private suspend fun performFullSyncAndUpload(userId: String) {
+    private suspend fun performFullSyncAndUpload(userId: Int) {
         // 1. 전체 데이터 수집 (권한 기반)
         val allData = syncAllHealthDataUseCase(
             onProgress = { dataType, current, total ->

@@ -18,8 +18,9 @@ import java.time.ZoneOffset
  * (심박수, 수면, 혈압)
  */
 abstract class SimpleHealthReader<T>(
-    protected val store: HealthDataStore
-) {
+    protected val store: HealthDataStore,
+    private val deviceManager: DeviceManager,
+    ) {
     protected val KST: ZoneId = ZoneId.of("Asia/Seoul")
 
     protected abstract suspend fun buildTodayRequest(): ReadDataRequest<HealthDataPoint>
@@ -29,7 +30,7 @@ abstract class SimpleHealthReader<T>(
     /**
      * 오늘 하루 데이터 조회 (매일 동기화)
      */
-    suspend fun readToday(deviceManager: DeviceManager): List<T> = withContext(Dispatchers.IO) {
+    suspend fun readToday(): List<T> = withContext(Dispatchers.IO) {
         val request = buildTodayRequest()
         val result = store.readData(request)
         result.dataList.map { mapToData(it, deviceManager) }
@@ -44,8 +45,7 @@ abstract class SimpleHealthReader<T>(
     suspend fun readAll(
         yearsPerChunk: Long = 1L,
         onProgress: ((done: Int, total: Int) -> Unit)? = null,
-        enableDelay: Boolean = true,
-        deviceManager: DeviceManager
+        enableDelay: Boolean = true
     ): List<T> = withContext(Dispatchers.IO) {
         val windows = generateYearWindows(yearsPerChunk)
         val result = ArrayList<T>(2048)

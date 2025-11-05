@@ -1,6 +1,8 @@
 package com.ssafy.sdk.health.domain.sync
 
 
+import com.samsung.android.sdk.health.data.DeviceManager
+import com.ssafy.sdk.health.domain.sync.activitySummary.ActivitySummaryReader
 import com.ssafy.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.ssafy.sdk.health.domain.sync.exercise.ExerciseReader
 import com.ssafy.sdk.health.domain.sync.heartRate.HeartRateReader
@@ -25,6 +27,8 @@ class SyncAllHealthDataUseCase @Inject constructor(
     private val bloodPressureReader: BloodPressureReader,
     private val exerciseReader: ExerciseReader,
     private val stepReader: StepReader,
+    private val activitySummaryReader: ActivitySummaryReader,
+    private val deviceManager: DeviceManager
 ) {
     /**
      * @param onProgress 진행 상황 콜백 (데이터 타입, 현재 진행, 전체)
@@ -52,14 +56,14 @@ class SyncAllHealthDataUseCase @Inject constructor(
      */
     private suspend fun syncAllParallel(
         onProgress: (String, Int, Int) -> Unit,
-        yearsPerChunk: Long
+        yearsPerChunk: Long,
     ): AllHealthData = coroutineScope {
         val heartRateDeferred = async {
             heartRateReader.readAll(
                 yearsPerChunk = yearsPerChunk,
                 onProgress = { done, total ->
                     onProgress("심박수", done, total)
-                }
+                },
             )
         }
 
@@ -68,7 +72,8 @@ class SyncAllHealthDataUseCase @Inject constructor(
                 yearsPerChunk = yearsPerChunk,
                 onProgress = { done, total ->
                     onProgress("수면", done, total)
-                }
+                },
+                true,
             )
         }
 
@@ -77,7 +82,7 @@ class SyncAllHealthDataUseCase @Inject constructor(
                 yearsPerChunk = yearsPerChunk,
                 onProgress = { done, total ->
                     onProgress("음수량", done, total)
-                }
+                },
             )
         }
 
@@ -86,7 +91,7 @@ class SyncAllHealthDataUseCase @Inject constructor(
                 yearsPerChunk = yearsPerChunk,
                 onProgress = { done, total ->
                     onProgress("혈압", done, total)
-                }
+                },
             )
         }
 
@@ -102,7 +107,15 @@ class SyncAllHealthDataUseCase @Inject constructor(
             stepReader.readAll(
                 onProgress = { done, total ->
                     onProgress("걸음수", done, total)
-                }
+                },
+            )
+        }
+
+        val activitySummaryDeferred = async {
+            activitySummaryReader.readAll(
+                onProgress = { done, total ->
+                    onProgress("활동 요약", done, total)
+                },
             )
         }
 
@@ -113,6 +126,7 @@ class SyncAllHealthDataUseCase @Inject constructor(
             bloodPressure = bloodPressureDeferred.await(),
             exercise = exerciseDeferred.await(),
             step = stepDeferred.await(),
+            activitySummary = activitySummaryDeferred.await(),
         )
     }
 
@@ -123,26 +137,29 @@ class SyncAllHealthDataUseCase @Inject constructor(
      */
     private suspend fun syncAllSequential(
         onProgress: (String, Int, Int) -> Unit,
-        yearsPerChunk: Long
+        yearsPerChunk: Long,
     ): AllHealthData {
         val heartRate = heartRateReader.readAll(
             yearsPerChunk = yearsPerChunk,
             onProgress = { done, total ->
                 onProgress("심박수", done, total)
-            }
+            },
+            true,
         )
 
         val sleep = sleepReader.readAll(
             yearsPerChunk = yearsPerChunk,
             onProgress = { done, total ->
                 onProgress("수면", done, total)
-            }
+            },
+            true,
         )
 
         val waterIntake = waterIntakeReader.readAll(
             onProgress = { done, total ->
                 onProgress("음수량", done, total)
-            }
+            },
+
         )
 
         val bloodPressure = bloodPressureReader.readAll(
@@ -164,6 +181,12 @@ class SyncAllHealthDataUseCase @Inject constructor(
             }
         )
 
+        val activitySummary = activitySummaryReader.readAll(
+            onProgress = { done, total ->
+                onProgress("활동 요약", done, total)
+            }
+        )
+
         return AllHealthData(
             heartRate = heartRate,
             sleep = sleep,
@@ -171,6 +194,7 @@ class SyncAllHealthDataUseCase @Inject constructor(
             bloodPressure = bloodPressure,
             exercise = exercise,
             step = step,
+            activitySummary = activitySummary,
         )
     }
 }

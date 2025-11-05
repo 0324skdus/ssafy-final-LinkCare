@@ -26,7 +26,7 @@ import javax.inject.Inject
 class ExerciseReader @Inject constructor(
     private val store: HealthDataStore,
     private val deviceManager: DeviceManager,
-) : CompositeHealthReader<ExerciseData>() {
+) : CompositeHealthReader<ExerciseData>(deviceManager) {
 
     override suspend fun readToday(): ExerciseData {
         val startDate = LocalDate.now(KST).atStartOfDay()
@@ -46,7 +46,6 @@ class ExerciseReader @Inject constructor(
     override suspend fun readAll(
         yearsPerChunk: Long,
         onProgress: ((done: Int, total: Int) -> Unit)?,
-        deviceManager: DeviceManager
     ): List<ExerciseData> = withContext(Dispatchers.IO) {
         // 전체 기간을 1년 단위로 조회
         val windows = generateYearWindows(1L)
@@ -143,8 +142,8 @@ class ExerciseReader @Inject constructor(
         val sessions = rawSessions?.map { rs ->
 
             ExerciseSessionData(
-                startTime = rs.startTime,
-                endTime = rs.endTime,
+                startTime = rs.startTime.atZone(KST).toLocalDateTime(),
+                endTime = rs.endTime.atZone(KST).toLocalDateTime(),
                 exerciseType = rs.exerciseType,
                 duration = rs.duration.toMillis(),
                 calories = rs.calories,
@@ -157,8 +156,8 @@ class ExerciseReader @Inject constructor(
             deviceId = device.id,
             deviceType = device.deviceType,
             uid = dp.uid,
-            startTime = dp.startTime,
-            endTime = dp.endTime,
+            startTime = dp.startTime.atOffset(dp.zoneOffset).toLocalDateTime(),
+            endTime = dp.endTime?.atOffset(dp.zoneOffset)?.toLocalDateTime(),
             zoneOffset = dp.zoneOffset,
             dataSource = dp.dataSource,
             exerciseType = dp.getValue(DataType.ExerciseType.EXERCISE_TYPE),

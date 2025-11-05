@@ -15,7 +15,7 @@ class UploadDailyHealthDataUseCase @Inject constructor(
         return repository.uploadDailyHealthData(data)
     }
 
-    suspend operator fun invoke(userId: String, data: DailyHealthData): Result<Unit> {
+    suspend operator fun invoke(userId: Int, data: DailyHealthData): Result<Unit> {
         return repository.uploadUserDailyHealthData(userId, data)
     }
 }

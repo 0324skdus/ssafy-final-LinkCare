@@ -14,8 +14,9 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 class BloodPressureReader @Inject constructor(
-    store: HealthDataStore
-) : SimpleHealthReader<BloodPressureTypeData>(store) {
+    store: HealthDataStore,
+    private val deviceManager: DeviceManager,
+    ) : SimpleHealthReader<BloodPressureTypeData>(store, deviceManager) {
 
     override suspend fun buildTodayRequest() =
         DataTypes.BLOOD_PRESSURE.readDataRequestBuilder
@@ -32,8 +33,7 @@ class BloodPressureReader @Inject constructor(
             .setInstantTimeFilter(InstantTimeFilter.of(start, end))
             .build()
 
-    override suspend fun mapToData(dp: HealthDataPoint,
-                                   deviceManager: DeviceManager): BloodPressureTypeData {
+    override suspend fun mapToData(dp: HealthDataPoint, deviceManager: DeviceManager): BloodPressureTypeData {
         val device = findDevice(deviceManager)
         return BloodPressureTypeData(
             deviceId = device.id,

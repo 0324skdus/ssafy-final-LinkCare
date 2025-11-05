@@ -3,6 +3,7 @@ package com.ssafy.sdk.health.data.model
 import com.samsung.android.sdk.health.data.data.DataSource
 import com.samsung.android.sdk.health.data.device.DeviceType
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 data class SleepGoalData (
@@ -11,8 +12,8 @@ data class SleepGoalData (
 )
 
 data class SleepSessionData (
-    val startTime: Instant?,
-    val endTime: Instant?,
+    val startTime: LocalDateTime,
+    val endTime: LocalDateTime,
     val duration: Long?,
 //    val stages: List<SleepStageData>
 )
@@ -21,8 +22,8 @@ data class SleepData (
     val deviceId: String,
     val deviceType: DeviceType,
     val uid: String?,
-    val startTime: Instant?,
-    val endTime: Instant?,
+    val startTime: LocalDateTime?,
+    val endTime: LocalDateTime?,
     val zoneOffset: ZoneOffset?,
     val dataSource: DataSource?,
     val sessions: List<SleepSessionData>?,

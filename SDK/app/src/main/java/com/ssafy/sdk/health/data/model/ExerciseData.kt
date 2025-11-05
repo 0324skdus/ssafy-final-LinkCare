@@ -8,8 +8,8 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 
 data class ExerciseSessionData (
-    val startTime: Instant,
-    val endTime: Instant,
+    val startTime: LocalDateTime,
+    val endTime: LocalDateTime,
     val exerciseType: DataType.ExerciseType.PredefinedExerciseType,
     val duration: Long,
     val calories: Float,
@@ -20,8 +20,8 @@ data class ExerciseTypeData (
     val deviceId: String,
     val deviceType: DeviceType,
     val uid: String,
-    val startTime: Instant,
-    val endTime: Instant?,
+    val startTime: LocalDateTime,
+    val endTime: LocalDateTime?,
     val zoneOffset: ZoneOffset?,
     val dataSource: DataSource?,
     val exerciseType: DataType.ExerciseType.PredefinedExerciseType?,

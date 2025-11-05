@@ -16,7 +16,7 @@ class SyncAndUploadHealthDataUseCase @Inject constructor(
     /**
      * 하루치 데이터 동기화 & 업로드
      */
-    suspend fun syncAndUploadDaily(userId: String? = null): Result<Unit> {
+    suspend fun syncAndUploadDaily(userId: Int? = 0): Result<Unit> {
         return try {
             // 1. 데이터 수집
             val data = syncDailyHealthDataUseCase()
@@ -36,7 +36,7 @@ class SyncAndUploadHealthDataUseCase @Inject constructor(
      * 전체 데이터 동기화 & 업로드
      */
     suspend fun syncAndUploadAll(
-        userId: String? = null,
+        userId: Int? = 0,
         onProgress: (String, Int, Int) -> Unit
     ): Result<Unit> {
         return try {

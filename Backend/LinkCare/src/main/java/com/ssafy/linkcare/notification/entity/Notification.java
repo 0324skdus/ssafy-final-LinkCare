@@ -15,6 +15,32 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/*
+    * 알림 엔티티
+
+    * 역할: 사용자에게 전송되는 알림을 DB에 저장하고 관리
+
+    * 알림 타입 (NotificationType):
+        * - GROUP_JOIN_REQUEST: 그룹 참가 신청 (방장에게 알림)
+        * - GROUP_JOIN_APPROVED: 참가 신청 승인됨 (신청자에게 알림)
+        * - GROUP_JOIN_REJECTED: 참가 신청 거절됨 (신청자에게 알림)
+        * - 향후 추가 가능: 그룹 초대, 목표 달성 등
+
+    * 알림 전송 흐름:
+        * 1. NotificationService에서 Notification 엔티티 생성 (DB 저장)
+        * 2. FCMService에서 실시간 푸시 알림 전송 (사용자 기기로)
+        * 3. 사용자가 앱에서 알림 목록 조회 가능
+        * 4. 알림 클릭 시 markAsRead()로 읽음 처리
+
+    * 관련 데이터:
+        * - relatedGroup: 그룹 관련 알림일 경우 그룹 정보 (nullable)
+        * - relatedRequest: 참가 신청 관련 알림일 경우 신청 정보 (nullable)
+
+    * 연관 엔티티:
+        * - User (N:1) - 알림을 받는 사용자
+        * - Group (N:1, nullable) - 관련 그룹
+        * - GroupJoinRequest (N:1, nullable) - 관련 참가 신청
+*/
 @Entity
 @Table(name = "notifications")
 @Getter

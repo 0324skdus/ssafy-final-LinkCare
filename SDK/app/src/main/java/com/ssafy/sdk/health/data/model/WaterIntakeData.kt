@@ -10,8 +10,8 @@ data class WaterIntakeGroupedData (
     val deviceId: String,
     val deviceType: DeviceType,
     val uid: String,
-    val startTime: Instant?,
-    val endTime: Instant?,
+    val startTime: LocalDateTime?,
+    val endTime: LocalDateTime?,
     val zoneOffset: ZoneOffset?,
     val dataSource: DataSource?,
     val amount: Float?

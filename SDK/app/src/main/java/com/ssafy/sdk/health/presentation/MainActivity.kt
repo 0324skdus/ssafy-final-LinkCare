@@ -12,7 +12,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PhoneAppTheme {
-                HealthSyncScreen("1")
+                HealthSyncScreen(1)
             }
         }
     }

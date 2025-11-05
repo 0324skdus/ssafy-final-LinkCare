@@ -49,7 +49,7 @@ class HealthRepository @Inject constructor(
      * 사용자별 하루치 데이터 전송
      */
     suspend fun uploadUserDailyHealthData(
-        userId: String,
+        userId: Int,
         data: DailyHealthData
     ): Result<Unit> {
         return try {
@@ -64,7 +64,7 @@ class HealthRepository @Inject constructor(
      * 사용자별 전체 데이터 전송
      */
     suspend fun uploadUserAllHealthData(
-        userId: String,
+        userId: Int,
         data: AllHealthData
     ): Result<Unit> {
         return try {

@@ -2,8 +2,10 @@ package com.ssafy.sdk.health.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataService
 import com.samsung.android.sdk.health.data.HealthDataStore
+import com.samsung.android.sdk.health.data.device.Device
 import com.ssafy.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.ssafy.sdk.health.domain.sync.exercise.ExerciseReader
 import com.ssafy.sdk.health.domain.sync.heartRate.HeartRateReader
@@ -29,6 +31,16 @@ object HealthSyncModule {
         return HealthDataService.getStore(context)
     }
 
+    // DeviceManager 제공 추가
+    @Provides
+    @Singleton
+    fun provideDeviceManager(
+        healthDataStore: HealthDataStore
+    ): DeviceManager {
+        return healthDataStore.getDeviceManager()  // HealthDataStore에서 가져옴
+    }
+
+
     @Provides
     @Singleton
     fun provideSharedPreferences(
@@ -40,48 +52,54 @@ object HealthSyncModule {
     @Provides
     @Singleton
     fun provideHeartRateReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): HeartRateReader {
-        return HeartRateReader(healthDataStore)
+        return HeartRateReader(healthDataStore, deviceManager)
     }
 
     @Provides
     @Singleton
     fun provideSleepReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): SleepReader {
-        return SleepReader(healthDataStore)
+        return SleepReader(healthDataStore, deviceManager)
     }
 
     @Provides
     @Singleton
     fun provideBloodPressureReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): BloodPressureReader {
-        return BloodPressureReader(healthDataStore)
+        return BloodPressureReader(healthDataStore, deviceManager)
     }
 
     @Provides
     @Singleton
     fun provideWaterIntakeReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): WaterIntakeReader {
-        return WaterIntakeReader(healthDataStore)
+        return WaterIntakeReader(healthDataStore, deviceManager)
     }
 
     @Provides
     @Singleton
     fun provideExerciseReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): ExerciseReader {
-        return ExerciseReader(healthDataStore)
+        return ExerciseReader(healthDataStore, deviceManager)
     }
 
     @Provides
     @Singleton
     fun provideStepReader(
-        healthDataStore: HealthDataStore
+        healthDataStore: HealthDataStore,
+        deviceManager: DeviceManager
     ): StepReader {
-        return StepReader(healthDataStore)
+        return StepReader(healthDataStore, deviceManager)
     }
 }

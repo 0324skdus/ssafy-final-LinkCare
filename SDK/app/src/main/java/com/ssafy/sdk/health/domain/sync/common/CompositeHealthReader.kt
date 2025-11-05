@@ -9,7 +9,9 @@ import java.time.ZoneId
  * (음수량: 데이터 + 총량 + 목표)
  * (운동: 데이터 + 총 시간 + 총 칼로리)
  */
-abstract class CompositeHealthReader<T> {
+abstract class CompositeHealthReader<T>(
+    private val deviceManager: DeviceManager
+) {
     protected val KST: ZoneId = ZoneId.of("Asia/Seoul")
 
     /**
@@ -25,7 +27,6 @@ abstract class CompositeHealthReader<T> {
     abstract suspend fun readAll(
         yearsPerChunk: Long = 1L,
         onProgress: ((done: Int, total: Int) -> Unit)? = null,
-        deviceManager: DeviceManager
     ): List<T>
 
     suspend fun findDevice(

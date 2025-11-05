@@ -20,7 +20,7 @@ import javax.inject.Inject
 class WaterIntakeReader @Inject constructor(
     private val store: HealthDataStore,
     private val deviceManager: DeviceManager
-) : CompositeHealthReader<WaterIntakeData>() {
+) : CompositeHealthReader<WaterIntakeData>(deviceManager) {
 
     override suspend fun readToday(): WaterIntakeData {
         val startDate = LocalDate.now(KST).atStartOfDay()
@@ -36,7 +36,6 @@ class WaterIntakeReader @Inject constructor(
     override suspend fun readAll(
         yearsPerChunk: Long,
         onProgress: ((done: Int, total: Int) -> Unit)?,
-        deviceManager: DeviceManager
     ): List<WaterIntakeData> = withContext(Dispatchers.IO) {
         val startDate = LocalDate.now().minusYears(20)
         val endDate = LocalDate.now(KST)
@@ -89,8 +88,8 @@ class WaterIntakeReader @Inject constructor(
                 deviceId = device.id,
                 deviceType = device.deviceType,
                 uid = dp.uid,
-                startTime = dp.startTime,
-                endTime = dp.endTime,
+                startTime = dp.startTime.atZone(KST).toLocalDateTime(),
+                endTime = dp.endTime?.atZone(KST)?.toLocalDateTime(),
                 zoneOffset = dp.zoneOffset,
                 dataSource = dp.dataSource,
                 amount = dp.getValue(DataType.WaterIntakeType.AMOUNT)

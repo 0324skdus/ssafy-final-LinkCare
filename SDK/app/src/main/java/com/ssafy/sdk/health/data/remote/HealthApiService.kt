@@ -36,7 +36,7 @@ interface HealthApiService {
      */
     @POST("api/health/users/{userId}/daily")
     suspend fun uploadUserDailyHealthData(
-        @Path("userId") userId: String,
+        @Path("userId") userId: Int,
         @Body data: DailyHealthData
     ): Response<ApiResponse<Unit>>
 
@@ -46,7 +46,7 @@ interface HealthApiService {
      */
     @POST("api/health/users/{userId}/sync-all")
     suspend fun uploadUserAllHealthData(
-        @Path("userId") userId: String,
+        @Path("userId") userId: Int,
         @Body data: AllHealthData
     ): Response<ApiResponse<Unit>>
 }

@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync
 
+import com.ssafy.sdk.health.domain.sync.activitySummary.ActivitySummaryReader
 import com.ssafy.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.ssafy.sdk.health.domain.sync.exercise.ExerciseReader
 import com.ssafy.sdk.health.domain.sync.heartRate.HeartRateReader
@@ -19,6 +20,7 @@ class SyncDailyHealthDataUseCase @Inject constructor(
     private val bloodPressureReader: BloodPressureReader,
     private val exerciseReader: ExerciseReader,
     private val stepReader: StepReader,
+    private val activitySummaryReader: ActivitySummaryReader,
 ) {
     suspend operator fun invoke(): DailyHealthData {
         return DailyHealthData(
@@ -28,6 +30,7 @@ class SyncDailyHealthDataUseCase @Inject constructor(
             bloodPressure = bloodPressureReader.readToday(),
             exercise = exerciseReader.readToday(),
             step = stepReader.readToday(),
+            activitySummary = activitySummaryReader.readToday(),
         )
     }
 }

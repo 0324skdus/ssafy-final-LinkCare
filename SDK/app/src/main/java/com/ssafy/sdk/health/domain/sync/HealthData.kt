@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.domain.sync
 
+import com.ssafy.sdk.health.data.model.ActivitySummaryData
 import com.ssafy.sdk.health.data.model.BloodPressureTypeData
 import com.ssafy.sdk.health.data.model.ExerciseData
 import com.ssafy.sdk.health.data.model.HeartRatesData
@@ -16,7 +17,8 @@ data class DailyHealthData(
     val waterIntake: WaterIntakeData,
     val bloodPressure: List<BloodPressureTypeData>,
     val exercise: ExerciseData,
-    val step: StepData
+    val step: StepData,
+    val activitySummary: ActivitySummaryData,
 )
 
 /**
@@ -28,5 +30,6 @@ data class AllHealthData(
     val waterIntake: List<WaterIntakeData>,
     val bloodPressure: List<BloodPressureTypeData>,
     val exercise: List<ExerciseData>,
-    val step: List<StepData>
+    val step: List<StepData>,
+    val activitySummary: List<ActivitySummaryData>,
 )
