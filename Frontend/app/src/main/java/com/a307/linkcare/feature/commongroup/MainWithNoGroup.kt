@@ -14,13 +14,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationCompat
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.navigation.Route
-import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
-import com.a307.linkcare.feature.caregroup.CareGroupCreate
 
 @Composable
 fun MainWithNoGroup(

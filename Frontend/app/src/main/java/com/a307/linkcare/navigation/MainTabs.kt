@@ -20,6 +20,9 @@ import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.feature.commongroup.MainWithNoGroup
 import com.a307.linkcare.feature.caregroup.CareGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
+import com.a307.linkcare.feature.healthgroup.HealthGroupHome
+import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +53,13 @@ fun MainTabs(
     val healthGroups = listOf("만수무강", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
     val currentGroupHealth =
         if (healthGroups.isNotEmpty() && healthGroups.any { it.isNotBlank() }) healthGroups[selectedIndexHealth] else "헬스"
+
+    var selectedHealthGroup by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        if (selectedHealthGroup == null && healthGroups.isNotEmpty()) {
+            selectedHealthGroup = healthGroups.first()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -209,13 +219,31 @@ fun MainTabs(
                 startDestination = "health/main"
             ) {
                 composable("health/main") {
-                    MainWithNoGroup(
-                        navController = navController,
-                        onCreateGroupClick = {
-                            navController.navigate(Route.CreateHealthGroup.route)
-                        },
-                        currentTab = "health"
-                    )
+                    if (selectedHealthGroup == null) {
+                        MainWithNoGroup(
+                            navController = navController,
+                            onCreateGroupClick = {
+                                navController.navigate(Route.CreateHealthGroup.route)
+                            },
+                            currentTab = "health"
+                        )
+                    } else {
+                        HealthGroupHome(
+                            membersAll = listOf(
+                                Member(
+                                    "김싸피(나)",
+                                    10001,
+                                    30000,
+                                    R.drawable.char_bear_1,
+                                    "컨디션 좋아요!",
+                                    isLeader = true
+                                ),
+                                Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
+                                Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
+                                Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
+                            )
+                        )
+                    }
                 }
                 composable(Route.CreateHealthGroup.route) {
                     HealthGroupCreate(navController = navController)
