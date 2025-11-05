@@ -11,10 +11,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.navigation.navigation
 
 import com.a307.linkcare.common.component.molecules.*
@@ -26,6 +28,7 @@ import com.a307.linkcare.feature.healthgroup.HealthGroupHome
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.R
 import com.a307.linkcare.feature.caregroup.CareGroupHome
+import com.a307.linkcare.feature.commongroup.GroupSearch
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -116,7 +119,7 @@ fun MainTabs(
                                             menuItems = careGroups,
                                             onMenuSelect = { idx, _ -> selectedIndexCare = idx },
                                             onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
-                                            onSearchClick = { isSearchingCare = true },
+                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("care")) },
                                             moreMenu = { dismiss ->
                                                 DropdownMenuItem(
                                                     text = { Text("그룹 수정하기") },
@@ -127,7 +130,7 @@ fun MainTabs(
                                     } else {
                                         HeaderBasic(
                                             title = "케어",
-                                            onSearchClick = { isSearchingCare = true },
+                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("care")) },
                                             moreMenu = { dismiss ->
                                                 DropdownMenuItem(
                                                     text = { Text("그룹 수정하기") },
@@ -157,7 +160,7 @@ fun MainTabs(
                                             menuItems = healthGroups,
                                             onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
                                             onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
-                                            onSearchClick = { isSearchingHealth = true },
+                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("health")) },
                                             moreMenu = { dismiss ->
                                                 DropdownMenuItem(
                                                     text = { Text("그룹 수정하기") },
@@ -168,7 +171,7 @@ fun MainTabs(
                                     } else {
                                         HeaderBasic(
                                             title = "헬스",
-                                            onSearchClick = { isSearchingHealth = true },
+                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("health")) },
                                             moreMenu = { dismiss ->
                                                 DropdownMenuItem(
                                                     text = { Text("그룹 수정하기") },
@@ -205,6 +208,19 @@ fun MainTabs(
             startDestination = Route.Care.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // 검색 화면
+            composable(
+                route = "${Route.SearchGroup.route}/{kind}",
+                arguments = listOf(navArgument("kind") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val kind = backStackEntry.arguments?.getString("kind") ?: "care" // 기본값
+                GroupSearch(
+                    kind = kind,                      // ← "care" or "health"
+                    onBack = { navController.popBackStack() },
+                    onJoinClick = { group -> /* 상세/가입 처리 */ }
+                )
+            }
+
             // 케어 탭 그래프
             navigation(
                 route = Route.Care.route,

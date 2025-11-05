@@ -27,4 +27,8 @@ sealed class Route(val route: String) {
     object CreateHealthGroup : Route("health/create_health_group")
     object HealthGroupHome : Route("health/health_group_home")
 
+    object SearchGroup {
+        const val route = "group/search"
+        fun path(kind: String) = "$route/$kind"   // kind: "care" | "health"
+    }
 }
