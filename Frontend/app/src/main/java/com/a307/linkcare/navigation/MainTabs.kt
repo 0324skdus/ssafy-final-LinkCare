@@ -1,5 +1,7 @@
 package com.a307.linkcare.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
@@ -21,10 +23,12 @@ import com.a307.linkcare.feature.commongroup.MainWithNoGroup
 import com.a307.linkcare.feature.caregroup.CareGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupHome
-import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.caregroup.CareGroupHome
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainTabs(
@@ -58,6 +62,13 @@ fun MainTabs(
     LaunchedEffect(Unit) {
         if (selectedHealthGroup == null && healthGroups.isNotEmpty()) {
             selectedHealthGroup = healthGroups.first()
+        }
+    }
+
+    var selectedCareGroup by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        if (selectedCareGroup == null && careGroups.isNotEmpty()) {
+            selectedCareGroup = careGroups.first()
         }
     }
 
@@ -200,13 +211,31 @@ fun MainTabs(
                 startDestination = "care/main"
             ) {
                 composable("care/main") {
-                    MainWithNoGroup(
-                        navController = navController,
-                        onCreateGroupClick = {
-                            navController.navigate(Route.CreateCareGroup.route)
-                        },
-                        currentTab = "care"
-                    )
+                    if (selectedCareGroup == null) {
+                        MainWithNoGroup(
+                            navController = navController,
+                            onCreateGroupClick = {
+                                navController.navigate(Route.CreateCareGroup.route)
+                            },
+                            currentTab = "care"
+                        )
+                    } else {
+                        CareGroupHome(
+                            membersAll = listOf(
+                                Member(
+                                    "김싸피(나)",
+                                    10001,
+                                    30000,
+                                    R.drawable.char_bear_1,
+                                    "컨디션 좋아요!",
+                                    isLeader = true
+                                ),
+                                Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
+                                Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
+                                Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
+                            )
+                        )
+                    }
                 }
                 composable(Route.CreateCareGroup.route) {
                     CareGroupCreate(navController = navController)

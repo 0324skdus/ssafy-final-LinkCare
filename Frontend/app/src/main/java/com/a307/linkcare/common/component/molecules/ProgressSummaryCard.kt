@@ -10,7 +10,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.a307.linkcare.common.component.atoms.GroupContributionBar
-import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.common.theme.black
+import com.a307.linkcare.common.theme.white
+import com.a307.linkcare.feature.commongroup.domain.Member
 import java.text.NumberFormat
 
 // 데이터 클래스 정의
@@ -44,7 +46,6 @@ fun toSummaries(members: List<Member>): List<ProgressSummary> =
 
 @Composable
 fun ProgressSummaryCard(
-    titleGroup: String,
     members: List<Member>,
     totalSteps: Int? = null,
     totalGoal: Int? = null,
@@ -56,7 +57,11 @@ fun ProgressSummaryCard(
         modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF6F7FB),
+            contentColor = Color(0xFF111827)
+        )
     ) {
         Column(Modifier.padding(14.dp)) {
             // 헤더
@@ -65,11 +70,9 @@ fun ProgressSummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("${titleGroup}의", fontWeight = FontWeight.SemiBold)
-                    Text("운동을 분석했어요", fontWeight = FontWeight.SemiBold)
+                Column(Modifier.padding(2.dp)) {
+                    Text("운동량", fontWeight = FontWeight.SemiBold, color = black)
                 }
-
                 // 달성 뱃지 (필요 시 주석해제)
 //                Row(verticalAlignment = Alignment.CenterVertically) {
 //                    Icon(Icons.Default.Star, contentDescription = null, tint = point)

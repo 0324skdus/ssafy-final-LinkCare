@@ -21,6 +21,7 @@ sealed class Route(val route: String) {
 
     // Care 하위 탭
     object CreateCareGroup : Route("care/create_care_group")
+    object CareGroupHome : Route("care/care_group_home")
 
     // Health 하위 탭
     object CreateHealthGroup : Route("health/create_health_group")

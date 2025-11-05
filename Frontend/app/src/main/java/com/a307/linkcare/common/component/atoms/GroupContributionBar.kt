@@ -11,14 +11,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
-import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
-import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.feature.commongroup.domain.Member
 
 @Composable
 fun GroupContributionBar(

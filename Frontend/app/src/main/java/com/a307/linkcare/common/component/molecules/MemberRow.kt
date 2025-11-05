@@ -3,14 +3,12 @@ package com.a307.linkcare.common.component.molecules
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -19,11 +17,10 @@ import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.component.atoms.Avatar
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
-import com.a307.linkcare.feature.healthgroup.Member
-import androidx.compose.ui.res.painterResource
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
+import com.a307.linkcare.feature.commongroup.domain.Member
 
 @Composable
 fun MemberRow(

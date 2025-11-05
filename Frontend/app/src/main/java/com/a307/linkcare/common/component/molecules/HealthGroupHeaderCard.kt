@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.component.atoms.Avatar
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
-import com.a307.linkcare.feature.healthgroup.Member
+import com.a307.linkcare.feature.commongroup.domain.Member
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import com.a307.linkcare.R
