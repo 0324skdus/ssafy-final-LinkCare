@@ -19,8 +19,11 @@ sealed class Route(val route: String) {
     object Alarm   : Route("alarm")
     object MyPage  : Route("mypage")
 
-    // 하위 탭
+    // Care 하위 탭
     object CreateCareGroup : Route("care/create_care_group")
+
+    // Health 하위 탭
     object CreateHealthGroup : Route("health/create_health_group")
+    object HealthGroupHome : Route("health/health_group_home")
 
 }
