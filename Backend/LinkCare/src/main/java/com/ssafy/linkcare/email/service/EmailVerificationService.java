@@ -36,8 +36,6 @@ public class EmailVerificationService {
 
         // Redis에 저장 (5분 유효)
         redisTemplate.opsForValue().set(key, code, codeExpiration, TimeUnit.MILLISECONDS);
-
-        log.info("인증 코드 저장: email={}, code={}, TTL={}ms", email, code, codeExpiration);
     }
 
     /**
@@ -56,10 +54,9 @@ public class EmailVerificationService {
             throw new CustomException(ErrorCode.VERIFICATION_CODE_NOT_FOUND);
         }
 
-        // 인증 코드 없음 또는 만료됨
-        if (storedCode == null) {
-            log.warn("인증 코드 없음 또는 만료됨: email={}", email);
-            throw new CustomException(ErrorCode.VERIFICATION_CODE_NOT_FOUND);
+        // 인증 일치 여부 확인
+        if (!storedCode.equals(code)) {
+            throw new CustomException(ErrorCode.VERIFICATION_CODE_MISMATCH);
         }
 
         // 인증 성공 시 코드 삭제 (재사용 방지)

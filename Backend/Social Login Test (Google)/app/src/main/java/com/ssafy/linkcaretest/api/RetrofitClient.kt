@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     // 백엔드 URL (실제 상황에 맞게 변경)
-    // 에뮬레이터: http://10.0.2.2:8080
-    // 실제 기기: http://YOUR_PC_IP:8080
-    private const val BASE_URL = "http://10.0.2.2:8080"
+    // 에뮬레이터: http://10.0.2.2:9090
+    // 실제 기기: http://YOUR_PC_IP:9090
+    private const val BASE_URL = "http://10.0.2.2:9090"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

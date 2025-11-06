@@ -43,7 +43,37 @@ public enum ErrorCode {
     // 파일 업로드 관련 에러
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다"),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제에 실패했습니다"),
-    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다");
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다"),
+
+    //  그룹 관련 에러 (Group)
+
+    // 404 Not Found
+    GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹을 찾을 수 없습니다"),
+    GROUP_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 멤버를 찾을 수 없습니다"),
+    JOIN_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "가입 신청을 찾을 수 없습니다"),
+    INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
+
+    // 403 Forbidden
+    NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
+    ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버입니다"),
+
+    // 409 Conflict
+    GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
+    DUPLICATE_JOIN_REQUEST(HttpStatus.CONFLICT, "이미 가입 신청한 그룹입니다"),
+    GROUP_CAPACITY_FULL(HttpStatus.CONFLICT, "그룹 정원이 가득 차서 초대 링크를 생성할 수 없습니다"),
+    GROUP_REQUIRED_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 요구 권한을 찾을 수 없습니다"),
+
+    // 400 Bad Request
+    INVALID_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 초대 링크입니다"),
+    INVITATION_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 초대 링크입니다"),
+    JOIN_REQUEST_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 가입 신청입니다"),
+
+    PERMISSION_AGREEMENT_INVALID(HttpStatus.BAD_REQUEST, "권한 동의 정보가 유효하지 않습니다"),
+    HEALTH_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 정보 권한 설정을 찾을 수 없습니다"),
+
+    // 알림 관련 에러 (Notification)
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다"),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다");
 
     private final HttpStatus status;
     private final String message;
