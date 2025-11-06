@@ -2,6 +2,8 @@
 
 package com.a307.linkcare.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.*
 import androidx.compose.runtime.*
@@ -18,6 +20,7 @@ import com.a307.linkcare.feature.auth.ui.SignupScreen
 import com.a307.linkcare.feature.intro.IntroTourScreen
 import kotlinx.coroutines.delay
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
