@@ -51,8 +51,14 @@ import com.a307.linkcare.feature.mypage.StoreScreen
 import com.a307.linkcare.feature.mypage.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.a307.linkcare.common.component.molecules.HeaderBasic
+import com.a307.linkcare.feature.mypage.Gender
+import com.a307.linkcare.feature.mypage.Profile
+import com.a307.linkcare.feature.mypage.ProfileEditScreen
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -171,6 +177,17 @@ fun MainTabs() {
                     }
                 }
 
+                currentDestination?.route == Route.EditProfile.route -> {
+                    Column {
+                        HeaderBack(
+                            title = "개인정보 편집",
+                            onBackClick = { navController.popBackStack() }
+                        )
+
+                        Divider(color = unActiveField, thickness = 1.dp)
+                    }
+                }
+
                 // --- 그룹 조회 (마이페이지 > 그룹 조회) ---
                 currentDestination?.route == Route.MyGroups.route -> {
                     HeaderBack(
@@ -210,8 +227,8 @@ fun MainTabs() {
                                     onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { navController.navigate(Route.CareSearch) },
                                     moreMenu = { dismiss ->
-                                        androidx.compose.material3.DropdownMenuItem(
-                                            text = { androidx.compose.material3.Text("그룹 수정하기") },
+                                        DropdownMenuItem(
+                                            text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
                                                 val currentId = careGroups[selectedIndexCare]
@@ -233,8 +250,8 @@ fun MainTabs() {
                                     onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { navController.navigate(Route.HealthSearch) },
                                     moreMenu = { dismiss ->
-                                        androidx.compose.material3.DropdownMenuItem(
-                                            text = { androidx.compose.material3.Text("그룹 수정하기") },
+                                        DropdownMenuItem(
+                                            text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
                                                 val currentId = healthGroups[selectedIndexHealth]
@@ -384,9 +401,24 @@ fun MainTabs() {
                             avatarBgRes = R.drawable.background_1
                         ),
                         onGroupsClick = { navController.navigate(Route.MyGroups.route) },
-                        onEditClick = { /* ... */ },
+                        onEditClick = { navController.navigate(Route.EditProfile.route) },
                         onStoreClick = { navController.navigate(Route.Store.route) },
                         onDecorateClick = { navController.navigate(Route.Decorate.route) }
+                    )
+                }
+
+                // 편집
+                composable(Route.EditProfile.route) {
+                    ProfileEditScreen(
+                        initial = Profile(
+                            name = "싸피",
+                            gender = Gender.FEMALE,
+                            heightCm = 162,
+                            weightKg = 53,
+                            birthDate = "2022-11-11"
+                        ),
+                        onSave = { /** updated -> viewModel.saveProfile(updated)*/ },
+                        onBack = { navController.popBackStack() }
                     )
                 }
 
