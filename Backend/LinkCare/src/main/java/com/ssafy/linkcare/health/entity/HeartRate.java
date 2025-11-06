@@ -31,10 +31,10 @@ public class HeartRate {
     private String zoneOffset;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String endTime;
+    private Long endTime;
 
     @Embedded
     private DataSource dataSource;

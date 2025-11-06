@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Builder
@@ -33,10 +36,10 @@ public class Exercise {
     private String zoneOffset;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String endTime;
+    private Long endTime;
 
     @Embedded
     private DataSource dataSource;
@@ -47,4 +50,8 @@ public class Exercise {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
+
+    @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ExerciseSession> sessions = new ArrayList<>();
+
 }

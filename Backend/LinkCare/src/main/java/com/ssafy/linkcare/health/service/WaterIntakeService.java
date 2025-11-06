@@ -8,12 +8,17 @@ import com.ssafy.linkcare.health.entity.WaterIntake;
 import com.ssafy.linkcare.health.repository.WaterIntakeRepository;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WaterIntakeService {
@@ -38,7 +43,7 @@ public class WaterIntakeService {
                             .deviceId(dto.getDeviceId())
                             .deviceType(dto.getDeviceType())
                             .uid(dto.getUid())
-                            .startTime(dto.getStartTime())
+                            .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
                             .dataSource(dto.getDataSource())
                             .zoneOffset(dto.getZoneOffset())
                             .amount(dto.getAmount())
@@ -58,21 +63,37 @@ public class WaterIntakeService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        List<WaterIntake> waterIntakes = waterIntakeDto.getWaterIntakes().stream()
-                        .map(dto -> WaterIntake.builder()
-                                .deviceId(dto.getDeviceId())
-                                .deviceType(dto.getDeviceType())
-                                .uid(dto.getUid())
-                                .startTime(dto.getStartTime())
-                                .dataSource(dto.getDataSource())
-                                .zoneOffset(dto.getZoneOffset())
-                                .amount(dto.getAmount())
-                                .goal(waterIntakeDto.getGoal())
-                                .user(user)
-                                .build()
-                        ).toList();
+        // 목표 x 음수량 x
+        if(waterIntakeDto.getGoal() == 0 &&(waterIntakeDto.getWaterIntakes() == null || waterIntakeDto.getWaterIntakes().isEmpty())) {
+            return;
+        }
 
-            waterIntakeRepository.saveAll(waterIntakes);
-        };
-    }
+        waterIntakeDto.getWaterIntakes().forEach(dto -> {
+            // 이미 데이터가 존재하면 교체!
+            Optional<WaterIntake> existingData = waterIntakeRepository.findByUserAndUid(user, dto.getUid());
+
+            if(existingData.isPresent()) {
+                // 수정만 가능
+                WaterIntake waterIntake = existingData.get();
+                waterIntake.updateAmountAndGoal(dto.getAmount(), waterIntakeDto.getGoal());
+            } else {
+                waterIntakeRepository.save(WaterIntake.builder()
+                        .deviceId(dto.getDeviceId())
+                        .deviceType(dto.getDeviceType())
+                        .uid(dto.getUid())
+                        .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                        .dataSource(dto.getDataSource())
+                        .zoneOffset(dto.getZoneOffset())
+                        .amount(dto.getAmount())
+                        .goal(waterIntakeDto.getGoal())
+                        .user(user)
+                        .build()
+                );
+            }
+        });
+
+
+
+    };
+}
 

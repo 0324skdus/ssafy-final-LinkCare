@@ -22,15 +22,20 @@ public class ActivitySummary {
     private String deviceType;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "total_calories_burned")
-    private Double totalCaloriesBurned;
+    private double totalCaloriesBurned;
 
     @Column(name = "total_distance")
-    private Double totalDistance;
+    private double totalDistance;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
+
+    public void updateCaloriesAndDistance(double totalCaloriesBurned, double totalDistance) {
+        this.totalCaloriesBurned = totalCaloriesBurned;
+        this.totalDistance = totalDistance;
+    }
 }

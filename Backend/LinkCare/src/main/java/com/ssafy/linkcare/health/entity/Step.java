@@ -26,10 +26,10 @@ public class Step {
     private String deviceType;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String end_time;
+    private Long endTime;
 
     @Column(name = "count")
     private int count;

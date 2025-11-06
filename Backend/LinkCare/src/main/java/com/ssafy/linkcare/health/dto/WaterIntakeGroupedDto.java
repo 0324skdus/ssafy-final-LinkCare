@@ -2,6 +2,8 @@ package com.ssafy.linkcare.health.dto;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class WaterIntakeGroupedDto {
 
@@ -9,7 +11,8 @@ public class WaterIntakeGroupedDto {
     private String deviceType;
     private String uid;
     private String zoneOffset;
-    private String startTime;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
     private DataSource dataSource;
     private float amount;
 }

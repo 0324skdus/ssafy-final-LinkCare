@@ -20,10 +20,10 @@ public class ExerciseSession {
     private int exerciseSessionId;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String endTime;
+    private Long endTime;
 
     @Column(name = "exercise_type")
     private String exerciseType;

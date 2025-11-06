@@ -33,7 +33,7 @@ public class WaterIntake {
     private String zoneOffset;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Embedded
     private DataSource dataSource;
@@ -47,4 +47,9 @@ public class WaterIntake {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
+
+    public void updateAmountAndGoal(float amount, float goal) {
+        this.amount = amount;
+        this.goal = goal;
+    }
 }

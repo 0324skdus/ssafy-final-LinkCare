@@ -19,10 +19,10 @@ public class SleepSession {
     private int sleepSessionId;
 
     @Column(name = "state_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String endTime;
+    private Long endTime;
 
     @Column(name = "duration")
     private int duration;
@@ -30,4 +30,9 @@ public class SleepSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sleep_id")
     private Sleep sleep;
+
+    public void updateDuration(int duration) {
+        this.duration = duration;
+    }
+
 }

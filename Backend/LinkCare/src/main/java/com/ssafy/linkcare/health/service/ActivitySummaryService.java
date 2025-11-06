@@ -7,11 +7,13 @@ import com.ssafy.linkcare.health.entity.ActivitySummary;
 import com.ssafy.linkcare.health.repository.ActivitySummaryRepository;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class ActivitySummaryService {
                 .map(dto -> ActivitySummary.builder()
                         .deviceId(dto.getDeviceId())
                         .deviceType(dto.getDeviceType())
-                        .startTime(dto.getStartTime())
+                        .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
                         .totalCaloriesBurned(dto.getTotalCaloriesBurned())
                         .totalDistance(dto.getTotalDistance())
                         .user(user)
@@ -49,17 +51,24 @@ public class ActivitySummaryService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-
-        if(activityDto == null) {
+        if(activityDto == null || (activityDto.getTotalCaloriesBurned() == 0 && activityDto.getTotalDistance() == 0)) {
             return;
         }
+        Long startTimeTs = activityDto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond();
 
-        activitySummaryRepository.save(ActivitySummary.builder()
-                .startTime(activityDto.getStartTime())
-                .totalDistance(activityDto.getTotalDistance())
-                .totalCaloriesBurned(activityDto.getTotalCaloriesBurned())
-                .user(user)
-                .build());
+        Optional<ActivitySummary> existingData = activitySummaryRepository.findByUserAndStartTime(user, startTimeTs);
+        if(existingData.isPresent()) {
+            // 업데이트만 가능
+            ActivitySummary activitySummary = existingData.get();
+            activitySummary.updateCaloriesAndDistance(activityDto.getTotalCaloriesBurned(), activitySummary.getTotalDistance());
+        } else {
+            activitySummaryRepository.save(ActivitySummary.builder()
+                    .startTime(startTimeTs)
+                    .totalDistance(activityDto.getTotalDistance())
+                    .totalCaloriesBurned(activityDto.getTotalCaloriesBurned())
+                    .user(user)
+                    .build());
+        }
     }
 
 }

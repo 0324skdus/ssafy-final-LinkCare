@@ -2,8 +2,7 @@ package com.ssafy.linkcare.health.controller;
 
 import com.ssafy.linkcare.health.dto.AllHealthDataDto;
 import com.ssafy.linkcare.health.dto.DailyHealthData;
-import com.ssafy.linkcare.health.service.HealthSyncService;
-import com.ssafy.linkcare.health.service.SleepService;
+import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class HealthController {
 
-    private final HealthSyncService healthSyncService;
+    private final HealthService healthSyncService;
 
     // 일별 전체 데이터 동기화
     @PostMapping("/users/{userId}/daily")

@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -35,10 +36,10 @@ public class Sleep {
     private String zoneOffset;
 
     @Column(name = "start_time")
-    private String startTime;
+    private Long startTime;
 
     @Column(name = "end_time")
-    private String endTime;
+    private Long endTime;
 
     @Embedded
     private DataSource dataSource;
@@ -49,5 +50,12 @@ public class Sleep {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
+
+    @OneToMany(mappedBy = "sleep", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SleepSession> sessions = new ArrayList<>();
+
+    public void updateDuration(int duration) {
+        this.duration = duration;
+    }
 
 }
