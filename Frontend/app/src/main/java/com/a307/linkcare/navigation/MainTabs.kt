@@ -4,8 +4,15 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -16,7 +23,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.a307.linkcare.R
-import com.a307.linkcare.common.component.molecules.*
+import com.a307.linkcare.common.component.molecules.BottomBar
+import com.a307.linkcare.common.component.molecules.HeaderBack
+import com.a307.linkcare.common.component.molecules.HeaderDropDown
+import com.a307.linkcare.common.component.molecules.HeaderSearch
+import com.a307.linkcare.common.component.molecules.HeaderTitleOnly
 import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.feature.caregroup.CareGroup
 import com.a307.linkcare.feature.caregroup.CareGroupCreate
@@ -31,10 +42,26 @@ import com.a307.linkcare.feature.healthgroup.HealthGroup
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupEdit
 import com.a307.linkcare.feature.healthgroup.HealthGroupHome
+import com.a307.linkcare.feature.mypage.DecorateScreen
 import com.a307.linkcare.feature.mypage.MyGroups
 import com.a307.linkcare.feature.mypage.MyPage
 import com.a307.linkcare.feature.mypage.MyPageUiState
+import com.a307.linkcare.feature.mypage.StoreItem
+import com.a307.linkcare.feature.mypage.StoreScreen
+import com.a307.linkcare.feature.mypage.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
+import androidx.activity.compose.BackHandler
+import androidx.navigation.NavController
+import com.a307.linkcare.common.component.molecules.HeaderBasic
+
+private fun NavController.goBackToMyPage() {
+    navigate(Route.MyPage.route) {
+        // MyPage 위로는 모두 유지, MyPage가 없으면 생성
+        popUpTo(Route.MyPage.route) { inclusive = false }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,6 +163,41 @@ fun MainTabs() {
                     Divider(color = unActiveField, thickness = 1.dp)
                 }
 
+                // --- 마이페이지 ---
+                currentDestination?.route == Route.MyPageMain.route -> {
+                    Column {
+                        HeaderTitleOnly(title = "내 페이지")
+                        Divider(color = unActiveField, thickness = 1.dp)
+                    }
+                }
+
+                // --- 그룹 조회 (마이페이지 > 그룹 조회) ---
+                currentDestination?.route == Route.MyGroups.route -> {
+                    HeaderBack(
+                        title = "그룹 조회",
+                        onBackClick = { navController.popBackStack() }
+                    )
+                    Divider(color = unActiveField, thickness = 1.dp)
+                }
+
+                // --- 상점 (마이페이지 > 상점) ---
+                currentDestination?.route == Route.Store.route -> {
+                    HeaderBack(
+                        title = "상점",
+                        onBackClick = { navController.goBackToMyPage() } // 여기!
+                    )
+                    Divider(color = unActiveField, thickness = 1.dp)
+                }
+
+                // --- 꾸미기 (마이페이지 > 꾸미기) ---
+                currentDestination?.route == Route.Decorate.route -> {
+                    HeaderBack(
+                        title = "꾸미기",
+                        onBackClick = { navController.goBackToMyPage() }
+                    )
+                    Divider(color = unActiveField, thickness = 1.dp)
+                }
+
                 else -> {
                     Column {
                         when {
@@ -148,8 +210,8 @@ fun MainTabs() {
                                     onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { navController.navigate(Route.CareSearch) },
                                     moreMenu = { dismiss ->
-                                        DropdownMenuItem(
-                                            text = { Text("그룹 수정하기") },
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { androidx.compose.material3.Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
                                                 val currentId = careGroups[selectedIndexCare]
@@ -171,8 +233,8 @@ fun MainTabs() {
                                     onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { navController.navigate(Route.HealthSearch) },
                                     moreMenu = { dismiss ->
-                                        DropdownMenuItem(
-                                            text = { Text("그룹 수정하기") },
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { androidx.compose.material3.Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
                                                 val currentId = healthGroups[selectedIndexHealth]
@@ -304,26 +366,72 @@ fun MainTabs() {
                 }
             }
 
+            // ---------- 알림 ----------
             composable(Route.Alarm.route) {
                 Notification()
             }
-            composable(Route.MyPage.route) {
-                MyPage(
-                    state = MyPageUiState(
-                        nickname = "김싸피",
-                        coinLabel = "보유 응원 코인 300",
-                        groupCountLabel = "그룹 조회",
-                        avatarRes = R.drawable.char_bear_1, // 프로젝트 내 아바타 이미지
-                        avatarBgRes = R.drawable.background_1   // 배경 이미지 (없으면 null)
+
+            // ---------- 마이페이지 ----------
+            navigation(route = Route.MyPage.route, startDestination = Route.MyPageMain.route) {
+                // MyPage 홈
+                composable(Route.MyPageMain.route) {
+                    MyPage(
+                        state = MyPageUiState(
+                            nickname = "김싸피",
+                            coinLabel = "보유 코인 300",
+                            groupCountLabel = "그룹 조회",
+                            avatarRes = R.drawable.char_bear_1,
+                            avatarBgRes = R.drawable.background_1
+                        ),
+                        onGroupsClick = { navController.navigate(Route.MyGroups.route) },
+                        onEditClick = { /* ... */ },
+                        onStoreClick = { navController.navigate(Route.Store.route) },
+                        onDecorateClick = { navController.navigate(Route.Decorate.route) }
+                    )
+                }
+
+                // 그룹 조회
+                composable(Route.MyGroups.route) {
+                    MyGroups(navController = navController)
+                }
+
+                // 상점
+                val dummyState = StoreUiState(
+                    coins = 300,
+                    characterItems = listOf(
+                        StoreItem("bear1", R.drawable.char_bear_1, price = 100, owned = true),
+                        StoreItem("duck1", R.drawable.char_duck_1, price = 150, owned = false)
                     ),
-                    onGroupsClick = { navController.navigate(Route.MyGroups.route) },
-                    onEditClick = { /* ... */ },
-                    onStoreClick = { /* ... */ },
-                    onDecorateClick = { /* ... */ }
+                    backgroundItems = listOf(
+                        StoreItem("bg1", R.drawable.background_1, price = 80, owned = true),
+                        StoreItem("bg2", R.drawable.background_2, price = 120, owned = false),
+                        StoreItem("bg3", R.drawable.background_3, price = 120, owned = false),
+                        StoreItem("bg4", R.drawable.background_4, price = 120, owned = false),
+                        StoreItem("bg5", R.drawable.background_5, price = 120, owned = false),
+                        StoreItem("bg6", R.drawable.background_6, price = 120, owned = false),
+                        StoreItem("bg7", R.drawable.background_7, price = 120, owned = false),
+                        StoreItem("bg8", R.drawable.background_8, price = 120, owned = false)
+                    ),
+                    equippedBackground = R.drawable.background_1,
+                    equippedCharacter = R.drawable.char_bear_1
                 )
-            }
-            composable(Route.MyGroups.route) {
-                MyGroups(navController = navController)
+                composable(Route.Store.route) {
+                    StoreScreen(
+                        state = dummyState,
+                        onBuy = { /* TODO: 구매 처리 */ }
+                    )
+                }
+
+                // 꾸미기
+                composable(Route.Decorate.route) {
+                    DecorateScreen(
+                        ownedCharacters = listOf(R.drawable.char_bear_1, R.drawable.char_duck_1),
+                        ownedBackgrounds = listOf(R.drawable.background_1, R.drawable.background_2),
+                        equippedCharacter = R.drawable.char_bear_1,
+                        equippedBackground = R.drawable.background_1,
+                        onApply = { _, _ -> /* TODO: 장착 처리 */ }
+                    )
+                }
             }
         }
     }
