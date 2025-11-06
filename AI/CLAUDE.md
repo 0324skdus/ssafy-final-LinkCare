@@ -98,11 +98,32 @@ jupyter notebook
 
 #### API Server
 ```bash
+#venv 실행 방법
+.\.venv\Scripts\activate
+
 # FastAPI 서버 실행
 uvicorn app.main:app --reload
 
 # 또는 백그라운드에서 실행
 uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+#### 확인 
+```bash
+# 요청 보내는 법 
+curl -X POST http://127.0.0.1:8000/items -H "Content-Type: application/json" -d '{"name": "apple"}'
+요약:
+
+curl <주소> → 기본 GET 요청
+
+-X → 메서드 지정 (POST, PUT, DELETE 등)
+
+-H → 헤더 설정
+
+-d → 데이터 전송
+
+==> curl http://127.0.0.1:8000/health
+
 ```
 
 **사용 가능한 엔드포인트**:
