@@ -1,0 +1,51 @@
+
+services:
+  backend:
+    image: ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/backend:${DOCKER_TAG}
+    container_name: backend
+    restart: always
+    ports:
+      - "9090:9090"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+      GMAIL_PASSWORD: ${GMAIL_PASSWORD}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+    volumes:
+      - /home/ubuntu/app/secret/firebase-service-account.json:/run/secrets/firebase.json:ro
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_USER_PASSWORD}
+      MYSQL_PASSWORD: ${DB_USER_PASSWORD}
+      MYSQL_DATABASE: linkcare
+      MYSQL_USER: ssafy
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
