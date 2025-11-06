@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+notebooks/
+
+# Data (학습 데이터는 이미지에 포함하지 않음)
+data/
+
+#Models (volume mount로 연결할 예정)
+models/
+
+#Scripts (개발용, production 불필요)
+scripts/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentation
+README.md
+CLAUDE.md
+NOTEBOOKS_GUIDE_KR.md
+
+# Tests
+tests/
