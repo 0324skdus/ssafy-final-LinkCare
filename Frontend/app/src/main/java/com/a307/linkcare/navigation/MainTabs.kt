@@ -31,6 +31,7 @@ import com.a307.linkcare.feature.healthgroup.HealthGroup
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupEdit
 import com.a307.linkcare.feature.healthgroup.HealthGroupHome
+import com.a307.linkcare.feature.notification.Notification
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -300,7 +301,9 @@ fun MainTabs() {
                 }
             }
 
-            composable(Route.Alarm.route) { /* ... */ }
+            composable(Route.Alarm.route) {
+                Notification()
+            }
             composable(Route.MyPage.route) { /* ... */ }
         }
     }

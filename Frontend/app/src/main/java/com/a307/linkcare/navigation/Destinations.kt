@@ -30,6 +30,9 @@ sealed class Route(val route: String) {
     object CreateHealthGroup : Route("health/create_health_group")
     object HealthGroupHome : Route("health/health_group_home")
 
+    // alarm 하위 탭
+    object Nofitication : Route("alarm/nofitication")
+
     companion object {
         const val CareSearch = "care/search"
         const val HealthSearch = "health/search"
