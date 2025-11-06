@@ -35,6 +35,7 @@ sealed class Route(val route: String) {
 
     // My Page 하위 탭
     object MyPageMain : Route("mypage/my_page_main")
+    object MyGroups : Route("mypage/my_groups")
 
     companion object {
         const val CareSearch = "care/search"
