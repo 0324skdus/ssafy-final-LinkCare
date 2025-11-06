@@ -12,14 +12,14 @@ class WatchListenerService : WearableListenerService() {
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         for (event in dataEvents) {
             if (event.type == DataEvent.TYPE_CHANGED &&
-                event.dataItem.uri.path == "/workout/summary"
+                event.dataItem.uri.path == "/linkcare/summary"
             ) {
                 val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
                 val summary = WorkoutSummary(
                     sessionId = dataMap.getString("sessionId") ?: "",
                     avgHeartRate = dataMap.getInt("avgHeartRate"),
                     calories = dataMap.getInt("calories"),
-                    steps = dataMap.getInt("steps"),
+                    distance = dataMap.getInt("distance"),
                     durationSec = dataMap.getInt("durationSec")
                 )
 

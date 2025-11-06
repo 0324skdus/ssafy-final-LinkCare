@@ -9,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.linkcare.testmoblie"
+        applicationId = "com.linkcare.linkcarewear"
         minSdk = 34
         targetSdk = 36
         versionCode = 1
@@ -55,7 +55,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    implementation("com.google.android.gms:play-services-wearable:18.2.0")
+    implementation("com.google.android.gms:play-services-wearable:18.1.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.0")
     // ✅ AppCompatActivity 인식용
     implementation("androidx.appcompat:appcompat:1.7.0")

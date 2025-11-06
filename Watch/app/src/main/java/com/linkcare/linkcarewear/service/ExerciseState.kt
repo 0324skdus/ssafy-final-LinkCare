@@ -1,18 +1,5 @@
-/*
- * Copyright 2025 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/*화면이 표현할 상태(데이터 구조)
+*/
 package com.linkcare.linkcarewear.service
 
 import androidx.health.services.client.data.DataPointContainer
@@ -21,6 +8,7 @@ import androidx.health.services.client.data.ExerciseGoal
 import androidx.health.services.client.data.ExerciseState
 import androidx.health.services.client.data.ExerciseUpdate.ActiveDurationCheckpoint
 import androidx.health.services.client.data.LocationAvailability
+import com.linkcare.linkcarewear.data.DataLayerManager
 
 data class ExerciseMetrics(
     val heartRate: Double? = null,
@@ -28,20 +16,27 @@ data class ExerciseMetrics(
     val calories: Double? = null,
     val heartRateAverage: Double? = null
 ) {
-    fun update(latestMetrics: DataPointContainer): ExerciseMetrics =
-        copy(
-            heartRate =
-            latestMetrics.getData(DataType.HEART_RATE_BPM).lastOrNull()?.value
-                ?: heartRate,
-            distance = latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total ?: distance,
-            calories = latestMetrics.getData(DataType.CALORIES_TOTAL)?.total ?: calories,
-            heartRateAverage =
-            latestMetrics.getData(DataType.HEART_RATE_BPM_STATS)?.average
-                ?: heartRateAverage
-        )
+    fun update(latestMetrics: DataPointContainer, sessionId: String, checkpoint: ActiveDurationCheckpoint?): ExerciseMetrics {
+        val newHeartRate = latestMetrics.getData(DataType.HEART_RATE_BPM).lastOrNull()?.value ?: heartRate
+        val newCalories = latestMetrics.getData(DataType.CALORIES_TOTAL)?.total ?: calories
+
+        // ✅ durationSec 계산 (밀리초 → 초)
+        val durationSec = checkpoint?.activeDuration?.seconds?.toInt() ?: 0
+
+        if (newHeartRate != null && newCalories != null) {
+            DataLayerManager.sendMetrics(
+                sessionId = sessionId,
+                heartRate = newHeartRate.toInt(),
+                calories = newCalories.toInt(),
+                durationSec = durationSec
+            )
+        }
+
+        return copy(heartRate = newHeartRate, calories = newCalories)
+    }
 }
 
-// Capturing most of the values associated with our exercise in a data class
+    // Capturing most of the values associated with our exercise in a data class
 data class ExerciseServiceState(
     val exerciseState: ExerciseState? = null,
     val exerciseMetrics: ExerciseMetrics = ExerciseMetrics(),

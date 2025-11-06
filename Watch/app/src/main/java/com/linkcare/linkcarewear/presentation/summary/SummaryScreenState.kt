@@ -1,7 +1,7 @@
-
+//화면이 표현할 상태(데이터 구조)
 package com.linkcare.linkcarewear.presentation.summary
 
-import com.linkcare.linkcarewear.model.WorkoutSummary
+import com.linkcare.linkcarewear.data.model.WorkoutSummary
 import java.time.Duration
 
 data class SummaryScreenState(
