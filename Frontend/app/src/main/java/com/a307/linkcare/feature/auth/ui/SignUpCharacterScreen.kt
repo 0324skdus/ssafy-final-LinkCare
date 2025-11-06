@@ -2,8 +2,11 @@
 
 package com.a307.linkcare.feature.auth.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,18 +23,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.common.util.cropTransparentBorder
+import com.a307.linkcare.common.util.loadCroppedPainterIO
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -47,7 +55,6 @@ fun SignupCharacterScreen(
     ),
     onStart: (selectedIndex: Int, name: String) -> Unit = { _, _ -> },
     onNavigateToIntro: () -> Unit = {}
-
 ) {
     require(characterImages.isNotEmpty()) { "characterImages must not be empty" }
 
@@ -55,7 +62,6 @@ fun SignupCharacterScreen(
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
     var name by rememberSaveable { mutableStateOf("") }
     val canStart = name.isNotBlank()
-
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
 
     Box(
@@ -95,11 +101,38 @@ fun SignupCharacterScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // 캐러셀 영역
+            val context = LocalContext.current
+
+            // 캐릭터 이미지 Painter 캐시
+            val cachedPainters = remember(characterImages) {
+                mutableStateListOf<BitmapPainter?>().also { list ->
+                    repeat(characterImages.size) { list.add(null) }
+                }
+            }
+
+            // IO 스레드에서 미리 로드 + 크롭 + 캐싱
+            LaunchedEffect(Unit) {
+                characterImages.forEachIndexed { i, resId ->
+                    if (cachedPainters[i] == null) {
+                        cachedPainters[i] = loadCroppedPainterIO(context, resId)
+                    }
+                }
+            }
+
+            // 새 그림이 준비되기 전엔 직전 그림을 유지
+            var lastReadyIndex by remember { mutableStateOf(0) }
+            val currentPainter = cachedPainters.getOrNull(selectedIndex)
+            val painterToShow = currentPainter ?: cachedPainters.getOrNull(lastReadyIndex)
+
+            LaunchedEffect(currentPainter, selectedIndex) {
+                if (currentPainter != null) lastReadyIndex = selectedIndex
+            }
+
+            // ───────────────────── 캐릭터 선택 박스 ─────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp),
+                    .height(300.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // 좌측 화살표
@@ -113,11 +146,12 @@ fun SignupCharacterScreen(
                         if (selectedIndex - 1 < 0) characterImages.lastIndex else selectedIndex - 1
                 }
 
-                // 원형 캐릭터 미리보기
+                // 원형 프레임
                 Box(
                     modifier = Modifier
-                        .size(220.dp)
+                        .size(255.dp)
                         .clip(CircleShape)
+                        .background(Color(0xFFEFF3FF))
                         .border(3.dp, Color(0xFFE5E7EB), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -125,20 +159,27 @@ fun SignupCharacterScreen(
                     Image(
                         painter = painterResource(id = R.drawable.background_1),
                         contentDescription = "character background",
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.matchParentSize(),
                         contentScale = ContentScale.Crop
                     )
 
-                    // 캐릭터 이미지
-                    Crossfade(targetState = selectedIndex, label = "charCrossfade") { idx ->
-                        Image(
-                            painter = painterResource(id = characterImages[idx]),
-                            contentDescription = "character_$idx",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(18.dp),
-                            contentScale = ContentScale.Fit
-                        )
+                    // 빠른 크로스페이드 + 크롭된 이미지 표시
+                    if (painterToShow != null) {
+                        Crossfade(
+                            targetState = painterToShow,
+                            animationSpec = tween(durationMillis = 0),
+                            label = "charCrossfade_fast"
+                        ) { painter ->
+                            Image(
+                                painter = painter,
+                                contentDescription = "character",
+                                modifier = Modifier
+                                    .fillMaxSize(0.5f)
+                                    .align(Alignment.Center)
+                                    .offset(y = 10.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
                     }
                 }
 
@@ -194,6 +235,7 @@ fun SignupCharacterScreen(
     }
 }
 
+// ───────────────────────── ArrowPill ─────────────────────────
 @Composable
 private fun ArrowPill(
     text: String,
