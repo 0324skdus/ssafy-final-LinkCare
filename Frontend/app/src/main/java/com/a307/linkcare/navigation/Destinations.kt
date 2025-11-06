@@ -1,5 +1,8 @@
 package com.a307.linkcare.navigation
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 sealed class Route(val route: String) {
     // Auth 영역
     object Intro  : Route("intro")
@@ -31,4 +34,21 @@ sealed class Route(val route: String) {
         const val CareSearch = "care/search"
         const val HealthSearch = "health/search"
     }
+
+    /** 그룹 수정 (id 인자 전달용) */
+    object EditCareGroup : Route("care/edit_care_group/{groupId}") {
+        const val ARG_GROUP_ID = "groupId"
+
+        val arguments = listOf(
+            navArgument(ARG_GROUP_ID) { type = NavType.StringType }
+        )
+    }
+    object EditHealthGroup : Route("health/edit_health_group/{groupId}") {
+        const val ARG_GROUP_ID = "groupId"
+
+        val arguments = listOf(
+            navArgument(ARG_GROUP_ID) { type = NavType.StringType }
+        )
+    }
+
 }
