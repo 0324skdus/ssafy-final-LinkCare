@@ -17,32 +17,6 @@ docker build -t linkcare-ai:latest .
 docker images linkcare-ai
 ```
 
-### 2. Docker Hub에 이미지 푸시
-
-```bash
-# Docker Hub 로그인
-docker login
-
-# 이미지 태그 (your-dockerhub-username을 실제 계정명으로 변경)
-docker tag linkcare-ai:latest your-dockerhub-username/linkcare-ai:latest
-
-# 푸시
-docker push your-dockerhub-username/linkcare-ai:latest
-```
-
-**대안: AWS ECR 사용**
-```bash
-# ECR 로그인 (region과 account-id를 실제 값으로 변경)
-aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com
-
-# ECR 리포지토리 생성
-aws ecr create-repository --repository-name linkcare-ai --region ap-northeast-2
-
-# 이미지 태그 및 푸시
-docker tag linkcare-ai:latest <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/linkcare-ai:latest
-docker push <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/linkcare-ai:latest
-```
-
 ---
 
 ## EC2 인스턴스 설정
