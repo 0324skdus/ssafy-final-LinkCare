@@ -56,6 +56,8 @@ constructor(
         )
 
     private var errorState: MutableStateFlow<String?> = MutableStateFlow(null)
+    /** 현재 세션 ID 저장 */
+    private var currentSessionId: String? = null
 
     val serviceState: StateFlow<ServiceState> =
         exerciseServiceStateUpdates
@@ -87,11 +89,12 @@ constructor(
             }
         }
 
-    fun startExercise() =
+    fun startExerciseWithSession(sessionId:String) =
         serviceCall {
             try {
                 errorState.value = null
-                startExercise()
+                currentSessionId = sessionId
+                startExercise(sessionId)
             } catch (e: Exception) {
                 errorState.value = e.message
                 logger.error("Error starting exercise", e.fillInStackTrace())

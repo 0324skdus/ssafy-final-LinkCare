@@ -24,6 +24,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.linkcare.linkcarewear.data.DataLayerManager
 import com.linkcare.linkcarewear.presentation.LinkCareExerciseApp
 import com.linkcare.linkcarewear.presentation.exercise.ExerciseViewModel
 import com.linkcare.linkcarewear.presentation.preparing.PreparingViewModel
@@ -46,6 +47,7 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    //초기화
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         var pendingNavigation = true
@@ -53,6 +55,7 @@ class MainActivity : FragmentActivity() {
         splash.setKeepOnScreenCondition { pendingNavigation }
 
         super.onCreate(savedInstanceState)
+        DataLayerManager.init(this)
 
         // Request permissions when activity is created
         requestPermissions.launch(PreparingViewModel.permissions.toTypedArray())

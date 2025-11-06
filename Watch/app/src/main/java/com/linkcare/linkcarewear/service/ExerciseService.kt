@@ -31,7 +31,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.linkcare.linkcarewear.data.DataLayerManager
 import com.linkcare.linkcarewear.data.ExerciseClientManager
 import com.linkcare.linkcarewear.data.isExerciseInProgress
-import com.linkcare.linkcarewear.model.WorkoutSummary
+import com.linkcare.linkcarewear.data.model.WorkoutSummary
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.Duration
 import javax.inject.Inject
@@ -73,8 +73,10 @@ class ExerciseService : LifecycleService() {
      * Start exercise in this service's coroutine context.
      */
     private var currentSessionId: String = ""
-    suspend fun startExercise() {
-        currentSessionId = System.currentTimeMillis().toString()
+    val sessionId: String?
+        get() = currentSessionId   // ✅ 외부에서 읽기만 가능하도록 허용
+    suspend fun startExercise(sessionId: String) {
+        currentSessionId = sessionId
         postOngoingActivityNotification()
         exerciseClientManager.startExercise()
     }

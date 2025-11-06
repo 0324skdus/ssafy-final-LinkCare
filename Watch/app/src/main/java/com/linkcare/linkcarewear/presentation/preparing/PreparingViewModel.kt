@@ -38,6 +38,7 @@ class PreparingViewModel
 constructor(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
+    private var sessionId: String = ""
     init {
         viewModelScope.launch {
             healthServicesRepository.prepareExercise()
@@ -45,7 +46,12 @@ constructor(
     }
 
     fun startExercise() {
-        healthServicesRepository.startExercise()
+        // ✅ 세션ID 생성
+        sessionId = System.currentTimeMillis().toString()
+
+        viewModelScope.launch {
+            healthServicesRepository.startExerciseWithSession(sessionId)
+        }
     }
 
     val uiState: StateFlow<PreparingScreenState> =
