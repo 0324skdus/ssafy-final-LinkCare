@@ -56,10 +56,12 @@ private val dummyGroups = listOf(
 @Composable
 fun GroupSearch(
     kind: String, // "care" | "health"
+    query: String,
+    onQueryChange: (String) -> Unit,
     onBack: () -> Unit,
     onJoinClick: (GroupItem) -> Unit
 ) {
-    // 더미 데이터 2세트
+    // 더미 데이터
     val careDummy = remember {
         listOf(
             GroupItem(1, "케어-식단관리", "식단 기록하고 리뷰하는 그룹", "200kcal | 20min | 3000steps | 2km", "3/6"),
@@ -75,45 +77,32 @@ fun GroupSearch(
 
     val source = if (kind == "health") healthDummy else careDummy
 
-    var query by remember { mutableStateOf("") }
     val results = remember(query, source) {
         if (query.isBlank()) emptyList()
         else source.filter {
-            it.title.contains(query, true) || it.summary.contains(query, true)
+            it.title.contains(query, ignoreCase = true) ||
+                    it.summary.contains(query, ignoreCase = true)
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    TextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = { Text(if (kind == "health") "헬스 그룹 검색" else "케어 그룹 검색") },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFF4F6F8),
-                            unfocusedContainerColor = Color(0xFFF4F6F8),
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null) }
-                }
-            )
-        }
-    ) { padding ->
+    Scaffold { padding ->
         when {
+            // 입력 없을 때 (아무것도 안보여줌)
             query.isBlank() -> {}
+
+            // 결과 없음
             results.isEmpty() -> EmptyState(
-                modifier = Modifier.padding(padding).fillMaxSize(),
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
                 message = "앗! 검색 결과가 없어요."
             )
+
+            // 결과 있음
             else -> LazyColumn(
-                modifier = Modifier.padding(padding).fillMaxSize(),
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -124,6 +113,7 @@ fun GroupSearch(
         }
     }
 }
+
 
 // --------- 카드 UI ----------
 @Composable

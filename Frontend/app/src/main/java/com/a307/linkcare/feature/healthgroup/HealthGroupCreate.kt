@@ -2,8 +2,10 @@ package com.a307.linkcare.feature.healthgroup
 
 import android.annotation.SuppressLint
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +40,11 @@ fun HealthGroupCreate(
     var shareExercise by remember { mutableStateOf(true) }
     var shareHr by remember { mutableStateOf(true) }
     var shareSteps by remember { mutableStateOf(true) }
+
+    var kcalText by remember { mutableStateOf("") }
+    var minutesText by remember { mutableStateOf("") }
+    var stepsText by remember { mutableStateOf("") }
+    var kmText by remember { mutableStateOf("") }
 
     val maxMember = maxMemberText.toIntOrNull()
     val maxValid = maxMember != null && maxMember in 1..6
@@ -130,6 +137,21 @@ fun HealthGroupCreate(
                         color = Color(0xFFD9534F)
                     )
                 }
+            }
+
+            item {
+                SectionTitle("최소 기준을 선택해주세요")
+                BaselineInputs(
+                    kcalText = kcalText,
+                    minutesText = minutesText,
+                    stepsText = stepsText,
+                    kmText = kmText,
+                    onKcalChange = { kcalText = it },
+                    onMinutesChange = { minutesText = it },
+                    onStepsChange = { stepsText = it },
+                    onKmChange = { kmText = it },
+                    enabled = true // leader
+                )
             }
 
             // 공유 데이터

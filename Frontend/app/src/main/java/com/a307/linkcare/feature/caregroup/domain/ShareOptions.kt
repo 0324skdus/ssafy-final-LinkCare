@@ -1,11 +1,11 @@
 package com.a307.linkcare.feature.caregroup.domain
 
 data class ShareOptions(
-    val exercise: Boolean,
-    val heartRate: Boolean,
-    val steps: Boolean,
-    val sleep: Boolean,
-    val water: Boolean,
-    val bloodPressure: Boolean,
-    val bloodSugar: Boolean
+    val exercise: Boolean = false,
+    val heartRate: Boolean = false,
+    val steps: Boolean = false,
+    val sleep: Boolean = false,
+    val water: Boolean = false,
+    val bloodPressure: Boolean = false,
+    val bloodSugar: Boolean = false
 )

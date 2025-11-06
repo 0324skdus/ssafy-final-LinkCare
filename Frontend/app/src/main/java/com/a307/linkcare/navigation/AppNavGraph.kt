@@ -131,7 +131,16 @@ fun AppNavGraph(
 
         // 메인 화면
         composable(Route.Main.route) {
-            MainTabs()
+            MainTabs(
+            )
         }
     }
+}
+
+fun Route.withArgs(vararg args: Any?): String {
+    var path = route
+    args.forEach { arg ->
+        path = path.replaceFirst("\\{[^/]+\\}".toRegex(), arg.toString())
+    }
+    return path
 }
