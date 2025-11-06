@@ -9,16 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.navigation.navigation
-
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.feature.commongroup.MainWithNoGroup
@@ -30,7 +26,6 @@ import com.a307.linkcare.R
 import com.a307.linkcare.feature.caregroup.CareGroupHome
 import com.a307.linkcare.feature.commongroup.GroupSearch
 
-
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,23 +36,16 @@ fun MainTabs(
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
 
-    // 케어 탭 상태
-    var isSearchingCare by remember { mutableStateOf(false) }
-    var queryCare by remember { mutableStateOf("") }
-    var selectedIndexCare by remember { mutableStateOf(0) }
-
-    // 헬스 탭 상태
-    var isSearchingHealth by remember { mutableStateOf(false) }
-    var queryHealth by remember { mutableStateOf("") }
-    var selectedIndexHealth by remember { mutableStateOf(0) }
-
-    // 케어/헬스 그룹 리스트 - 더미 데이터
+    // 그룹 더미 데이터
     /** TO DO : 그룹 조회 API 연결 */
     val careGroups = listOf("307", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
+    val healthGroups = listOf("만수무강", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
+
+    var selectedIndexCare by remember { mutableStateOf(0) }
+    var selectedIndexHealth by remember { mutableStateOf(0) }
+
     val currentGroupCare =
         if (careGroups.isNotEmpty() && careGroups.any { it.isNotBlank() }) careGroups[selectedIndexCare] else "케어"
-
-    val healthGroups = listOf("만수무강", "2번째 그룹", "3번째 그룹", "4번째 그룹", "5번째 그룹")
     val currentGroupHealth =
         if (healthGroups.isNotEmpty() && healthGroups.any { it.isNotBlank() }) healthGroups[selectedIndexHealth] else "헬스"
 
@@ -75,11 +63,24 @@ fun MainTabs(
         }
     }
 
+    // 현재 화면이 검색인지 확인
+    val routeStr = currentDestination?.route.orEmpty()
+    val isCareSearch = routeStr == Route.CareSearch
+    val isHealthSearch = routeStr == Route.HealthSearch
+
     Scaffold(
         topBar = {
-            when (currentDestination?.route) {
+            when {
+                // 검색 화면 헤더
+                isCareSearch -> {
+                    // 헤더 없음
+                }
+                isHealthSearch -> {
+                    // 헤더 없음
+                }
+
                 // 케어 그룹 생성 화면
-                Route.CreateCareGroup.route -> {
+                currentDestination?.route == Route.CreateCareGroup.route -> {
                     HeaderBack(
                         title = "케어 그룹 생성",
                         onBackClick = { navController.popBackStack() }
@@ -88,8 +89,7 @@ fun MainTabs(
                 }
 
                 // 헬스 그룹 생성 화면
-                Route.CreateHealthGroup.route -> {
-                    // 헤더 없음
+                currentDestination?.route == Route.CreateHealthGroup.route -> {
                     Column {
                         HeaderBack(
                             title = "헬스 그룹 생성",
@@ -102,95 +102,70 @@ fun MainTabs(
                 else -> {
                     Column {
                         when {
+                            // 케어 탭 계층일 때
                             currentDestination?.hierarchy?.any { it.route == Route.Care.route } == true -> {
-                                if (isSearchingCare) {
-                                    HeaderSearch(
-                                        query = queryCare,
-                                        onQueryChange = { queryCare = it },
-                                        onBackClick = { isSearchingCare = false },
-                                        onClearClick = { queryCare = "" },
-                                        placeholder = "그룹 검색하기",
-                                        focusOnShow = true
+                                if (careGroups.isNotEmpty() && careGroups.any { it.isNotBlank() }) {
+                                    HeaderDropDown(
+                                        title = currentGroupCare,
+                                        menuItems = careGroups,
+                                        onMenuSelect = { idx, _ -> selectedIndexCare = idx },
+                                        onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
+                                        onSearchClick = { navController.navigate(Route.CareSearch) },
+                                        moreMenu = { dismiss ->
+                                            DropdownMenuItem(
+                                                text = { Text("그룹 수정하기") },
+                                                onClick = { dismiss(); onEditGroup() }
+                                            )
+                                        }
                                     )
                                 } else {
-                                    if (careGroups.isNotEmpty() && careGroups.any { it.isNotBlank() }) {
-                                        HeaderDropDown(
-                                            title = currentGroupCare,
-                                            menuItems = careGroups,
-                                            onMenuSelect = { idx, _ -> selectedIndexCare = idx },
-                                            onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
-                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("care")) },
-                                            moreMenu = { dismiss ->
-                                                DropdownMenuItem(
-                                                    text = { Text("그룹 수정하기") },
-                                                    onClick = { dismiss(); onEditGroup() }
-                                                )
-                                            }
-                                        )
-                                    } else {
-                                        HeaderBasic(
-                                            title = "케어",
-                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("care")) },
-                                            moreMenu = { dismiss ->
-                                                DropdownMenuItem(
-                                                    text = { Text("그룹 수정하기") },
-                                                    onClick = { dismiss(); onEditGroup() }
-                                                )
-                                            }
-                                        )
-                                    }
+                                    HeaderBasic(
+                                        title = "케어",
+                                        onSearchClick = { navController.navigate(Route.CareSearch) },
+                                        moreMenu = { dismiss ->
+                                            DropdownMenuItem(
+                                                text = { Text("그룹 수정하기") },
+                                                onClick = { dismiss(); onEditGroup() }
+                                            )
+                                        }
+                                    )
                                 }
                             }
 
-                            // 헬스 탭
+                            // 헬스 탭 계층일 때
                             currentDestination?.hierarchy?.any { it.route == Route.Health.route } == true -> {
-                                if (isSearchingHealth) {
-                                    HeaderSearch(
-                                        query = queryHealth,
-                                        onQueryChange = { queryHealth = it },
-                                        onBackClick = { isSearchingHealth = false },
-                                        onClearClick = { queryHealth = "" },
-                                        placeholder = "그룹 검색하기",
-                                        focusOnShow = true
+                                if (healthGroups.isNotEmpty() && healthGroups.any { it.isNotBlank() }) {
+                                    HeaderDropDown(
+                                        title = currentGroupHealth,
+                                        menuItems = healthGroups,
+                                        onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
+                                        onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
+                                        onSearchClick = { navController.navigate(Route.HealthSearch) },
+                                        moreMenu = { dismiss ->
+                                            DropdownMenuItem(
+                                                text = { Text("그룹 수정하기") },
+                                                onClick = { dismiss(); onEditGroup() }
+                                            )
+                                        }
                                     )
                                 } else {
-                                    if (healthGroups.isNotEmpty() && healthGroups.any { it.isNotBlank() }) {
-                                        HeaderDropDown(
-                                            title = currentGroupHealth,
-                                            menuItems = healthGroups,
-                                            onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
-                                            onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
-                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("health")) },
-                                            moreMenu = { dismiss ->
-                                                DropdownMenuItem(
-                                                    text = { Text("그룹 수정하기") },
-                                                    onClick = { dismiss(); onEditGroup() }
-                                                )
-                                            }
-                                        )
-                                    } else {
-                                        HeaderBasic(
-                                            title = "헬스",
-                                            onSearchClick = { navController.navigate(Route.SearchGroup.path("health")) },
-                                            moreMenu = { dismiss ->
-                                                DropdownMenuItem(
-                                                    text = { Text("그룹 수정하기") },
-                                                    onClick = { dismiss(); onEditGroup() }
-                                                )
-                                            }
-                                        )
-                                    }
+                                    HeaderBasic(
+                                        title = "헬스",
+                                        onSearchClick = { navController.navigate(Route.HealthSearch) },
+                                        moreMenu = { dismiss ->
+                                            DropdownMenuItem(
+                                                text = { Text("그룹 수정하기") },
+                                                onClick = { dismiss(); onEditGroup() }
+                                            )
+                                        }
+                                    )
                                 }
                             }
 
                             currentDestination?.route == Route.Alarm.route -> HeaderTitleOnly(title = "알림")
                             currentDestination?.route == Route.MyPage.route -> HeaderTitleOnly(title = "내 페이지")
                         }
-                        // 헤더 아래 회색 구분선
-                        Divider(
-                            color = Color(0xFFD9D9D9),
-                            thickness = 1.dp
-                        )
+                        Divider(color = Color(0xFFD9D9D9), thickness = 1.dp)
                     }
                 }
             }
@@ -208,19 +183,6 @@ fun MainTabs(
             startDestination = Route.Care.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // 검색 화면
-            composable(
-                route = "${Route.SearchGroup.route}/{kind}",
-                arguments = listOf(navArgument("kind") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val kind = backStackEntry.arguments?.getString("kind") ?: "care" // 기본값
-                GroupSearch(
-                    kind = kind,                      // ← "care" or "health"
-                    onBack = { navController.popBackStack() },
-                    onJoinClick = { group -> /* 상세/가입 처리 */ }
-                )
-            }
-
             // 케어 탭 그래프
             navigation(
                 route = Route.Care.route,
@@ -238,14 +200,7 @@ fun MainTabs(
                     } else {
                         CareGroupHome(
                             membersAll = listOf(
-                                Member(
-                                    "김싸피(나)",
-                                    10001,
-                                    30000,
-                                    R.drawable.char_bear_1,
-                                    "컨디션 좋아요!",
-                                    isLeader = true
-                                ),
+                                Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
                                 Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
                                 Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
                                 Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
@@ -253,6 +208,16 @@ fun MainTabs(
                         )
                     }
                 }
+
+                // 케어 검색 화면 (탭 내에 포함)
+                composable(Route.CareSearch) {
+                    GroupSearch(
+                        kind = "care",
+                        onBack = { navController.popBackStack() },
+                        onJoinClick = { /* 상세/가입 처리 */ }
+                    )
+                }
+
                 composable(Route.CreateCareGroup.route) {
                     CareGroupCreate(navController = navController)
                 }
@@ -275,14 +240,7 @@ fun MainTabs(
                     } else {
                         HealthGroupHome(
                             membersAll = listOf(
-                                Member(
-                                    "김싸피(나)",
-                                    10001,
-                                    30000,
-                                    R.drawable.char_bear_1,
-                                    "컨디션 좋아요!",
-                                    isLeader = true
-                                ),
+                                Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
                                 Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
                                 Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
                                 Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
@@ -290,6 +248,16 @@ fun MainTabs(
                         )
                     }
                 }
+
+                // 헬스 검색 화면
+                composable(Route.HealthSearch) {
+                    GroupSearch(
+                        kind = "health",
+                        onBack = { navController.popBackStack() },
+                        onJoinClick = { /* 상세/가입 처리 */ }
+                    )
+                }
+
                 composable(Route.CreateHealthGroup.route) {
                     HealthGroupCreate(navController = navController)
                 }
