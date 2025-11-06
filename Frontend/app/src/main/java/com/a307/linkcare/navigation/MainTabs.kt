@@ -31,6 +31,9 @@ import com.a307.linkcare.feature.healthgroup.HealthGroup
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.HealthGroupEdit
 import com.a307.linkcare.feature.healthgroup.HealthGroupHome
+import com.a307.linkcare.feature.mypage.MyGroups
+import com.a307.linkcare.feature.mypage.MyPage
+import com.a307.linkcare.feature.mypage.MyPageUiState
 import com.a307.linkcare.feature.notification.Notification
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -304,7 +307,24 @@ fun MainTabs() {
             composable(Route.Alarm.route) {
                 Notification()
             }
-            composable(Route.MyPage.route) { /* ... */ }
+            composable(Route.MyPage.route) {
+                MyPage(
+                    state = MyPageUiState(
+                        nickname = "김싸피",
+                        coinLabel = "보유 응원 코인 300",
+                        groupCountLabel = "그룹 조회",
+                        avatarRes = R.drawable.char_bear_1, // 프로젝트 내 아바타 이미지
+                        avatarBgRes = R.drawable.background_1   // 배경 이미지 (없으면 null)
+                    ),
+                    onGroupsClick = { navController.navigate(Route.MyGroups.route) },
+                    onEditClick = { /* ... */ },
+                    onStoreClick = { /* ... */ },
+                    onDecorateClick = { /* ... */ }
+                )
+            }
+            composable(Route.MyGroups.route) {
+                MyGroups(navController = navController)
+            }
         }
     }
 }
