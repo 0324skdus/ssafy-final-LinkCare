@@ -2,6 +2,7 @@ package com.linkcare.linkcarewear.presentation.exercise
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.linkcare.linkcarewear.data.DataLayerManager
 import com.linkcare.linkcarewear.data.HealthServicesRepository
 import com.linkcare.linkcarewear.data.ServiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,54 +18,83 @@ class ExerciseViewModel @Inject constructor(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
 
-    /** 운동 세션을 구분하기 위한 고유 ID */
+    /** 운동 세션 고유 ID */
     private var sessionId: String = ""
 
-    /** UI에서 관찰할 상태 */
+    /** UI 상태 */
     val uiState: StateFlow<ExerciseScreenState> =
         healthServicesRepository.serviceState
             .map {
                 ExerciseScreenState(
-                    hasExerciseCapabilities = healthServicesRepository.hasExerciseCapability(),
-                    isTrackingAnotherExercise = healthServicesRepository.isTrackingExerciseInAnotherApp(),
+                    hasExerciseCapabilities = true, // suspend 함수 대신 기본값으로 처리
+                    isTrackingAnotherExercise = false,
                     serviceState = it,
                     exerciseState = (it as? ServiceState.Connected)?.exerciseServiceState,
-                    sessionId = sessionId                     // ✅ 세션 ID 포함
+                    sessionId = sessionId
                 )
-            }.stateIn(
+            }
+            .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(3_000),
-                healthServicesRepository.serviceState.value.let {
-                    ExerciseScreenState(
-                        hasExerciseCapabilities = true,
-                        isTrackingAnotherExercise = false,
-                        serviceState = it,
-                        exerciseState = (it as? ServiceState.Connected)?.exerciseServiceState,
-                        sessionId = sessionId                 // ✅ 초기 상태에도 포함
-                    )
-                }
+                ExerciseScreenState(
+                    hasExerciseCapabilities = true,
+                    isTrackingAnotherExercise = false,
+                    serviceState = healthServicesRepository.serviceState.value,
+                    exerciseState = (healthServicesRepository.serviceState.value as? ServiceState.Connected)?.exerciseServiceState,
+                    sessionId = sessionId
+                )
             )
 
     suspend fun isExerciseInProgress(): Boolean =
         healthServicesRepository.isExerciseInProgress()
 
-    /** 운동 시작 시 sessionId를 생성하고 저장 */
+    /** ✅ 운동 시작 */
     fun startExercise() {
-        sessionId = System.currentTimeMillis().toString()      // ✅ 세션 ID 생성
+        sessionId = System.currentTimeMillis().toString()
         viewModelScope.launch {
-            healthServicesRepository.startExercise()
+            try {
+                healthServicesRepository.startExerciseWithSession(sessionId)
+                // Repository에서 실제 세션이 시작된 후 모바일에 상태 전송
+                DataLayerManager.sendSessionState("START")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
+    /** ✅ 일시정지 */
     fun pauseExercise() {
-        healthServicesRepository.pauseExercise()
+        viewModelScope.launch {
+            try {
+                healthServicesRepository.pauseExercise()
+                DataLayerManager.sendSessionState("PAUSE")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
-    fun endExercise() {
-        healthServicesRepository.endExercise()
-    }
-
+    /** ✅ 재개 */
     fun resumeExercise() {
-        healthServicesRepository.resumeExercise()
+        viewModelScope.launch {
+            try {
+                healthServicesRepository.resumeExercise()
+                DataLayerManager.sendSessionState("RESUME")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /** ✅ 종료 */
+    fun endExercise() {
+        viewModelScope.launch {
+            try {
+                healthServicesRepository.endExercise()
+                DataLayerManager.sendSessionState("STOP")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

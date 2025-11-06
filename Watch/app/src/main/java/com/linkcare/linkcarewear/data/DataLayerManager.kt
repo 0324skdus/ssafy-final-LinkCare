@@ -3,7 +3,7 @@ package com.linkcare.linkcarewear.data
 import android.content.Context
 import android.util.Log
 import com.google.android.gms.wearable.*
-import com.linkcare.linkcarewear.model.WorkoutSummary
+import com.linkcare.linkcarewear.data.model.WorkoutSummary
 
 object DataLayerManager {
     private lateinit var dataClient: DataClient
@@ -18,17 +18,22 @@ object DataLayerManager {
         nodeClient = Wearable.getNodeClient(appContext)
     }
 
-    fun sendMetrics(heartRate: Int, distance: Int) {
+    /** 운동 중 실시간 데이터 전송 */
+    fun sendMetrics(sessionId: String, heartRate: Int, calories: Int, durationSec: Int) {
         val dataMap = PutDataMapRequest.create("/linkcare/metrics").apply {
+            dataMap.putString("sessionId", sessionId)
             dataMap.putInt("heartRate", heartRate)
-            dataMap.putInt("distance", distance)
+            dataMap.putInt("calories", calories)
+            dataMap.putInt("durationSec", durationSec)
             dataMap.putLong("timestamp", System.currentTimeMillis())
         }
+
         dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
             .addOnSuccessListener { Log.d("DataLayer", "✅ metrics sent") }
             .addOnFailureListener { Log.e("DataLayer", "❌ metrics send failed", it) }
     }
 
+//세션 상태 전송(START / PAUSE / RESUME / STOP)
     fun sendSessionState(state: String) {
         nodeClient.connectedNodes
             .addOnSuccessListener { nodes ->
@@ -46,9 +51,9 @@ object DataLayerManager {
             }
             .addOnFailureListener { Log.e("DataLayer", "❌ node lookup failed", it) }
     }
-
+//운동 종료 후 요약 리포트 전송
     fun sendWorkoutSummary(context: Context, summary: WorkoutSummary) {
-        val dataMap = PutDataMapRequest.create("/linkcare/workout_summary").apply {
+        val dataMap = PutDataMapRequest.create("/linkcare/summary").apply {
             dataMap.putString("sessionId", summary.sessionId)
             dataMap.putInt("avgHeartRate", summary.avgHeartRate)
             dataMap.putInt("calories", summary.calories)
@@ -57,5 +62,7 @@ object DataLayerManager {
             dataMap.putLong("timestamp", System.currentTimeMillis())
         }
         dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
+            .addOnSuccessListener { Log.d("DataLayer", "✅ summary sent") }
+            .addOnFailureListener { Log.e("DataLayer", "❌ summary send failed", it) }
     }
 }

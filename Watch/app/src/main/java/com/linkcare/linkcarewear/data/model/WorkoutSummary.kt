@@ -1,4 +1,4 @@
-package com.linkcare.linkcarewear.model
+package com.linkcare.linkcarewear.data.model
 
 data class WorkoutSummary(
     val sessionId: String,
