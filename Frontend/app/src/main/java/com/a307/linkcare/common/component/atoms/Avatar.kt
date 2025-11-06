@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.R
+import com.a307.linkcare.common.util.painterResourceCropped
 
 
 @Composable
@@ -99,9 +100,9 @@ fun Avatar(
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = imageRes),
+                painter = painterResourceCropped(resId = imageRes),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.size(35.dp)
             )
         }
     }

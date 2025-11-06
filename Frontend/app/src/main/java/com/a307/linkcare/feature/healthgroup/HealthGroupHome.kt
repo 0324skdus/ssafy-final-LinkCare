@@ -96,7 +96,7 @@ fun HealthGroupHome(
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(0.62f) }
+    var todayGroupPercent by remember { mutableStateOf(1f) }
     var todayGroupProgress by remember { mutableStateOf(10234) }
     var totalGroupGoal by remember { mutableStateOf(20000) }
 
