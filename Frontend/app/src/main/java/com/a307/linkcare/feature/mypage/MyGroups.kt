@@ -61,18 +61,10 @@ fun MyGroups (
     val tabs = listOf("내 그룹", "신청 목록")
 
     Scaffold(
-        topBar = {
-            HeaderBack(
-                title = "그룹 정보",
-                onBackClick = { navController.popBackStack() }
-            )
-            Divider(color = unActiveField, thickness = 1.dp)
-        }
-    ) { inner ->
+    ) { _ ->
         Column(
             modifier
                 .fillMaxSize()
-                .padding(inner)
                 .padding(horizontal = 12.dp)
         ) {
             // Tabs
