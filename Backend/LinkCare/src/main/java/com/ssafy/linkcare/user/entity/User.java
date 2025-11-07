@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.user.entity;
 
+import com.ssafy.linkcare.character.entity.UserCharacter;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,6 +12,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /*
     * 사용자 엔티티
@@ -96,6 +99,13 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_character_id")
+    private UserCharacter mainCharacter;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserCharacter> characters = new ArrayList<>();
+
     @Builder
     public User(String email, String password, String name, Float height, Float weight, LocalDate birth, String gender, String provider, String providerId, Integer exerciseStartYear) {
         this.email = email;
@@ -130,4 +140,7 @@ public class User {
         this.fcmToken = fcmToken;
     }
 
+    public void updateMainCharacter(UserCharacter userCharacter) {
+        this.mainCharacter = userCharacter;
+    }
 }
