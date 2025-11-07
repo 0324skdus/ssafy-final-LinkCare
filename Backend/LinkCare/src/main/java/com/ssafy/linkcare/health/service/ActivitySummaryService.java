@@ -3,24 +3,31 @@ package com.ssafy.linkcare.health.service;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.ActivitySummaryDto;
+import com.ssafy.linkcare.health.dto.ActivitySummaryResponse;
 import com.ssafy.linkcare.health.entity.ActivitySummary;
 import com.ssafy.linkcare.health.repository.ActivitySummaryRepository;
+import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ActivitySummaryService {
 
     private final UserRepository userRepository;
     private final ActivitySummaryRepository activitySummaryRepository;
+    private final TimeStampUtil timeStampUtil;
 
     // 전체 데이터 저장
     @Transactional
@@ -71,4 +78,57 @@ public class ActivitySummaryService {
         }
     }
 
+    // 3주치 데이터 조회
+    public List<ActivitySummaryResponse> getActivitySummariesByPeriod(int userSeq, Long startTime, Long endTime) {
+        User user = validateUser(userSeq);
+
+        // 기본값 3주
+        Long startTimeTs = timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long endTimeTs = timeStampUtil.getCurrentTimestamp();
+
+        log.info("기간별 조회 - User: {}, Start: {}, End: {}",
+                userSeq, startTimeTs, endTimeTs);
+
+        List<ActivitySummary> activitySummaries = activitySummaryRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user,startTimeTs, endTimeTs);
+
+        return activitySummaries.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
+    // 당일 데이터 조회
+    public ActivitySummaryResponse getTodayActivitySummary(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
+        Long endTimeTs = timeStampUtil.getCurrentTimestamp();
+
+        ActivitySummary activitySummary = activitySummaryRepository
+                .findByUserAndStartTime(user, startTimeTs)
+                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_DATA_NOT_FOUND));
+
+        return convertToResponse(activitySummary);
+    }
+
+    // 일주일 데이터 조회
+    public List<ActivitySummaryResponse> getThisWeekActivitySummaries(int userSeq) {
+        User user = validateUser(userSeq);
+
+        return null;
+    }
+
+
+    private ActivitySummaryResponse convertToResponse(ActivitySummary activitySummary) {
+        return ActivitySummaryResponse.builder()
+                .totalDistance(activitySummary.getTotalDistance())
+                .activitySummaryId(activitySummary.getActivitySummaryId())
+                .deviceId(activitySummary.getDeviceId())
+                .deviceType(activitySummary.getDeviceType())
+                .totalCaloriesBurned(activitySummary.getTotalCaloriesBurned())
+                .build();
+    }
+
+    private User validateUser(int userSeq) {
+        return userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
 }

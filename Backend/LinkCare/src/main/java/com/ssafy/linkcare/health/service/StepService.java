@@ -50,17 +50,29 @@ public class StepService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // TODO: 걸음수 업데이트 로직
+        if(dto == null) {
+            return;
+        }
 
-        stepRepository.save(Step.builder()
-                .deviceId(dto.getDeviceId())
-                .deviceType(dto.getDeviceType())
-                .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                .count(dto.getCount())
-                .goal(dto.getGoal())
-                .user(user)
-                .build()
-        );
+        // 걸음 수 업데이트 (기존 값에 덮어쓰기)
+        Long startTimeTs = dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond();
+        Optional<Step> existingData = stepRepository.findByUserAndStartTime(user, startTimeTs);
+
+        if(existingData.isPresent()) {
+            Step step = existingData.get();
+            step.updateStepAndGoal(dto.getCount(), dto.getGoal());
+        } else {
+            stepRepository.save(Step.builder()
+                    .deviceId(dto.getDeviceId())
+                    .deviceType(dto.getDeviceType())
+                    .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                    .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                    .count(dto.getCount())
+                    .goal(dto.getGoal())
+                    .user(user)
+                    .build()
+            );
+        }
+
     }
 }

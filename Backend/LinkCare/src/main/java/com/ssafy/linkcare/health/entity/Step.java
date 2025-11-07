@@ -40,4 +40,9 @@ public class Step {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
+
+    public void updateStepAndGoal(int count, int goal) {
+        this.count = count;
+        this.goal = goal;
+    }
 }

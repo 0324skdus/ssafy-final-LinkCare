@@ -11,7 +11,6 @@ public class BloodPressureDto {
     private String deviceType;
     private String uid;
     private LocalDateTime startTime;
-    private LocalDateTime endTime;
     private DataSource dataSource;
     private float systolic;
     private float diastolic;

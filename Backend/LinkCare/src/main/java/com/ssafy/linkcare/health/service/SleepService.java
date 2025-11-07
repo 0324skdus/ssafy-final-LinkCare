@@ -90,7 +90,9 @@ public class SleepService {
                 .collect(Collectors.toSet());
 
         if(!uidsToDelete.isEmpty()) {
-            sleepRepository.deleteByUserAndUidIn(user, uidsToDelete);
+            List<Sleep> sleepToDelete = existingSleeps.stream()
+                            .filter(sleep -> uidsToDelete.contains(sleep.getUid())).toList();
+            sleepRepository.deleteAll(sleepToDelete);
         }
 
         // 수정, 삭제 가능

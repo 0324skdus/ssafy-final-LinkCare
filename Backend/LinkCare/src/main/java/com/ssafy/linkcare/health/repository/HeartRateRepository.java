@@ -19,7 +19,7 @@ public interface HeartRateRepository extends JpaRepository<HeartRate, Integer> {
     Optional<HeartRate> findByUserAndUid(User user, String uid);
 
     @Query("SELECT hr FROM HeartRate hr WHERE hr.user = :user " +
-            "AND FUNCTION('DATE', FUNCTION('FROM_UNIXTIME', bp.startTime)) = :startDate")
+            "AND FUNCTION('DATE', FUNCTION('FROM_UNIXTIME', hr.startTime)) = :startDate")
     List<HeartRate> findByUserAndStartDate(@Param("user") User user,
                                                @Param("startDate") LocalDate startDate);
 

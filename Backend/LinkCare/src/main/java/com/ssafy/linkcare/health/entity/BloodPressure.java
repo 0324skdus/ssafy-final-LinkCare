@@ -35,9 +35,6 @@ public class BloodPressure {
     @Column(name = "start_time")
     private Long startTime;
 
-    @Column(name = "end_time")
-    private Long endTime;
-
     @Embedded
     private DataSource dataSource;
 

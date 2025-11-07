@@ -26,4 +26,6 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
     List<ExerciseSession> findByExercise(Exercise exercise);
 
     void deleteByExercise(Exercise exercise);
+
+    long countByExercise(Exercise exercise);
 }

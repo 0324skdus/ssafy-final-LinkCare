@@ -37,12 +37,12 @@ public class ExerciseService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if(exerciseList == null || exerciseList.isEmpty()) {
+        if (exerciseList == null || exerciseList.isEmpty()) {
             return;
         }
 
         exerciseList.forEach(exerciseDto -> {
-            if(exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
+            if (exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
                 return;
             }
             for (ExerciseTypeDto dto : exerciseDto.getExercises()) {
@@ -82,13 +82,14 @@ public class ExerciseService {
             }
         });
     }
+
     @Transactional
     public void saveDailyExerciseData(ExerciseDto exerciseDto, int userSeq) {
 
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if(exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
+        if (exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
             return;
         }
 
@@ -106,8 +107,11 @@ public class ExerciseService {
         Set<String> uidToDelete = existingUids.stream().filter(uid -> !sdkUids.contains(uid)).collect(Collectors.toSet());
 
         // 삭제
-        if(!uidToDelete.isEmpty()) {
-            exerciseRepository.deleteByUserAndUidIn(user, uidToDelete);
+        if (!uidToDelete.isEmpty()) {
+            List<Exercise> exerciseToDelete = existingExercises.stream()
+                    .filter(exercise -> uidToDelete.contains(exercise.getUid()))
+                    .toList();
+            exerciseRepository.deleteAll(exerciseToDelete);
         }
 
         for (ExerciseTypeDto dto : exerciseDto.getExercises()) {
@@ -119,63 +123,70 @@ public class ExerciseService {
             if (existingData.isPresent()) {
                 Exercise exercise = existingData.get();
                 // 삭제된 세션이 있는지 확인
-                if(dto.getSessions() != null && !dto.getSessions().isEmpty()) {
+                if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
                     Set<String> sdkSessionKeys = dto.getSessions().stream().map(session ->
                             session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond() + "_"
-                            + session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond()
-                            ).collect(Collectors.toSet());
+                                    + session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond()
+                    ).collect(Collectors.toSet());
 
                     List<ExerciseSession> existingSessions = exerciseSessionRepository.findByExercise(exercise);
                     Set<String> existingSessionKeys = existingSessions.stream().map(
                             session -> session.getStartTime() + "_"
-                            + session.getEndTime()).collect(Collectors.toSet());
+                                    + session.getEndTime()).collect(Collectors.toSet());
 
                     // 삭제된 session 확인
                     Set<String> sessionToDelete = existingSessionKeys.stream().filter(key -> !sdkSessionKeys.contains(key))
                             .collect(Collectors.toSet());
 
                     // 삭제
-                    if(!sessionToDelete.isEmpty()) {
+                    if (!sessionToDelete.isEmpty()) {
                         existingSessions.stream()
                                 .filter(session -> sessionToDelete.contains(
                                         session.getStartTime() + "_" + session.getEndTime()))
                                 .forEach(exerciseSessionRepository::delete);
                     }
+                } else {
+                    // 세션이 비어있다면
+                    exerciseSessionRepository.deleteByExercise(exercise);
                 }
-                // 세션이 비어있다면
-                exerciseSessionRepository.deleteByExercise(exercise);
 
-            } else {
-                Exercise savedExercise = Exercise.builder()
-                        .deviceId(dto.getDeviceId())
-                        .deviceType(dto.getDeviceType())
-                        .uid(dto.getUid())
-                        .exerciseType(dto.getExerciseType())
-                        .zoneOffset(dto.getZoneOffset())
-                        .dataSource(dto.getDataSource())
-                        .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                        .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                        .user(user)
-                        .build();
+                long remainingSessionCount = exerciseSessionRepository.countByExercise(exercise);
+                if (remainingSessionCount == 0) {
+                    // 세션이 하나도 없으면 Exercise도 삭제
+                    exerciseRepository.delete(exercise);
 
-                exerciseRepository.save(savedExercise);
+                } else {
+                    Exercise savedExercise = Exercise.builder()
+                            .deviceId(dto.getDeviceId())
+                            .deviceType(dto.getDeviceType())
+                            .uid(dto.getUid())
+                            .exerciseType(dto.getExerciseType())
+                            .zoneOffset(dto.getZoneOffset())
+                            .dataSource(dto.getDataSource())
+                            .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                            .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                            .user(user)
+                            .build();
 
-                if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
-                    List<ExerciseSession> sessions = dto.getSessions().stream()
-                            .map(session -> ExerciseSession.builder()
-                                    .startTime(session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                                    .endTime(session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                                    .exerciseType(session.getExerciseType())
-                                    .distance(session.getDistance())
-                                    .calories(session.getCalories())
-                                    .exercise(savedExercise)
-                                    .build()
-                            ).toList();
+                    exerciseRepository.save(savedExercise);
 
-                    exerciseSessionRepository.saveAll(sessions);
+                    if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
+                        List<ExerciseSession> sessions = dto.getSessions().stream()
+                                .map(session -> ExerciseSession.builder()
+                                        .startTime(session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                                        .endTime(session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                                        .exerciseType(session.getExerciseType())
+                                        .distance(session.getDistance())
+                                        .calories(session.getCalories())
+                                        .exercise(savedExercise)
+                                        .build()
+                                ).toList();
+
+                        exerciseSessionRepository.saveAll(sessions);
+                    }
                 }
+
             }
-
         }
     }
 }

@@ -77,7 +77,10 @@ public class HeartRateService {
 
         // 삭제
         if(!uidToDelete.isEmpty()) {
-            heartRateRepository.deleteByUserAndUidIn(user, uidToDelete);
+            List<HeartRate> heartRateToDelete = heartRates.stream()
+                            .filter(heartRate -> uidToDelete.contains(heartRate.getUid()))
+                                    .toList();
+            heartRateRepository.deleteAll(heartRateToDelete);
         }
 
 

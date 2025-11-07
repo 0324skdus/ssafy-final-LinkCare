@@ -38,7 +38,6 @@ public class BloodPressureService {
                         .deviceType(dto.getDeviceType())
                         .uid(dto.getUid())
                         .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                        .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
                         .dataSource(dto.getDataSource())
                         .systolic(dto.getSystolic())
                         .diastolic(dto.getDiastolic())
@@ -78,7 +77,10 @@ public class BloodPressureService {
 
         // 삭제
         if(!uidToDelete.isEmpty()) {
-            bloodPressureRepository.deleteByUserAndUidIn(user, uidToDelete);
+            List<BloodPressure> bloodPressuresToDelete = bloodPressures.stream()
+                            .filter(bloodPressure -> uidToDelete.contains(bloodPressure.getUid()))
+                                    .toList();
+            bloodPressureRepository.deleteAll(bloodPressuresToDelete);
         }
 
         bloodPressureList.forEach(dto -> {
@@ -93,7 +95,6 @@ public class BloodPressureService {
                         .deviceType(dto.getDeviceType())
                         .uid(dto.getUid())
                         .startTime(dto.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                        .endTime(dto.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
                         .dataSource(dto.getDataSource())
                         .systolic(dto.getSystolic())
                         .diastolic(dto.getDiastolic())

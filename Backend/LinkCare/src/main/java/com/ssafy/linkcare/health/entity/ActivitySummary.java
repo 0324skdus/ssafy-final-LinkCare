@@ -13,7 +13,7 @@ public class ActivitySummary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long activitySummaryId;
+    private int activitySummaryId;
 
     @Column(name = "device_id")
     private String deviceId;
