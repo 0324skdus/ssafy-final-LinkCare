@@ -1,6 +1,6 @@
 package com.ssafy.linkcare.character.controller;
 
-import com.ssafy.linkcare.character.dto.CharacterResponseDto;
+import com.ssafy.linkcare.character.dto.CharacterStatusDto;
 import com.ssafy.linkcare.character.service.CharacterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +16,23 @@ public class CharacterController {
 
     private final CharacterService characterService;
 
-    // 소유 캐릭터 리스트 반환
     @GetMapping
-    public ResponseEntity<List<CharacterResponseDto>> getOwnedCharacters(Authentication authentication) {
+    public ResponseEntity<List<CharacterStatusDto>> getCharacterStatuses(Authentication authentication) {
         Long userPk = Long.parseLong(authentication.getName());
-        List<CharacterResponseDto> characters = characterService.getOwnedCharacters(userPk);
+        List<CharacterStatusDto> characters = characterService.getCharacterStatuses(userPk);
         return ResponseEntity.ok(characters);
     }
 
-    // 메인 캐릭터 변경
+    @GetMapping("/main")
+    public ResponseEntity<CharacterStatusDto> getMainCharacter(Authentication authentication) {
+        Long userPk = Long.parseLong(authentication.getName());
+        CharacterStatusDto mainCharacter = characterService.getMainCharacter(userPk);
+        if (mainCharacter == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(mainCharacter);
+    }
+
     @PostMapping("/main/{userCharacterId}")
     public ResponseEntity<Void> changeMainCharacter(Authentication authentication, @PathVariable Long userCharacterId) {
         Long userPk = Long.parseLong(authentication.getName());
@@ -32,7 +40,6 @@ public class CharacterController {
         return ResponseEntity.ok().build();
     }
 
-    // 캐릭터 잠금 해제 (
     @PostMapping("/unlock/{characterId}")
     public ResponseEntity<Void> unlockCharacter(Authentication authentication, @PathVariable Long characterId) {
         Long userPk = Long.parseLong(authentication.getName());
