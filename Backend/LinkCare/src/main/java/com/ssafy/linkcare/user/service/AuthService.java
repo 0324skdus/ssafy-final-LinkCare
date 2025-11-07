@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
@@ -35,6 +36,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
+    private final CharacterService characterService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -95,6 +97,9 @@ public class AuthService {
 
         // 4. DB 저장
         userRepository.save(user);
+
+        // 5. 기본 캐릭터 지급
+        characterService.assignDefaultCharacter(user);
 
         log.info("회원가입 완료: {}", request.email());
     }
