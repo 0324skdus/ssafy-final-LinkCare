@@ -1,18 +1,3 @@
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.linkcare.linkcarewear.service
 
 import android.content.ContentValues.TAG
@@ -43,18 +28,28 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ExerciseService : LifecycleService() {
-    @Inject
-    lateinit var exerciseClientManager: ExerciseClientManager
 
-    @Inject
-    lateinit var exerciseNotificationManager: ExerciseNotificationManager
-
-    @Inject
-    lateinit var exerciseServiceMonitor: ExerciseServiceMonitor
+    @Inject lateinit var exerciseClientManager: ExerciseClientManager
+    @Inject lateinit var exerciseNotificationManager: ExerciseNotificationManager
+    @Inject lateinit var exerciseServiceMonitor: ExerciseServiceMonitor
 
     private var isBound = false
     private var isStarted = false
     private val localBinder = LocalBinder()
+
+    //중복 방지 플래그
+    private var summarySent = false
+    private var isExerciseEnded = false
+    private var currentSessionId: String = ""
+
+    // companion으로 세션 단위 중복 방지
+    companion object {
+        private val UNBIND_DELAY = 3.seconds
+        private val sentSessionSummaries = mutableSetOf<String>()
+    }
+
+    val sessionId: String?
+        get() = currentSessionId
 
     private val serviceRunningInForeground: Boolean
         get() = this.foregroundServiceType != 0
@@ -62,76 +57,59 @@ class ExerciseService : LifecycleService() {
     private suspend fun isExerciseInProgress() =
         exerciseClientManager.exerciseClient.isExerciseInProgress()
 
-    /**
-     * Prepare exercise in this service's coroutine context.
-     */
     suspend fun prepareExercise() {
         exerciseClientManager.prepareExercise()
     }
 
-    /**
-     * Start exercise in this service's coroutine context.
-     */
-    private var currentSessionId: String = ""
-    val sessionId: String?
-        get() = currentSessionId   // ✅ 외부에서 읽기만 가능하도록 허용
     suspend fun startExercise(sessionId: String) {
         currentSessionId = sessionId
+        summarySent = false
+        isExerciseEnded = false
         postOngoingActivityNotification()
+        Log.d("SessionDebug", "🚀 Service startExercise() currentSessionId=$currentSessionId")
         exerciseClientManager.startExercise()
     }
 
-    /**
-     * Pause exercise in this service's coroutine context.
-     */
     suspend fun pauseExercise() {
         exerciseClientManager.pauseExercise()
     }
 
-    /**
-     * Resume exercise in this service's coroutine context.
-     */
     suspend fun resumeExercise() {
         exerciseClientManager.resumeExercise()
     }
-
-    /**
-     * End exercise in this service's coroutine context.
-     */
     suspend fun endExercise() {
+        Log.d(TAG, "🟡 endExercise() CALLED, sessionId=$currentSessionId")
+
+        if (isExerciseEnded || sentSessionSummaries.contains(currentSessionId)) return
+        isExerciseEnded = true
+
+        // ⚙️ 1️⃣ 우선 세션 종료 요청
         exerciseClientManager.endExercise()
-        removeOngoingActivityNotification()
-        // ✅ 현재 운동 상태에서 측정된 메트릭 가져오기
+
+        // ⚙️ 2️⃣ 300~500ms 기다려서 마지막 업데이트 반영
+        delay(500)
+
+        // ⚙️ 3️⃣ 이제 상태 가져오기
         val currentState = exerciseServiceMonitor.exerciseServiceState.value
         val metrics = currentState.exerciseMetrics
+        val durationSec = (currentState.activeDurationCheckpoint?.activeDuration?.seconds ?: 0L).toInt()
 
-        if (metrics != null) {
-            // ✅ Number → Double → Int로 안전하게 변환
-            val avgHeartRate = (metrics.heartRateAverage ?: 0.0).toDouble().toInt()
-            val calories = (metrics.calories ?: 0.0).toDouble().toInt()
-            val distance = (metrics.distance ?: 0.0).toDouble().toInt()
-            val durationSec = (currentState.activeDurationCheckpoint
-                ?.activeDuration
-                ?.seconds ?: 0L).toInt()
+        val summary = WorkoutSummary(
+            sessionId = currentSessionId,
+            avgHeartRate = (metrics.heartRateAverage ?: 0.0).toInt(),
+            calories = (metrics.calories ?: 0.0).toInt(),
+            distance = (metrics.distance ?: 0.0).toInt(),
+            durationSec = durationSec
+        )
 
-            val summary = WorkoutSummary(
-                sessionId = currentSessionId,
-                avgHeartRate = avgHeartRate,
-                calories = calories,
-                distance = distance,
-                durationSec = durationSec
-            )
+        DataLayerManager.sendWorkoutSummary(this, summary)
+        sentSessionSummaries.add(currentSessionId)
+        Log.d(TAG, "✅ Workout summary sent after delay: $summary")
 
-            // ✅ 워치 → 모바일로 요약 데이터 전송
-            DataLayerManager.sendWorkoutSummary(this, summary)
-            Log.d(TAG, "Workout summary sent: $summary")
-        } else {
-            Log.w(TAG, "No metrics available at end of exercise")
-        }
+        removeOngoingActivityNotification()
+        currentSessionId = ""
     }
 
-    /** Wear OS 3.0 reserves two buttons for the OS. For devices with more than 2 buttons,
-     * consider implementing a "press" to mark lap feature**/
     fun markLap() {
         lifecycleScope.launch {
             exerciseClientManager.markLap()
@@ -144,34 +122,25 @@ class ExerciseService : LifecycleService() {
         startId: Int
     ): Int {
         super.onStartCommand(intent, flags, startId)
-
         Log.d(TAG, "onStartCommand")
 
         if (!isStarted) {
             isStarted = true
+            if (!isBound) stopSelfIfNotRunning()
 
-            if (!isBound) {
-                // We may have been restarted by the system. Manage our lifetime accordingly.
-                stopSelfIfNotRunning()
-            }
-            // Start collecting exercise information. We might stop shortly (see above), in which
-            // case launchWhenStarted takes care of canceling this coroutine.
             lifecycleScope.launch(Dispatchers.Default) {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     exerciseServiceMonitor.monitor()
                 }
             }
         }
-        // If our process is stopped, we might have an active exercise. We want the system to
-        // recreate our service so that we can present the ongoing notification in that case.
         return START_STICKY
     }
 
     private fun stopSelfIfNotRunning() {
         lifecycleScope.launch {
-            // We may have been restarted by the system. Check for an ongoing exercise.
-            if (!isExerciseInProgress()) {
-                // Need to cancel [prepareExercise()] to prevent battery drain.
+            if (!isExerciseInProgress() && !isExerciseEnded) {
+                // 이미 종료된 세션은 다시 endExercise() 안 부르게 조건 강화
                 if (exerciseServiceMonitor.exerciseServiceState.value.exerciseState ==
                     ExerciseState.PREPARING
                 ) {
@@ -188,7 +157,6 @@ class ExerciseService : LifecycleService() {
         super.onCreate()
         DataLayerManager.init(this)
     }
-
 
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
@@ -215,9 +183,6 @@ class ExerciseService : LifecycleService() {
     override fun onUnbind(intent: Intent?): Boolean {
         isBound = false
         lifecycleScope.launch {
-            // Client can unbind because it went through a configuration change, in which case it
-            // will be recreated and bind again shortly. Wait a few seconds, and if still not bound,
-            // manage our lifetime accordingly.
             delay(UNBIND_DELAY)
             if (!isBound) {
                 stopSelfIfNotRunning()
@@ -247,8 +212,6 @@ class ExerciseService : LifecycleService() {
                     serviceState.activeDurationCheckpoint?.activeDuration
                         ?: Duration.ZERO
                 ),
-                // Starting with Wear 5 (API 34), startForeground should be called with
-                // foregroundServiceTypes
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
                     if
                         (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -260,15 +223,9 @@ class ExerciseService : LifecycleService() {
         }
     }
 
-    /** Local clients will use this to access the service. */
     inner class LocalBinder : Binder() {
         fun getService() = this@ExerciseService
-
         val exerciseServiceState: Flow<ExerciseServiceState>
             get() = this@ExerciseService.exerciseServiceMonitor.exerciseServiceState
-    }
-
-    companion object {
-        private val UNBIND_DELAY = 3.seconds
     }
 }

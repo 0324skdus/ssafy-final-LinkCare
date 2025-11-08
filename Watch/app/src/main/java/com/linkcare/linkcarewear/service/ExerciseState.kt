@@ -16,23 +16,39 @@ data class ExerciseMetrics(
     val calories: Double? = null,
     val heartRateAverage: Double? = null
 ) {
-    fun update(latestMetrics: DataPointContainer, sessionId: String, checkpoint: ActiveDurationCheckpoint?): ExerciseMetrics {
-        val newHeartRate = latestMetrics.getData(DataType.HEART_RATE_BPM).lastOrNull()?.value ?: heartRate
-        val newCalories = latestMetrics.getData(DataType.CALORIES_TOTAL)?.total ?: calories
+    fun update(
+        latestMetrics: DataPointContainer,
+        sessionId: String,
+        checkpoint: ActiveDurationCheckpoint?,
+        isEnded: Boolean = false
 
-        // ✅ durationSec 계산 (밀리초 → 초)
+    ): ExerciseMetrics {
+        val newHeartRate =
+            latestMetrics.getData(DataType.HEART_RATE_BPM).lastOrNull()?.value ?: heartRate
+        val newDistance =
+            latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total ?: distance
+        val newCalories =
+            latestMetrics.getData(DataType.CALORIES_TOTAL)?.total ?: calories
+        val newAvgHeartRate =
+            latestMetrics.getData(DataType.HEART_RATE_BPM_STATS)?.average ?: heartRateAverage
+
+        //durationSec 계산 (밀리초 → 초)
         val durationSec = checkpoint?.activeDuration?.seconds?.toInt() ?: 0
 
-        if (newHeartRate != null && newCalories != null) {
+        if (!isEnded &&sessionId.isNotEmpty() && newHeartRate != null ) {
             DataLayerManager.sendMetrics(
                 sessionId = sessionId,
                 heartRate = newHeartRate.toInt(),
-                calories = newCalories.toInt(),
+                calories = newCalories?.toInt() ?: 0,
                 durationSec = durationSec
             )
         }
 
-        return copy(heartRate = newHeartRate, calories = newCalories)
+        return copy(
+            heartRate = newHeartRate,
+            distance = newDistance,
+            calories = newCalories,
+            heartRateAverage = newAvgHeartRate)
     }
 }
 

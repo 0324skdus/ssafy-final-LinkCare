@@ -51,8 +51,10 @@ constructor(
 
     @SuppressLint("RestrictedApi")
     private fun processExerciseUpdate(exerciseUpdate: ExerciseUpdate) {
-        // Dismiss any ongoing activity notification.
-        if (exerciseUpdate.exerciseStateInfo.state.isEnded) {
+        val state = exerciseUpdate.exerciseStateInfo.state
+        val isEnded = state.isEnded
+
+        if (isEnded) {
             exerciseService.removeOngoingActivityNotification()
         }
 
@@ -61,11 +63,11 @@ constructor(
         exerciseServiceState.update { old ->
             old.copy(
                 exerciseState = exerciseUpdate.exerciseStateInfo.state,
-                // ✅ sessionId 전달 추가
                 exerciseMetrics = old.exerciseMetrics.update(
                     exerciseUpdate.latestMetrics,
                     sessionId = sessionId,
-                    checkpoint = exerciseUpdate.activeDurationCheckpoint
+                    checkpoint = exerciseUpdate.activeDurationCheckpoint,
+                    isEnded = isEnded
                 ),
                 activeDurationCheckpoint =
                     exerciseUpdate.activeDurationCheckpoint ?: old.activeDurationCheckpoint,

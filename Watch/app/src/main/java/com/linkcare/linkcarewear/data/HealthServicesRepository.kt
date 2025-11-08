@@ -1,18 +1,3 @@
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 @file:OptIn(ExperimentalCoroutinesApi::class)
 
 package com.linkcare.linkcarewear.data
@@ -56,8 +41,6 @@ constructor(
         )
 
     private var errorState: MutableStateFlow<String?> = MutableStateFlow(null)
-    /** 현재 세션 ID 저장 */
-    private var currentSessionId: String? = null
 
     val serviceState: StateFlow<ServiceState> =
         exerciseServiceStateUpdates
@@ -89,12 +72,21 @@ constructor(
             }
         }
 
-    fun startExerciseWithSession(sessionId:String) =
-        serviceCall {
+    private fun serviceCallWithSession(
+        sessionId: String,
+        function: suspend ExerciseService.(String) -> Unit
+    ) = coroutineScope.launch {
+        binderConnection.runWhenConnected {
+            function(it.getService(), sessionId)
+        }
+    }
+
+    // startExerciseWithSession 수정
+    fun startExerciseWithSession(sessionId: String) =
+        serviceCallWithSession(sessionId) { id ->
             try {
                 errorState.value = null
-                currentSessionId = sessionId
-                startExercise(sessionId)
+                startExercise(id)   // 이게 실제 Service.startExercise(sessionId)
             } catch (e: Exception) {
                 errorState.value = e.message
                 logger.error("Error starting exercise", e.fillInStackTrace())

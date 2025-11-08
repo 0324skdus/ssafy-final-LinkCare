@@ -53,7 +53,13 @@ object DataLayerManager {
     }
 //운동 종료 후 요약 리포트 전송
     fun sendWorkoutSummary(context: Context, summary: WorkoutSummary) {
-        val dataMap = PutDataMapRequest.create("/linkcare/summary").apply {
+    if (summary.sessionId.isBlank()) {
+        Log.w("DataLayer", "⚠️ Ignoring summary send: empty sessionId")
+        return
+    }
+    val timestamp = System.currentTimeMillis()
+    Log.d("DataLayer", "⚙️ sendWorkoutSummary() called at $timestamp, session=${summary.sessionId}")
+    val dataMap = PutDataMapRequest.create("/linkcare/summary").apply {
             dataMap.putString("sessionId", summary.sessionId)
             dataMap.putInt("avgHeartRate", summary.avgHeartRate)
             dataMap.putInt("calories", summary.calories)
