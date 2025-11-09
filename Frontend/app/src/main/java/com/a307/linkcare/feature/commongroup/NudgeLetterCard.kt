@@ -50,7 +50,7 @@ fun NudgeLetterCard(
     val isCustomSelected = selectedId == -1
     val canSend = if (isCustomSelected) customText.isNotBlank() else selectedId != -1
 
-    Box(modifier = modifier.width(324.dp).height(532.dp)) {
+    Box(modifier = modifier) { //.width(324.dp).height(532.dp)
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = Color.White,
@@ -247,53 +247,6 @@ private fun OptionCard(text: String, selected: Boolean, onClick: () -> Unit) {
                     )
                 }
             }
-        }
-    }
-}
-
-// ----- 미리보기 -----
-@Preview(showBackground = true, widthDp = 360, name = "Nudge - 기본")
-@Composable
-private fun PreviewNudgeLetterCard() {
-    val sender = User("김싸피", R.drawable.char_bear_1)
-    val receiver = User("김에이", R.drawable.char_bear_2)
-    val suggestions = listOf(
-        Suggestion(1, "이따 같이 러닝하자"),
-        Suggestion(2, "심박수 너무 높은데?"),
-        Suggestion(3, "스트레칭을 해볼까?")
-    )
-    MaterialTheme {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            NudgeLetterCard(
-                sender = sender,
-                receiver = receiver,
-                suggestions = suggestions,
-                onSend = { selected, custom ->
-                    // preview에서는 no-op
-                }
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true, widthDp = 360, name = "Nudge - 긴 문구 테스트")
-@Composable
-private fun PreviewNudgeLetterCard_LongText() {
-    val sender = User("김싸피", R.drawable.char_bear_1)
-    val receiver = User("김에이", R.drawable.char_bear_2)
-    val suggestions = listOf(
-        Suggestion(1, "이따 같이 러닝하자"),
-        Suggestion(2, "심박수 너무 높은데? 오늘은 뛰는 강도를 조금 낮추고, 호흡을 길게 가져가 보자. 필요하면 페이스 조절하자!"),
-        Suggestion(3, "스트레칭을 해볼까?")
-    )
-    MaterialTheme {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            NudgeLetterCard(
-                sender = sender,
-                receiver = receiver,
-                suggestions = suggestions,
-                onSend = { _, _ -> }
-            )
         }
     }
 }

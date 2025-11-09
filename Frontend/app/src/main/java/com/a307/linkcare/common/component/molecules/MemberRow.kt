@@ -1,6 +1,7 @@
 package com.a307.linkcare.common.component.molecules
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -26,12 +27,14 @@ import com.a307.linkcare.feature.commongroup.domain.Member
 fun MemberRow(
     m: Member,
     bubbleVisible: Boolean,
-    onAvatarToggle: () -> Unit
+    onAvatarToggle: () -> Unit,
+    onClick: (() -> Unit)? = null
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
