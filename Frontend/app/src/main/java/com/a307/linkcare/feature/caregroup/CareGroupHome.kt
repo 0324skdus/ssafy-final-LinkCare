@@ -27,6 +27,49 @@ import com.a307.linkcare.feature.caregroup.domain.CareWeekSummary
 import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*;
+fun sampleHealthToday(m: Member): HealthToday =
+    HealthToday(
+        // 💓 혈압
+        bloodPressures = List((1..3).random()) {
+            val hour = (7..21).random()
+            val minute = listOf("00", "15", "30", "45").random()
+            BloodPressure(
+                time = String.format("%02d:%s", hour, minute),
+                sys = (110..135).random(),
+                dia = (70..88).random()
+            )
+        }.sortedBy { it.time },
+
+        // 💧 음수량
+        waterLogs = List((3..6).random()) {
+            val hour = (8..22).random()
+            val minute = listOf("00", "30").random()
+            WaterLog(
+                time = String.format("%02d:%s", hour, minute),
+                amountMl = listOf(150, 200, 250, 300).random()
+            )
+        }.sortedBy { it.time },
+        waterGoalMl = 2000,
+
+        // 😴 수면
+        sleepSessions = listOf(
+            SleepSession("23:30", "06:50")
+        ) + if ((0..1).random() == 1) {
+            listOf(SleepSession("13:20", "14:10")) // 낮잠 있을 수도 있음
+        } else emptyList(),
+
+        // 🏃 운동
+        activitySessions = List((1..3).random()) { idx ->
+            ActivitySession(
+                sessionId = "${System.currentTimeMillis()}_$idx",
+                avgHeartRate = listOf(98, 110, 121, 130).random(),
+                calories = listOf(180, 240, 300).random(),
+                distance = listOf(1200, 1500, 2000).random(),  // meter
+                durationSec = listOf(480, 600, 900).random(),
+                timestamp = System.currentTimeMillis() - (idx * 60 * 60 * 1000)
+            )
+        }
+    )
 
 /* ---------- 날짜 유틸 ---------- */
 enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
@@ -104,6 +147,12 @@ fun CareGroupHome(
         sampleSummary(selectedDate.korLabel(), metricType)
     }
 
+    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    val todayHealthByName = remember(selectedDate, todayMembers) {
+        todayMembers.associate { m -> m.name to sampleHealthToday(m) }
+    }
+
+
     Scaffold { _ ->
         Box(modifier = modifier.fillMaxSize()) {
 
@@ -147,9 +196,9 @@ fun CareGroupHome(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
-                            expandedMemberName =
-                                if (expandedMemberName == m.name) null else m.name
-                        }
+                            expandedMemberName = if (expandedMemberName == m.name) null else m.name
+                        },
+                        onClick = { selectedMember = m }
                     )
                     Divider(color = Color(0x11000000))
                 }
@@ -229,7 +278,14 @@ fun CareGroupHome(
                 }
             }
 
-            // 다이얼로그는 LazyColumn "밖"
+            selectedMember?.let { m ->
+                CareMemberDetail(
+                    member = m,
+                    today = todayHealthByName[m.name] ?: HealthToday(),
+                    onDismiss = { selectedMember = null }
+                )
+            }
+
             if (showCalendar) {
                 DatePickerDialog(
                     onDismissRequest = { showCalendar = false },

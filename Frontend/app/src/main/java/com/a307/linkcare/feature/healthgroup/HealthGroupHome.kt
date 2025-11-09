@@ -32,6 +32,9 @@ import java.util.Locale
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
+import com.a307.linkcare.feature.caregroup.CareMemberDetail
+import com.a307.linkcare.feature.caregroup.HealthToday
+import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import java.time.temporal.ChronoUnit
 import com.a307.linkcare.feature.commongroup.domain.*
 
@@ -121,10 +124,15 @@ fun HealthGroupHome(
         todayMembers = weekMembers.ifEmpty { members }
     }
 
-    // 다이얼로그는 리스트 바깥에서 remember
+    // 다이얼로그
     val dpState = rememberDatePickerState(
         initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal()
     )
+
+    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    val todayHealthByName = remember(selectedDate, todayMembers) {
+        todayMembers.associate { m -> m.name to sampleHealthToday(m) }
+    }
 
     Scaffold { _ ->
         Box(modifier = modifier.fillMaxSize()) {
@@ -156,7 +164,7 @@ fun HealthGroupHome(
                         onPrev = onPrevDay,
                         onNext = onNextDay,
                         label = selectedDate.korLabel(),
-                        onClick = { showCalendar = true } // 클릭으로 달력 열기
+                        onClick = { showCalendar = true }
                     )
                 }
 
@@ -168,7 +176,8 @@ fun HealthGroupHome(
                         onAvatarToggle = {
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
-                        }
+                        },
+                        onClick = { selectedMember = m }
                     )
                     Divider(color = Color(0x11000000))
                 }
@@ -219,7 +228,14 @@ fun HealthGroupHome(
                 }
             }
 
-            // 다이얼로그는 LazyColumn "밖"
+            selectedMember?.let { m ->
+                HealthMemberDetail(
+                    member = m,
+                    today = todayHealthByName[m.name] ?: HealthToday(),
+                    onDismiss = { selectedMember = null }
+                )
+            }
+
             if (showCalendar) {
                 DatePickerDialog(
                     onDismissRequest = { showCalendar = false },

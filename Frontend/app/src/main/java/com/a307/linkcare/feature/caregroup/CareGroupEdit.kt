@@ -458,7 +458,7 @@ private fun MemberRow(
 
 /** 아바타 간단 칩 */
 @Composable
-private fun GroupAvatarChip(@DrawableRes avatarRes: Int) {
+fun GroupAvatarChip(@DrawableRes avatarRes: Int) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
