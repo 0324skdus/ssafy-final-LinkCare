@@ -39,17 +39,18 @@ constructor(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
     private var sessionId: String = ""
-    init {
-        viewModelScope.launch {
-            healthServicesRepository.prepareExercise()
-        }
-    }
+//    init {
+//        viewModelScope.launch {
+//            healthServicesRepository.prepareExercise()
+//        }
+//    }
 
     fun startExercise() {
         // ✅ 세션ID 생성
         sessionId = System.currentTimeMillis().toString()
 
         viewModelScope.launch {
+            healthServicesRepository.prepareExercise()
             healthServicesRepository.startExerciseWithSession(sessionId)
         }
     }

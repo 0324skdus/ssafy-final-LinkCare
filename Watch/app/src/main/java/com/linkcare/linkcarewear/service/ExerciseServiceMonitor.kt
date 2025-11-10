@@ -2,6 +2,7 @@ package com.linkcare.linkcarewear.service
 
 import android.annotation.SuppressLint
 import android.app.Service
+import androidx.health.services.client.data.ExerciseState
 import androidx.health.services.client.data.ExerciseUpdate
 import com.linkcare.linkcarewear.data.ExerciseClientManager
 import com.linkcare.linkcarewear.data.ExerciseMessage
@@ -51,9 +52,12 @@ constructor(
 
     @SuppressLint("RestrictedApi")
     private fun processExerciseUpdate(exerciseUpdate: ExerciseUpdate) {
-        // Dismiss any ongoing activity notification.
-        if (exerciseUpdate.exerciseStateInfo.state.isEnded) {
-            exerciseService.removeOngoingActivityNotification()
+        val state = exerciseUpdate.exerciseStateInfo.state
+        val isEnded = state.isEnded
+
+        // ✅ ACTIVE 상태가 되었을 때 시작 시간 기록
+        if (state == ExerciseState.ACTIVE && exerciseService.startTimestamp == null) {
+            exerciseService.startTimestamp = System.currentTimeMillis()
         }
 
         val sessionId = exerciseService.sessionId ?: "unknown"
@@ -61,14 +65,15 @@ constructor(
         exerciseServiceState.update { old ->
             old.copy(
                 exerciseState = exerciseUpdate.exerciseStateInfo.state,
-                // ✅ sessionId 전달 추가
                 exerciseMetrics = old.exerciseMetrics.update(
                     exerciseUpdate.latestMetrics,
                     sessionId = sessionId,
-                    checkpoint = exerciseUpdate.activeDurationCheckpoint
+                    checkpoint = exerciseUpdate.activeDurationCheckpoint,
+                    isEnded = isEnded,
+                    startTimeMillis = exerciseService.startTimestamp
                 ),
-                activeDurationCheckpoint =
-                    exerciseUpdate.activeDurationCheckpoint ?: old.activeDurationCheckpoint,
+                activeDurationCheckpoint = exerciseUpdate.activeDurationCheckpoint
+                    ?: old.activeDurationCheckpoint,
                 exerciseGoal = exerciseUpdate.latestAchievedGoals
             )
         }

@@ -1,18 +1,3 @@
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 @file:OptIn(ExperimentalCoroutinesApi::class)
 
 package com.linkcare.linkcarewear.data
@@ -56,8 +41,6 @@ constructor(
         )
 
     private var errorState: MutableStateFlow<String?> = MutableStateFlow(null)
-    /** 현재 세션 ID 저장 */
-    private var currentSessionId: String? = null
 
     val serviceState: StateFlow<ServiceState> =
         exerciseServiceStateUpdates
@@ -89,17 +72,40 @@ constructor(
             }
         }
 
-    fun startExerciseWithSession(sessionId:String) =
-        serviceCall {
+    private fun serviceCallWithSession(
+        sessionId: String,
+        function: suspend ExerciseService.(String) -> Unit
+    ) = coroutineScope.launch {
+        binderConnection.runWhenConnected {
+            function(it.getService(), sessionId)
+        }
+    }
+
+    // startExerciseWithSession 수정
+    fun startExerciseWithSession(sessionId: String) {
+        // 🔒 1. 세션 ID가 비어 있거나 잘못된 경우 자동 실행 방지
+        if (sessionId.isBlank() || sessionId == "0") {
+            logger.log("⚠️ Skipping automatic startExerciseWithSession — invalid sessionId: $sessionId")
+            return
+        }
+
+        serviceCallWithSession(sessionId) { id ->
             try {
                 errorState.value = null
-                currentSessionId = sessionId
-                startExercise(sessionId)
+                // 🔒 2. 서비스 연결 시 자동 실행 방지 (중복 호출 방어)
+                if (exerciseClientManager.exerciseClient.isExerciseInProgress()) {
+                    logger.log("⚠️ Exercise already in progress — skipping duplicate startExercise()")
+                    return@serviceCallWithSession
+                }
+
+                startExercise(id)   // ✅ 실제 서비스 시작
             } catch (e: Exception) {
                 errorState.value = e.message
                 logger.error("Error starting exercise", e.fillInStackTrace())
             }
         }
+    }
+
 
     fun pauseExercise() = serviceCall { pauseExercise() }
 

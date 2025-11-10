@@ -22,13 +22,13 @@ data class ExerciseScreenState(
     }
 
     val isEnding: Boolean
-        get() = exerciseState?.exerciseState?.isEnding == true
+        get() = exerciseState?.exerciseState?.isEnding ?: false
 
     val isEnded: Boolean
-        get() = exerciseState?.exerciseState?.isEnded == true
+        get() = exerciseState?.exerciseState?.isEnded ?: false
 
     val isPaused: Boolean
-        get() = exerciseState?.exerciseState?.isPaused == true
+        get() = exerciseState?.exerciseState?.isPaused ?: false
 
     val error: String?
         get() =

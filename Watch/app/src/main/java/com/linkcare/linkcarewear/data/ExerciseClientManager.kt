@@ -195,9 +195,9 @@ constructor(
                         val distance = (update.latestMetrics.getData(DataType.DISTANCE_TOTAL))?.total?.toDouble()
 
 
-                        if (heartRate != null && calories != null) {
-                            sendMetricsToMobile(heartRate, calories, distance ?: 0.0)
-                        }
+//                        if (heartRate != null && calories != null) {
+//                            sendMetricsToMobile(heartRate, calories, distance ?: 0.0)
+//                        }
                     }
 
                     override fun onLapSummaryReceived(lapSummary: ExerciseLapSummary) {
@@ -233,19 +233,19 @@ constructor(
     private companion object {
         const val CALORIES_THRESHOLD = 250.0
     }
-    private fun sendMetricsToMobile(heartRate: Double, calories: Double, distance: Double) {
-        val data = PutDataMapRequest.create("/linkcare/metrics").apply {
-            dataMap.putDouble("heartRate", heartRate)
-            dataMap.putDouble("calories", calories)
-            dataMap.putDouble("distance", distance)
-            dataMap.putLong("timestamp", System.currentTimeMillis())
-        }.asPutDataRequest()
-
-        Wearable.getDataClient(context)
-            .putDataItem(data)
-            .addOnSuccessListener { Log.d("LinkCareWear", "실시간 데이터 전송 성공") }
-            .addOnFailureListener { e -> Log.e("LinkCareWear", "전송 실패", e) }
-    }
+//    private fun sendMetricsToMobile(heartRate: Double, calories: Double, distance: Double) {
+//        val data = PutDataMapRequest.create("/linkcare/metrics").apply {
+//            dataMap.putDouble("heartRate", heartRate)
+//            dataMap.putDouble("calories", calories)
+//            dataMap.putDouble("distance", distance)
+//            dataMap.putLong("timestamp", System.currentTimeMillis())
+//        }.asPutDataRequest()
+//
+//        Wearable.getDataClient(context)
+//            .putDataItem(data)
+//            .addOnSuccessListener { Log.d("LinkCareWear", "실시간 데이터 전송 성공") }
+//            .addOnFailureListener { e -> Log.e("LinkCareWear", "전송 실패", e) }
+//    }
 
 }
 
