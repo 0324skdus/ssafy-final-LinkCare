@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,10 @@ public class Character {
 
     @Column(length = 200)
     private String description;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int price = 0;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "character_images", joinColumns = @JoinColumn(name = "character_id"))
