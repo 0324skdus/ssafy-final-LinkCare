@@ -25,17 +25,17 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.theme.*
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.kakao.sdk.user.UserApiClient
 import com.kakao.sdk.common.model.ClientError
 import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.auth.model.OAuthToken
-import com.a307.linkcare.feature.auth.data.KakaoLoginRequest
-import com.a307.linkcare.feature.auth.data.GoogleLoginRequest
+import com.a307.linkcare.feature.auth.domain.KakaoLoginRequest
+import com.a307.linkcare.feature.auth.domain.GoogleLoginRequest
 import com.a307.linkcare.feature.auth.data.RetrofitClient
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun LoginScreen(
@@ -99,11 +99,13 @@ fun LoginScreen(
                                     onLoginSuccess(false)
                                 } else {
                                     Log.e(TAG, "Backend Google login failed: code=${res.code()} body=${res.errorBody()?.string()}")
-                                    toast("서버 구글 로그인 실패(${res.code()})")
+                                    toast("서버 구글 로그인 실패")
                                 }
+                            } catch (ce: CancellationException) {
+                                // ignore
                             } catch (e: Exception) {
                                 Log.e(TAG, "Backend Google login error", e)
-                                toast("서버 통신 오류: ${e.message}")
+                                toast("서버 통신 오류")
                             }
                         }
                         onLoginSuccess(false)
@@ -116,7 +118,7 @@ fun LoginScreen(
                     when (e.statusCode) {
                         12501 -> toast("구글 로그인이 취소되었어요.")
                         12500 -> toast("구글 로그인 설정 오류입니다.")
-                        else -> toast("구글 로그인 실패: ${e.statusCode}")
+                        else -> toast("구글 로그인 실패")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG,"Unexpected error: ${e.message}", e)
@@ -155,7 +157,7 @@ fun LoginScreen(
                     toast("카카오 로그인이 취소되었어요.")
                 } else {
                     Log.e(TAG, "Kakao login failed: ${error.message}", error)
-                    toast("카카오 로그인 실패: ${error.message}")
+                    toast("카카오 로그인 실패")
                 }
             } else if (token != null) {
                 val accessToken = token.accessToken
@@ -168,11 +170,13 @@ fun LoginScreen(
                             onLoginSuccess(false)
                         } else {
                             Log.e(TAG, "Backend Kakao login failed: code=${res.code()} body=${res.errorBody()?.string()}")
-                            toast("서버 카카오 로그인 실패(${res.code()})")
+                            toast("서버 카카오 로그인 실패")
                         }
+                    } catch (ce: CancellationException) {
+                        // ignore
                     } catch (e: Exception) {
                         Log.e(TAG, "Backend Kakao login error", e)
-                        toast("서버 통신 오류: ${e.message}")
+                        toast("서버 통신 오류")
                     }
                 }
                 onLoginSuccess(false)

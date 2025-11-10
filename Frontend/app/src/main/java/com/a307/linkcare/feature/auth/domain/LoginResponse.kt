@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.auth.data
+package com.a307.linkcare.feature.auth.domain
 
 data class LoginResponse(
     val accessToken: String,

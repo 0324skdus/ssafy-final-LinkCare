@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.auth.data
+package com.a307.linkcare.feature.auth.domain
 
 data class ErrorResponse(
     val status: Int,

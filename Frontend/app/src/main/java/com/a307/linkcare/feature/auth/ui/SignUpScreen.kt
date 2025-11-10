@@ -15,11 +15,12 @@ import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.*
 
 @Composable
 fun SignupScreen(
     onVerifyEmail: (String) -> Unit = {},
-    onVerifyCode: (String) -> Unit = {},
+    onVerifyCode: (email: String, code: String, onResult: (Boolean) -> Unit) -> Unit,
     onSubmit: (email: String, password: String) -> Unit = { _, _ -> }
 ) {
     // --- 상태
@@ -28,9 +29,11 @@ fun SignupScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var passwordCheck by rememberSaveable { mutableStateOf("") }
 
+
     var emailLocked by rememberSaveable { mutableStateOf(false) }   // 인증 요청 후 이메일 입력 잠금
     var emailVerified by rememberSaveable { mutableStateOf(false) } // 최종 이메일 인증 완료
     var codeVerified by rememberSaveable { mutableStateOf(false) }  // 코드 검증 완료
+    var isVerifying by rememberSaveable { mutableStateOf(false) }   // 코드 확인 로딩 상태
 
     // --- 버튼/필드 활성 조건
     val canSendEmail = email.isNotBlank() && !emailLocked && !emailVerified
@@ -160,6 +163,7 @@ fun SignupScreen(
 
                 val codeBtnText = if (codeVerified) "완료" else "확인"
                 val codeBtnEnabled = if (codeVerified) false else canClickCode
+
                 val codeBtnColor = when {
                     codeVerified -> unActiveBtn
                     canClickCode -> main
@@ -179,9 +183,14 @@ fun SignupScreen(
                     isEnabled = codeBtnEnabled,
                     onClick = {
                         if (!codeVerified && canClickCode) {
-                            onVerifyCode(code)
-                            codeVerified = true
-                            emailVerified = true
+                            onVerifyCode(email, code) { success ->
+                                if (success) {
+                                    codeVerified = true
+                                    emailVerified = true
+                                } else {
+                                    // 실패면 그대로 '확인' 상태 유지
+                                }
+                            }
                         }
                     }
                 )
