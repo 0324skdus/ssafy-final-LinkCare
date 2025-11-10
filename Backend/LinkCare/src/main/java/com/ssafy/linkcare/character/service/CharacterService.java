@@ -7,6 +7,7 @@ import com.ssafy.linkcare.character.repository.CharacterRepository;
 import com.ssafy.linkcare.character.repository.UserCharacterRepository;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -27,6 +28,7 @@ public class CharacterService {
     private final CharacterRepository characterRepository;
     private final UserCharacterRepository userCharacterRepository;
     private final S3Service s3Service;
+    private final PointService pointService;
 
     @Transactional
     public void assignDefaultCharacter(User user) {
@@ -109,7 +111,6 @@ public class CharacterService {
         userRepository.save(user);
     }
 
-    // todo 현재 단순 캐릭터 status 변경 로직만 있음. -> 이후 포인트 관련 변경 로직 추가 필요.
     @Transactional
     public void unlockCharacter(Long userPk, Long characterId) {
         User user = userRepository.findById(userPk)
@@ -118,12 +119,16 @@ public class CharacterService {
         Character characterToUnlock = characterRepository.findById(characterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND, "해당 캐릭터를 찾을 수 없습니다."));
 
+        // 이미 보유하고 있는지 확인
         boolean alreadyOwned = user.getCharacters().stream()
                 .anyMatch(uc -> uc.getCharacter().getCharacterId().equals(characterId));
 
         if (alreadyOwned) {
             throw new CustomException(ErrorCode.DUPLICATE_RESOURCE, "이미 보유하고 있는 캐릭터입니다.");
         }
+
+        // 포인트 차감
+        pointService.usePoints(userPk, characterToUnlock.getPrice());
 
         UserCharacter userCharacter = UserCharacter.builder()
                 .user(user)

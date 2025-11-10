@@ -5,6 +5,7 @@ import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
 import com.ssafy.linkcare.security.service.KakaoService;
 import com.ssafy.linkcare.security.service.OAuth2Service;
@@ -37,6 +38,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
     private final CharacterService characterService;
+    private final PointService pointService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -100,6 +102,9 @@ public class AuthService {
 
         // 5. 기본 캐릭터 지급
         characterService.assignDefaultCharacter(user);
+
+        // 6. 포인트 계정 생성
+        pointService.createPointForNewUser(user);
 
         log.info("회원가입 완료: {}", request.email());
     }

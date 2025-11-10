@@ -12,6 +12,7 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력값입니다"),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "이메일 형식이 올바르지 않습니다"),
     INVALID_PASSWORD_FORMAT(HttpStatus.BAD_REQUEST, "비밀번호 형식이 올바르지 않습니다"),
+    INSUFFICIENT_POINTS(HttpStatus.BAD_REQUEST, "포인트가 부족합니다."),
 
     // 이메일 인증 관련
     VERIFICATION_CODE_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 코드가 만료되었거나 존재하지 않습니다"),
@@ -57,7 +58,7 @@ public enum ErrorCode {
 
     // 403 Forbidden
     NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
-    ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버입니다"),
+    ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버임"),
 
     // 409 Conflict
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
