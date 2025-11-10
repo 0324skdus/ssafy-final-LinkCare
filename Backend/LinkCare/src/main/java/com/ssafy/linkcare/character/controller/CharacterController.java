@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/characters")
+@RequestMapping("/api/characters")
 @RequiredArgsConstructor
 public class CharacterController {
 
