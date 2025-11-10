@@ -82,16 +82,30 @@ constructor(
     }
 
     // startExerciseWithSession 수정
-    fun startExerciseWithSession(sessionId: String) =
+    fun startExerciseWithSession(sessionId: String) {
+        // 🔒 1. 세션 ID가 비어 있거나 잘못된 경우 자동 실행 방지
+        if (sessionId.isBlank() || sessionId == "0") {
+            logger.log("⚠️ Skipping automatic startExerciseWithSession — invalid sessionId: $sessionId")
+            return
+        }
+
         serviceCallWithSession(sessionId) { id ->
             try {
                 errorState.value = null
-                startExercise(id)   // 이게 실제 Service.startExercise(sessionId)
+                // 🔒 2. 서비스 연결 시 자동 실행 방지 (중복 호출 방어)
+                if (exerciseClientManager.exerciseClient.isExerciseInProgress()) {
+                    logger.log("⚠️ Exercise already in progress — skipping duplicate startExercise()")
+                    return@serviceCallWithSession
+                }
+
+                startExercise(id)   // ✅ 실제 서비스 시작
             } catch (e: Exception) {
                 errorState.value = e.message
                 logger.error("Error starting exercise", e.fillInStackTrace())
             }
         }
+    }
+
 
     fun pauseExercise() = serviceCall { pauseExercise() }
 

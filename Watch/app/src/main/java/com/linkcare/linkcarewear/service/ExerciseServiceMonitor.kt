@@ -2,6 +2,7 @@ package com.linkcare.linkcarewear.service
 
 import android.annotation.SuppressLint
 import android.app.Service
+import androidx.health.services.client.data.ExerciseState
 import androidx.health.services.client.data.ExerciseUpdate
 import com.linkcare.linkcarewear.data.ExerciseClientManager
 import com.linkcare.linkcarewear.data.ExerciseMessage
@@ -54,8 +55,9 @@ constructor(
         val state = exerciseUpdate.exerciseStateInfo.state
         val isEnded = state.isEnded
 
-        if (isEnded) {
-            exerciseService.removeOngoingActivityNotification()
+        // ✅ ACTIVE 상태가 되었을 때 시작 시간 기록
+        if (state == ExerciseState.ACTIVE && exerciseService.startTimestamp == null) {
+            exerciseService.startTimestamp = System.currentTimeMillis()
         }
 
         val sessionId = exerciseService.sessionId ?: "unknown"
@@ -67,10 +69,11 @@ constructor(
                     exerciseUpdate.latestMetrics,
                     sessionId = sessionId,
                     checkpoint = exerciseUpdate.activeDurationCheckpoint,
-                    isEnded = isEnded
+                    isEnded = isEnded,
+                    startTimeMillis = exerciseService.startTimestamp
                 ),
-                activeDurationCheckpoint =
-                    exerciseUpdate.activeDurationCheckpoint ?: old.activeDurationCheckpoint,
+                activeDurationCheckpoint = exerciseUpdate.activeDurationCheckpoint
+                    ?: old.activeDurationCheckpoint,
                 exerciseGoal = exerciseUpdate.latestAchievedGoals
             )
         }

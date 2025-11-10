@@ -29,9 +29,12 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class ExerciseService : LifecycleService() {
 
-    @Inject lateinit var exerciseClientManager: ExerciseClientManager
-    @Inject lateinit var exerciseNotificationManager: ExerciseNotificationManager
-    @Inject lateinit var exerciseServiceMonitor: ExerciseServiceMonitor
+    @Inject
+    lateinit var exerciseClientManager: ExerciseClientManager
+    @Inject
+    lateinit var exerciseNotificationManager: ExerciseNotificationManager
+    @Inject
+    lateinit var exerciseServiceMonitor: ExerciseServiceMonitor
 
     private var isBound = false
     private var isStarted = false
@@ -41,6 +44,8 @@ class ExerciseService : LifecycleService() {
     private var summarySent = false
     private var isExerciseEnded = false
     private var currentSessionId: String = ""
+
+    var startTimestamp: Long? = null
 
     // companion으로 세션 단위 중복 방지
     companion object {
@@ -65,10 +70,12 @@ class ExerciseService : LifecycleService() {
         currentSessionId = sessionId
         summarySent = false
         isExerciseEnded = false
+        startTimestamp = System.currentTimeMillis() // ✅ 시작 시간 기록
         postOngoingActivityNotification()
         Log.d("SessionDebug", "🚀 Service startExercise() currentSessionId=$currentSessionId")
         exerciseClientManager.startExercise()
     }
+
 
     suspend fun pauseExercise() {
         exerciseClientManager.pauseExercise()
@@ -77,22 +84,24 @@ class ExerciseService : LifecycleService() {
     suspend fun resumeExercise() {
         exerciseClientManager.resumeExercise()
     }
+
     suspend fun endExercise() {
         Log.d(TAG, "🟡 endExercise() CALLED, sessionId=$currentSessionId")
 
         if (isExerciseEnded || sentSessionSummaries.contains(currentSessionId)) return
         isExerciseEnded = true
 
-        // ⚙️ 1️⃣ 우선 세션 종료 요청
+        // 우선 세션 종료 요청
         exerciseClientManager.endExercise()
 
-        // ⚙️ 2️⃣ 300~500ms 기다려서 마지막 업데이트 반영
+        // 300~500ms 기다려서 마지막 업데이트 반영
         delay(500)
 
-        // ⚙️ 3️⃣ 이제 상태 가져오기
+        // 이제 상태 가져오기
         val currentState = exerciseServiceMonitor.exerciseServiceState.value
         val metrics = currentState.exerciseMetrics
-        val durationSec = (currentState.activeDurationCheckpoint?.activeDuration?.seconds ?: 0L).toInt()
+        val durationSec =
+            (currentState.activeDurationCheckpoint?.activeDuration?.seconds ?: 0L).toInt()
 
         val summary = WorkoutSummary(
             sessionId = currentSessionId,
@@ -133,6 +142,42 @@ class ExerciseService : LifecycleService() {
                     exerciseServiceMonitor.monitor()
                 }
             }
+            // ✅ 운동 중 실시간 전송 루프
+            lifecycleScope.launch(Dispatchers.Default) {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    exerciseServiceMonitor.exerciseServiceState.collect { state ->
+                        if (state.exerciseState == ExerciseState.ACTIVE && currentSessionId.isNotEmpty()) {
+                            val metrics = state.exerciseMetrics
+                            Log.d(
+                                "DurationDebug",
+                                "state=${state.exerciseState}, checkpoint=${state.activeDurationCheckpoint}, start=${startTimestamp}, now=${System.currentTimeMillis()}"
+                            )
+
+                            val durationSec = when {
+                                state.activeDurationCheckpoint?.activeDuration?.seconds != null &&
+                                    state.activeDurationCheckpoint.activeDuration.seconds > 0 ->
+                                    state.activeDurationCheckpoint.activeDuration.seconds.toInt()
+
+                                else ->
+                                    ((System.currentTimeMillis() - (startTimestamp ?: System.currentTimeMillis())) / 1000).toInt()
+                            }
+
+
+                            DataLayerManager.sendMetrics(
+                                sessionId = currentSessionId,
+                                heartRate = metrics.heartRate?.toInt() ?: 0,
+                                calories = metrics.calories?.toInt() ?: 0,
+                                durationSec = durationSec
+                            )
+                            Log.d(
+                                TAG,
+                                "📡 Sent realtime metrics to mobile: HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
+                            )
+                            delay(2000) // 2초 주기로 전송
+                        }
+                    }
+                }
+            }
         }
         return START_STICKY
     }
@@ -153,9 +198,18 @@ class ExerciseService : LifecycleService() {
             }
         }
     }
+
     override fun onCreate() {
         super.onCreate()
         DataLayerManager.init(this)
+        lifecycleScope.launch {
+            // 세션 잔재가 남아 있으면 정리
+            val inProgress = exerciseClientManager.exerciseClient.isExerciseInProgress()
+            if (inProgress) {
+                Log.w("ExerciseService", "⚠️ Cleaning up previous exercise session.")
+                exerciseClientManager.endExercise()
+            }
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
