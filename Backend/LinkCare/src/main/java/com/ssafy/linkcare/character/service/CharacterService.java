@@ -79,7 +79,7 @@ public class CharacterService {
 
         UserCharacter mainUserCharacter = user.getMainCharacter();
         if (mainUserCharacter == null) {
-            return null; // 대표 캐릭터가 없는 경우
+            return null;
         }
 
         Character mainCharacter = mainUserCharacter.getCharacter();
@@ -109,6 +109,7 @@ public class CharacterService {
         userRepository.save(user);
     }
 
+    // todo 현재 단순 캐릭터 status 변경 로직만 있음. -> 이후 포인트 관련 변경 로직 추가 필요.
     @Transactional
     public void unlockCharacter(Long userPk, Long characterId) {
         User user = userRepository.findById(userPk)
