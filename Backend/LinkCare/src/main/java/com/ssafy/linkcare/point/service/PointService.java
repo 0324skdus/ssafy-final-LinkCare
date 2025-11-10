@@ -25,7 +25,7 @@ public class PointService {
     }
 
     @Transactional
-    public void addPoints(Long userPk, int amount) {
+    public int addPoints(Long userPk, int amount) {
         if (amount <= 0) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "포인트는 0보다 커야 합니다.");
         }
@@ -35,6 +35,7 @@ public class PointService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "포인트 정보를 찾을 수 없습니다."));
 
         point.add(amount);
+        return point.getBalance();
     }
 
     @Transactional
