@@ -5,15 +5,8 @@ package com.a307.linkcare.feature.healthgroup
 import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,22 +14,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.R
-import java.time.*
-import java.time.format.DateTimeFormatter
-import java.time.temporal.WeekFields
-import java.util.Locale
-import androidx.compose.foundation.clickable
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.text.font.FontWeight
-import com.a307.linkcare.feature.caregroup.CareMemberDetail
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
-import java.time.temporal.ChronoUnit
 import com.a307.linkcare.feature.commongroup.domain.*
+import kotlinx.coroutines.launch
+import java.time.*
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.temporal.WeekFields
+import java.util.Locale
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -76,7 +74,10 @@ private fun epochMilliToLocalDate(millis: Long): LocalDate =
 @Composable
 fun HealthGroupHome(
     membersAll: List<Member>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLeader: Boolean = true,
+    currentGoal: Int?,                       // null이면 미설정 상태
+    onSaveGoal: (newGoal: Int) -> Unit = {}  // TODO API 저장
 ) {
     // 데모 데이터
     val members = remember {
@@ -99,9 +100,15 @@ fun HealthGroupHome(
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(1f) }
+    // 진행/목표
     var todayGroupProgress by remember { mutableStateOf(10234) }
-    var totalGroupGoal by remember { mutableStateOf(20000) }
+    var totalGroupGoal by rememberSaveable { mutableStateOf(currentGoal ?: 0) }
+    val todayGroupPercent by remember(totalGroupGoal, todayGroupProgress) {
+        mutableStateOf(
+            if (totalGroupGoal > 0) (todayGroupProgress / totalGroupGoal.toFloat()) else 0f
+        )
+    }
+    val percentText = ((todayGroupPercent * 100).toInt()).coerceIn(0, 100)
 
     // 날짜 이동
     val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
@@ -124,7 +131,7 @@ fun HealthGroupHome(
         todayMembers = weekMembers.ifEmpty { members }
     }
 
-    // 다이얼로그
+    // 날짜 선택 다이얼로그
     val dpState = rememberDatePickerState(
         initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal()
     )
@@ -134,7 +141,16 @@ fun HealthGroupHome(
         todayMembers.associate { m -> m.name to sampleHealthToday(m) }
     }
 
-    Scaffold { _ ->
+    // 스낵바/코루틴
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // 목표 수정 바텀시트 상태
+    var showGoalSheet by rememberSaveable { mutableStateOf(false) }
+    var goalInput by rememberSaveable { mutableStateOf(if (currentGoal != null) currentGoal.toString() else "") }
+    var goalError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
         Box(modifier = modifier.fillMaxSize()) {
 
             LazyColumn(Modifier.fillMaxSize()) {
@@ -142,9 +158,18 @@ fun HealthGroupHome(
                 item {
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleRow(
-                        title = "${todayGroupProgress}",
-                        subtitle = "목표 ${totalGroupGoal} 까지\n${(todayGroupPercent * 100).toInt()}% 달성했어요",
-                        onEditClick = {}
+                        title = "$todayGroupProgress",
+                        subtitle = "목표 ${if (totalGroupGoal > 0) totalGroupGoal else "미설정"} 까지\n${percentText}% 달성했어요",
+                        onEditClick = {
+                            if (!isLeader) {
+                                scope.launch { snackbar.showSnackbar("그룹장만 목표를 수정할 수 있어요.") }
+                                return@ScreenTitleRow
+                            }
+                            // 미설정이면 빈 값으로, 설정되어 있으면 해당 값으로
+                            goalInput = if (totalGroupGoal > 0) totalGroupGoal.toString() else ""
+                            goalError = null
+                            showGoalSheet = true
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -256,13 +281,41 @@ fun HealthGroupHome(
                     DatePicker(state = dpState, showModeToggle = false)
                 }
             }
-        }
-    }
+
+            // ▼ 목표 수정 바텀시트
+            if (showGoalSheet) {
+                GoalEditSheet(
+                    initialText = goalInput,
+                    errorText = goalError,
+                    onTextChange = {
+                        goalInput = it
+                        goalError = null
+                    },
+                    onDismiss = { showGoalSheet = false },
+                    onSave = {
+                        val value = goalInput.trim()
+                        val parsed = value.toIntOrNull()
+                        when {
+                            value.isEmpty() -> goalError = "값을 입력하세요."
+                            parsed == null || parsed <= 0 -> goalError = "양의 정수를 입력하세요."
+                            parsed < 1000 -> goalError = "최소 1,000 이상을 권장해요."
+                            else -> {
+                                totalGroupGoal = parsed
+                                onSaveGoal(parsed) // 실제 저장 콜백 (API)
+                                showGoalSheet = false
+                                scope.launch { snackbar.showSnackbar("목표가 저장되었어요.") }
+                            }
+                        }
+                    }
+                )
+            }
+        } // Box
+    } // Scaffold
 }
 
 /* ---------- 컴포넌트 ---------- */
 @Composable
- fun ScreenTitleRow(
+fun ScreenTitleRow(
     title: String,
     subtitle: String,
     onEditClick: () -> Unit
@@ -289,7 +342,7 @@ fun HealthGroupHome(
 }
 
 @Composable
- fun HeaderCard(
+fun HeaderCard(
     progress: Float,
     onPrev: () -> Unit,
     onNext: () -> Unit,
@@ -329,5 +382,71 @@ fun HealthGroupHome(
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GoalEditSheet(
+    initialText: String,
+    errorText: String?,
+    onTextChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text("그룹 목표 설정", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = black)
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = initialText,
+                onValueChange = onTextChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("목표 걸음수(예: 20000)") },
+                placeholder = { Text("숫자만 입력") },
+                singleLine = true,
+                trailingIcon = {
+                    if (initialText.isNotEmpty()) {
+                        IconButton(onClick = { onTextChange("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "지우기")
+                        }
+                    }
+                },
+                isError = errorText != null
+            )
+
+            if (errorText != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(errorText, color = Color(0xFFD32F2F), fontSize = 12.sp)
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("취소") }
+
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = main, contentColor = white),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("저장") }
+            }
+
+            Spacer(Modifier.height(20.dp))
+        }
     }
 }

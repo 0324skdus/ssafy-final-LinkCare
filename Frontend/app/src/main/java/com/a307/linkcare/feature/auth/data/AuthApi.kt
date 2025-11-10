@@ -1,27 +1,28 @@
-//package com.a307.linkcare.feature.auth.data
-//
-//import com.a307.linkcare.feature.auth.domain.OnboardingForm
-//import retrofit2.http.Body
-//import retrofit2.http.POST
-//
-//interface AuthApi {
-//    // 로그인
-//    @POST("auth/login")
-//    suspend fun login(@Body body: Map<String, String>): TokenResponse
-//
-//    // 회원가입 (온보딩 데이터 전송)
-//    @POST("auth/signup")
-//    suspend fun signup(@Body form: OnboardingForm): SignupResponse
-//}
-//
-//// 로그인 후 받을 토큰 응답 모델
-//data class TokenResponse(
-//    val accessToken: String,
-//    val refreshToken: String
-//)
-//
-//// 회원가입 응답 모델
-//data class SignupResponse(
-//    val message: String? = null,
-//    val userId: Long? = null
-//)
+package com.a307.linkcare.feature.auth.data
+
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.Header
+import retrofit2.http.POST
+import retrofit2.http.PUT
+
+interface AuthApi {
+
+    @POST("/api/auth/google")
+    suspend fun googleLogin(
+        @Body request: GoogleLoginRequest
+    ): Response<LoginResponse>
+
+    // 카카오 로그인
+    @POST("/api/auth/kakao")
+    suspend fun kakaoLogin(
+        @Body request: KakaoLoginRequest
+    ): Response<LoginResponse>
+
+    // FCM 토큰 업데이트
+    @PUT("/api/users/fcm-token")
+    suspend fun updateFcmToken(
+        @Header("Authorization") token: String,
+        @Body request: UpdateFcmTokenRequest
+    ): Response<Void>
+}
