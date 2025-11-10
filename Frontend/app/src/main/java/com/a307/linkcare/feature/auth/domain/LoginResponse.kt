@@ -5,5 +5,6 @@ data class LoginResponse(
     val refreshToken: String,
     val userPk: Long,
     val email: String,
-    val name: String
+    val name: String,
+    val needsProfileCompletion: Boolean
 )

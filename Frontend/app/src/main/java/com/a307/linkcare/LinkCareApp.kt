@@ -17,7 +17,7 @@ class LinkCareApp : Application() {
 
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
 
-        // 개발 중 필요하면 KeyHash 출력 (카카오 콘솔 등록용)
+        // KeyHash 출력 (카카오 콘솔 등록용)
         printKeyHash()
     }
 

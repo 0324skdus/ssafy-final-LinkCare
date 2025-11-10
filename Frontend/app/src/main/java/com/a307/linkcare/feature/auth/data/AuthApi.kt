@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.auth.data
 
 import com.a307.linkcare.feature.auth.domain.GoogleLoginRequest
 import com.a307.linkcare.feature.auth.domain.KakaoLoginRequest
+import com.a307.linkcare.feature.auth.domain.LoginRequest
 import com.a307.linkcare.feature.auth.domain.LoginResponse
 import com.a307.linkcare.feature.auth.domain.SendVerificationCodeRequest
 import com.a307.linkcare.feature.auth.domain.SignupRequest
@@ -11,6 +12,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Query
@@ -58,4 +60,17 @@ interface AuthApi {
     suspend fun signup(
         @Body body: SignupRequest
     ): Response<String>
+
+    // 로그인 
+    @Headers("Content-Type: application/json")
+    @POST("api/auth/login")
+    suspend fun login(
+        @Body body: LoginRequest
+    ): Response<LoginResponse>
+
+    // 토큰 재발급
+    @POST("api/auth/refresh")
+    suspend fun refresh(
+        @Header("Authorization") refreshTokenHeader: String
+    ): Response<LoginResponse>
 }
