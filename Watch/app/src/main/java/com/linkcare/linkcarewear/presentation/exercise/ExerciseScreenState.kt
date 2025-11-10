@@ -10,9 +10,9 @@ data class ExerciseScreenState(
     val isTrackingAnotherExercise: Boolean,
     val serviceState: ServiceState,
     val exerciseState: ExerciseServiceState?,
-    val sessionId: String = ""
+    val sessionId: Long = 0L
 ) {
-    fun toSummary(sessionId: String): SummaryScreenState {
+    fun toSummary(sessionId: Long): SummaryScreenState {
         val exerciseMetrics = exerciseState?.exerciseMetrics
         val averageHeartRate = exerciseMetrics?.heartRateAverage ?: Double.NaN
         val totalDistance = exerciseMetrics?.distance ?: 0.0

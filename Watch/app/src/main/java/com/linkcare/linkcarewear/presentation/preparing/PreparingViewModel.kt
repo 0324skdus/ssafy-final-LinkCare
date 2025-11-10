@@ -38,7 +38,7 @@ class PreparingViewModel
 constructor(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
-    private var sessionId: String = ""
+    private var sessionId: Long = 0L
 //    init {
 //        viewModelScope.launch {
 //            healthServicesRepository.prepareExercise()
@@ -47,7 +47,7 @@ constructor(
 
     fun startExercise() {
         // ✅ 세션ID 생성
-        sessionId = System.currentTimeMillis().toString()
+        sessionId = System.currentTimeMillis()
 
         viewModelScope.launch {
             healthServicesRepository.prepareExercise()

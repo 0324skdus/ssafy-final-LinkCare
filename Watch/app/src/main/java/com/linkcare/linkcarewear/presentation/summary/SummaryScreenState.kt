@@ -5,7 +5,7 @@ import com.linkcare.linkcarewear.data.model.WorkoutSummary
 import java.time.Duration
 
 data class SummaryScreenState(
-    val sessionId: String = "",
+    val sessionId: Long = 0L,
     val averageHeartRate: Double,
     val totalDistance: Double,
     val totalCalories: Double,

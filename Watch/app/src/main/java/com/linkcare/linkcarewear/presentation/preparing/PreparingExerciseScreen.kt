@@ -1,26 +1,14 @@
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.linkcare.linkcarewear.presentation.preparing
 
 import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -34,7 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -107,7 +97,7 @@ fun PreparingExerciseRoute(
                 onStart()
             },
             uiState = uiState,
-            onGoals = { onGoals() },
+//            onGoals = { onGoals() },
             ambientState = ambientState
         )
     }
@@ -129,75 +119,56 @@ fun PreparingExerciseRoute(
 fun PreparingExerciseScreen(
     uiState: PreparingScreenState,
     ambientState: AmbientState,
-    onStart: () -> Unit = {},
-    onGoals: () -> Unit = {}
+    onStart: () -> Unit = {}
 ) {
     val location = (uiState as? PreparingScreenState.Preparing)?.locationAvailability
 
-    val columnState = rememberTransformingLazyColumnState()
-    val contentPadding = rememberResponsiveColumnPadding(
-        first = ColumnItemType.BodyText,
-        last = ColumnItemType.Button
-    )
     ScreenScaffold(
-        scrollState = columnState,
         timeText = {},
-        contentPadding = contentPadding,
-        modifier = Modifier
-            .ambientGray(ambientState)
-    ) { contentPadding ->
-        LocationStatusText(
-            updatePrepareLocationStatus(
-                locationAvailability = location ?: LocationAvailability.UNAVAILABLE
+        modifier = Modifier.ambientGray(ambientState)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 배경 이미지
+            Image(
+                painter = painterResource(id = R.drawable.background_default),
+                contentDescription = "배경",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
             )
-        )
-        TransformingLazyColumn(
-            state = columnState,
-            contentPadding = contentPadding
-        ) {
-            item {
+
+            // 내용 (텍스트 + 버튼)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 상단 GPS 상태
                 Text(
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    text = stringResource(id = R.string.preparing_exercise),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = 0.15f * LocalConfiguration.current.screenWidthDp.dp
-                        )
+                    text = updatePrepareLocationStatus(
+                        locationAvailability = location ?: LocationAvailability.UNAVAILABLE
+                    ),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
                 )
-            }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+
+                // 중앙 준비 텍스트
+                Text(
+                    text = stringResource(id = R.string.preparing_exercise),
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                // 하단 시작 버튼
+                FilledIconButton(
+                    onClick = onStart,
+                    enabled = uiState is PreparingScreenState.Preparing
                 ) {
-                    FilledIconButton(
-                        onClick = onStart,
-                        enabled = uiState is PreparingScreenState.Preparing
-                    ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = stringResource(id = R.string.start)
-                        )
-                    }
-                }
-            }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CompactButton(
-                        label = { Text(stringResource(id = R.string.goal)) },
-                        onClick = onGoals
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = stringResource(id = R.string.start)
                     )
                 }
             }

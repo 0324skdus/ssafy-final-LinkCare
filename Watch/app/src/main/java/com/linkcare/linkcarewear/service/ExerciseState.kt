@@ -16,7 +16,7 @@ data class ExerciseMetrics(
 ) {
     fun update(
         latestMetrics: DataPointContainer,
-        sessionId: String,
+        sessionId: Long,
         checkpoint: ActiveDurationCheckpoint?,
         isEnded: Boolean = false,
         startTimeMillis: Long? = null

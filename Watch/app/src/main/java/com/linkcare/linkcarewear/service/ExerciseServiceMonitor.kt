@@ -60,7 +60,7 @@ constructor(
             exerciseService.startTimestamp = System.currentTimeMillis()
         }
 
-        val sessionId = exerciseService.sessionId ?: "unknown"
+        val sessionId = exerciseService.sessionId
 
         exerciseServiceState.update { old ->
             old.copy(

@@ -73,8 +73,8 @@ constructor(
         }
 
     private fun serviceCallWithSession(
-        sessionId: String,
-        function: suspend ExerciseService.(String) -> Unit
+        sessionId: Long,
+        function: suspend ExerciseService.(Long) -> Unit
     ) = coroutineScope.launch {
         binderConnection.runWhenConnected {
             function(it.getService(), sessionId)
@@ -82,10 +82,10 @@ constructor(
     }
 
     // startExerciseWithSession 수정
-    fun startExerciseWithSession(sessionId: String) {
+    fun startExerciseWithSession(sessionId: Long) {
         // 🔒 1. 세션 ID가 비어 있거나 잘못된 경우 자동 실행 방지
-        if (sessionId.isBlank() || sessionId == "0") {
-            logger.log("⚠️ Skipping automatic startExerciseWithSession — invalid sessionId: $sessionId")
+        if (sessionId == 0L) {
+            logger.log("⚠️ Skipping automatic startExerciseWithSession — invalid sessionId: ${0}")
             return
         }
 
