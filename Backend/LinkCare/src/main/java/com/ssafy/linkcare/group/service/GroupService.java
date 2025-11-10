@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.group.service;
 
+import com.ssafy.linkcare.character.entity.UserCharacter;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.group.dto.*;
@@ -20,8 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -208,14 +211,27 @@ public class GroupService {
         // 그룹 멤버 조회 (N+1 방지 - 추후 최적화 가능)
         List<GroupMember> members = groupMemberRepository.findByGroup(group);
 
-        // 멤버 DTO 변환 (imageUrl 제거)
+        // 멤버 DTO 변환
         List<GroupDetailResponse.MemberDto> memberDtos = members.stream()
-                .map(gm -> new GroupDetailResponse.MemberDto(
-                        gm.getGroupMemberSeq(),
-                        gm.getUser().getUserPk(),
-                        gm.getUser().getName(),
-                        gm.getIsLeader()
-                ))
+                .map(gm -> {
+                    User user = gm.getUser();
+                    List<String> mainCharacterImageUrls = Collections.emptyList();
+                    UserCharacter mainCharacter = user.getMainCharacter();
+
+                    if (mainCharacter != null && mainCharacter.getCharacter() != null) {
+                        mainCharacterImageUrls = mainCharacter.getCharacter().getImageS3Keys().stream()
+                                .map(s3Service::generatePresignedGetUrl)
+                                .collect(Collectors.toList());
+                    }
+
+                    return new GroupDetailResponse.MemberDto(
+                            gm.getGroupMemberSeq(),
+                            user.getUserPk(),
+                            user.getName(),
+                            gm.getIsLeader(),
+                            mainCharacterImageUrls
+                    );
+                })
                 .toList();
 
         // HEALTH 그룹인 경우 목표 기준 조회
