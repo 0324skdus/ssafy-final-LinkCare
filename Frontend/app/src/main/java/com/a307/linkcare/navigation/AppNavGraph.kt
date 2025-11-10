@@ -33,16 +33,19 @@ fun AppNavGraph(
         // 로그인 화면
         composable(Route.Login.route) {
             LoginScreen(
+                navController = navController,
                 onLoginSuccess = { isFirstLogin ->
                     if (isFirstLogin) {
                         // 첫 로그인 시: Intro로 이동
                         navController.navigate(Route.Intro.route) {
                             popUpTo(Route.Login.route) { inclusive = true }
+                            launchSingleTop = true
                         }
                     } else {
                         // 기존 사용자: 바로 메인으로 이동
                         navController.navigate(Route.Main.route) {
                             popUpTo(Route.Login.route) { inclusive = true }
+                            launchSingleTop = true
                         }
                     }
                 },
