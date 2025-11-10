@@ -351,7 +351,13 @@ fun MainTabs() {
                                 Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
                                 Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
                                 Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-                            )
+                            ),
+                            isLeader = true,            // 현재 유저가 그룹장일 때만 true
+                            currentGoal = 20000,        // null이면 미설정
+                            onSaveGoal = { newGoal ->
+                                // TODO: API 요청으로 저장
+                                // ex) viewModel.saveGroupGoal(groupId, newGoal)
+                            }
                         )
                     }
                 }
