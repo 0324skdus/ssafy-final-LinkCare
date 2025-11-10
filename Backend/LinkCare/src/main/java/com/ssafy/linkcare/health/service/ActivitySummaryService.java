@@ -27,6 +27,7 @@ public class ActivitySummaryService {
 
     private final UserRepository userRepository;
     private final ActivitySummaryRepository activitySummaryRepository;
+
     private final TimeStampUtil timeStampUtil;
 
     // 전체 데이터 저장
@@ -35,6 +36,8 @@ public class ActivitySummaryService {
 
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+
 
         List<ActivitySummary> list = activityList.stream()
                 .map(dto -> ActivitySummary.builder()
@@ -102,28 +105,45 @@ public class ActivitySummaryService {
         Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
         Long endTimeTs = timeStampUtil.getCurrentTimestamp();
 
-        ActivitySummary activitySummary = activitySummaryRepository
+        return activitySummaryRepository
                 .findByUserAndStartTime(user, startTimeTs)
-                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_DATA_NOT_FOUND));
-
-        return convertToResponse(activitySummary);
+                .map(this::convertToResponse)
+                .orElseGet(() -> createEmptyActivitySummaryResponse(startTimeTs));
     }
 
     // 일주일 데이터 조회
     public List<ActivitySummaryResponse> getThisWeekActivitySummaries(int userSeq) {
         User user = validateUser(userSeq);
 
-        return null;
+        Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+
+        log.info("이번 주 데이터 조회 - User: {}", userSeq);
+
+        return getActivitySummariesByPeriod(userSeq, weekStart, now);
     }
+
 
 
     private ActivitySummaryResponse convertToResponse(ActivitySummary activitySummary) {
         return ActivitySummaryResponse.builder()
                 .totalDistance(activitySummary.getTotalDistance())
-                .activitySummaryId(activitySummary.getActivitySummaryId())
+//                .activitySummaryId(activitySummary.getActivitySummaryId())
                 .deviceId(activitySummary.getDeviceId())
                 .deviceType(activitySummary.getDeviceType())
                 .totalCaloriesBurned(activitySummary.getTotalCaloriesBurned())
+                .startTime(timeStampUtil.toLocalDateTime(activitySummary.getStartTime()))
+                .build();
+    }
+
+    // Helper 메서드
+    private ActivitySummaryResponse createEmptyActivitySummaryResponse(Long startTime) {
+        return ActivitySummaryResponse.builder()
+                .deviceId(null)
+                .deviceType(null)
+                .startTime(timeStampUtil.toLocalDateTime(startTime))
+                .totalCaloriesBurned(0.0)
+                .totalDistance(0.0)
                 .build();
     }
 

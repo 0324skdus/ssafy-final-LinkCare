@@ -27,4 +27,72 @@ public interface SleepRepository extends JpaRepository<Sleep, Long> {
     @Modifying
     @Query("DELETE FROM Sleep s WHERE s.user = :user AND s.uid IN :uids")
     void deleteByUserAndUidIn(@Param("user") User user, @Param("uids") Set<String> uids);
+
+    /**
+     * 특정 사용자의 기간별 Sleep 조회
+     * @param user 사용자
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return Sleep 리스트 (최신순, sessions 포함)
+     */
+    @Query("SELECT DISTINCT s FROM Sleep s " +
+            "LEFT JOIN FETCH s.sessions " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime " +
+            "ORDER BY s.endTime DESC")
+    List<Sleep> findByUserAndEndTimeBetweenOrderByEndTimeDesc(User user, Long startTime, Long endTime);
+
+    /**
+     * 특정 사용자의 기간별 총 수면 시간 합계
+     */
+    @Query("SELECT SUM(s.duration) FROM Sleep s " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime")
+    Optional<Long> sumTotalDurationByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 평균 수면 시간
+     */
+    @Query("SELECT AVG(s.duration) FROM Sleep s " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime")
+    Optional<Double> avgDurationByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 수면 기록 개수
+     */
+    @Query("SELECT COUNT(s) FROM Sleep s " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime")
+    Long countByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 최대 수면 시간
+     */
+    @Query("SELECT MAX(s.duration) FROM Sleep s " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime")
+    Optional<Integer> maxDurationByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 최소 수면 시간
+     */
+    @Query("SELECT MIN(s.duration) FROM Sleep s " +
+            "WHERE s.user = :user AND s.endTime BETWEEN :startTime AND :endTime")
+    Optional<Integer> minDurationByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
 }

@@ -2,15 +2,17 @@ package com.ssafy.linkcare.health.service;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.health.dto.SleepDataDto;
-import com.ssafy.linkcare.health.dto.SleepSessionDto;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.entity.Sleep;
 import com.ssafy.linkcare.health.entity.SleepSession;
 import com.ssafy.linkcare.health.repository.SleepRepository;
 import com.ssafy.linkcare.health.repository.SleepSessionRepository;
+import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SleepService {
@@ -29,6 +32,8 @@ public class SleepService {
     private final SleepRepository sleepRepository;
     private final SleepSessionRepository sleepSessionRepository;
     private final UserRepository userRepository;
+
+    private final TimeStampUtil timeStampUtil;
 
     @Transactional
     public void saveAllSleepData(List<SleepDataDto> sleepList, int userSeq) {
@@ -72,6 +77,22 @@ public class SleepService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if(sleepList == null || sleepList.isEmpty()) {
+            LocalDate today = LocalDate.now();
+            List<Sleep> existingSleep = sleepRepository.findByUserAndEndDate(user, today);
+            if(existingSleep.isEmpty() || existingSleep == null) {
+                sleepRepository.save(Sleep.builder()
+                        .deviceId("system")
+                        .deviceType("auto-generated")
+                        .uid("empty_" + System.currentTimeMillis())
+                        .duration(0)
+                        .zoneOffset(ZoneId.systemDefault().getId())
+                        .dataSource(null)
+                        .startTime(today.atStartOfDay(ZoneId.systemDefault()).toEpochSecond())
+                        .endTime(today.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond())
+                        .user(user)
+                        .sessions(null)
+                        .build());
+            }
             return;
         }
 
@@ -188,5 +209,204 @@ public class SleepService {
                 }
             }
         });
+    }
+
+    /**
+     * 당일 수면 데이터 조회 (endTime 기준)
+     * 오늘 일어난(종료된) 수면 데이터를 조회
+     */
+    public List<SleepResponse> getTodaySleeps(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long dayStart = timeStampUtil.getTodayStartTimestamp();
+        Long dayEnd = timeStampUtil.getCurrentTimestamp();
+
+        log.info("당일 수면 데이터 조회 - User: {}, Start: {}, End: {}", userSeq, dayStart, dayEnd);
+
+        // endTime을 기준으로 조회
+        List<Sleep> sleeps = sleepRepository
+                .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, dayStart, dayEnd);
+
+        return sleeps.stream()
+                .map(this::convertToSleepResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 이번 주 수면 데이터 조회 (endTime 기준)
+     * 이번 주에 일어난(종료된) 수면 데이터를 조회
+     * @param userSeq 사용자 시퀀스
+     * @return SleepResponse 리스트
+     */
+    public List<SleepResponse> getThisWeekSleeps(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long weekStart = timeStampUtil.getThisWeekStartTimestamp(); // 월요일 00:00
+        Long now = timeStampUtil.getCurrentTimestamp();
+
+        log.info("이번 주 수면 데이터 조회 (endTime 기준) - User: {}", userSeq);
+
+        // endTime이 이번 주에 속하는 수면 조회
+        List<Sleep> sleeps = sleepRepository
+                .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, weekStart, now);
+
+        return sleeps.stream()
+                .map(this::convertToSleepResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 기간별 수면 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return SleepResponse 리스트
+     */
+     public List<SleepResponse> getSleepsByPeriod(int userSeq, Long startTime, Long endTime) {
+         User user = validateUser(userSeq);
+
+         List<Sleep> sleeps = sleepRepository
+                 .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, startTime, endTime);
+
+         return sleeps.stream()
+                 .map(this::convertToSleepResponse)
+                 .collect(Collectors.toList());
+     }
+
+    /**
+     * 기간별 수면 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return SleepResponse 리스트
+     */
+    public List<SleepResponse> getSleepsByPeriod(int userSeq, LocalDate startTime, LocalDate endTime) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.toTimestamp(startTime);
+        Long endTimeTs = timeStampUtil.toTimestamp(endTime);
+
+        List<Sleep> sleeps = sleepRepository
+                .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, startTimeTs, endTimeTs);
+
+        return sleeps.stream()
+                .map(this::convertToSleepResponse)
+                .collect(Collectors.toList());
+    }
+
+
+    /**
+     * 3주치 수면 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return SleepResponse 리스트
+     */
+    public List<SleepResponse> getThreeWeeksSleeps(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long threeWeeksAgo = timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+
+        log.info("3주치 수면 데이터 조회 - User: {}", userSeq);
+
+        List<Sleep> sleeps = sleepRepository
+                .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, threeWeeksAgo, now);
+
+        return sleeps.stream()
+                .map(this::convertToSleepResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 기간별 수면 통계 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return 수면 통계
+     */
+    public SleepStatisticsResponse getSleepStatistics(
+            int userSeq,
+            Long startTime,
+            Long endTime
+    ) {
+        User user = validateUser(userSeq);
+
+        Long effectiveStartTime = startTime != null ? startTime : timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long effectiveEndTime = endTime != null ? endTime : timeStampUtil.getCurrentTimestamp();
+
+        log.info("수면 통계 조회 - User: {}, Start: {}, End: {}", userSeq, effectiveStartTime, effectiveEndTime);
+
+        Long totalDuration = sleepRepository
+                .sumTotalDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0L);
+
+        Double avgDuration = sleepRepository
+                .avgDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0);
+
+        Integer maxDuration = sleepRepository
+                .maxDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0);
+
+        Integer minDuration = sleepRepository
+                .minDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0);
+
+        return SleepStatisticsResponse.builder()
+                .totalDuration(totalDuration)
+                .averageDuration(avgDuration)
+                .maxDuration(maxDuration)
+                .minDuration(minDuration)
+                .startTime(timeStampUtil.toLocalDateTime(effectiveStartTime))
+                .endTime(timeStampUtil.toLocalDateTime(effectiveEndTime))
+                .build();
+    }
+
+    /**
+     * 당일 수면 통계 조회
+     */
+    public SleepStatisticsResponse getTodaySleepStatistics(int userSeq) {
+        Long dayStart = timeStampUtil.getTodayStartTimestamp();
+        Long dayEnd = timeStampUtil.getCurrentTimestamp();
+        return getSleepStatistics(userSeq, dayStart, dayEnd);
+    }
+
+    /**
+     * 이번 주 수면 통계 조회
+     */
+    public SleepStatisticsResponse getThisWeekSleepStatistics(int userSeq) {
+        Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+        return getSleepStatistics(userSeq, weekStart, now);
+    }
+
+    private SleepResponse convertToSleepResponse(Sleep sleep) {
+        // SleepSession을 SleepSessionResponse로 변환
+        List<SleepSessionResponse> sessionResponses = sleep.getSessions().stream()
+                .map(this::convertToSleepSessionResponse)
+                .collect(Collectors.toList());
+
+        return SleepResponse.builder()
+                .sleepId(sleep.getSleepId())
+                .deviceId(sleep.getDeviceId())
+                .deviceType(sleep.getDeviceType())
+                .uid(sleep.getUid())
+                .startTime(timeStampUtil.toLocalDateTime(sleep.getStartTime()))
+                .endTime(timeStampUtil.toLocalDateTime(sleep.getEndTime()))
+                .duration(sleep.getDuration())
+                .sessions(sessionResponses)
+                .build();
+    }
+
+    private SleepSessionResponse convertToSleepSessionResponse(SleepSession sleepSession) {
+        return SleepSessionResponse.builder()
+                .sleepSessionId(sleepSession.getSleepSessionId())
+                .startTime(timeStampUtil.toLocalDateTime(sleepSession.getStartTime()))
+                .endTime(timeStampUtil.toLocalDateTime(sleepSession.getEndTime()))
+                .duration(sleepSession.getDuration())
+                .build();
+    }
+    private User validateUser(int userSeq) {
+        return userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

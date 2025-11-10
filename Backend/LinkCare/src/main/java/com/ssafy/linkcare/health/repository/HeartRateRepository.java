@@ -26,4 +26,9 @@ public interface HeartRateRepository extends JpaRepository<HeartRate, Integer> {
     @Modifying
     @Query("DELETE FROM HeartRate hr WHERE hr.user = :user AND hr.uid IN :uids")
     void deleteByUserAndUidIn(@Param("user") User user, @Param("uids") Set<String> uids);
+
+    List<HeartRate> findByUserAndStartTimeBetweenOrderByStartTimeDesc(User user, Long startTimeTs, Long endTimeTs);
+
+
+    Optional<HeartRate> findByUserAndStartTime(User user, Long startTimeTs);
 }

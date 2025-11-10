@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ActivitySummaryResponse {
-    private int activitySummaryId;
+//    private int activitySummaryId;
     private LocalDateTime startTime;
     private String deviceId;
     private String deviceType;

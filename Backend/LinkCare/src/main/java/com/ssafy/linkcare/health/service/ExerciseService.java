@@ -2,20 +2,19 @@ package com.ssafy.linkcare.health.service;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.health.dto.ExerciseDto;
-import com.ssafy.linkcare.health.dto.ExerciseSessionDto;
-import com.ssafy.linkcare.health.dto.ExerciseTypeDto;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.entity.Exercise;
 import com.ssafy.linkcare.health.entity.ExerciseSession;
 import com.ssafy.linkcare.health.repository.ExerciseRepository;
 import com.ssafy.linkcare.health.repository.ExerciseSessionRepository;
+import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExerciseService {
@@ -30,6 +30,8 @@ public class ExerciseService {
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final ExerciseSessionRepository exerciseSessionRepository;
+
+    private final TimeStampUtil timeStampUtil;
 
     @Transactional
     public void saveAllExerciseData(List<ExerciseDto> exerciseList, int userSeq) {
@@ -92,7 +94,6 @@ public class ExerciseService {
         if (exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
             return;
         }
-
         // 삭제만 가능
         Set<String> sdkUids = exerciseDto.getExercises().stream().map(ExerciseTypeDto::getUid).collect(Collectors.toSet());
 
@@ -186,7 +187,276 @@ public class ExerciseService {
                     }
                 }
 
+            } else {
+                Exercise newExercise = Exercise.builder()
+                        .deviceId(dto.getDeviceId())
+                        .deviceType(dto.getDeviceType())
+                        .uid(dto.getUid())
+                        .exerciseType(dto.getExerciseType())
+                        .zoneOffset(dto.getZoneOffset())
+                        .dataSource(dto.getDataSource())
+                        .startTime(startTimeTs)
+                        .endTime(endTimeTs)
+                        .user(user)
+                        .build();
+
+                Exercise savedExercise = exerciseRepository.save(newExercise);
+                log.info("새 운동 데이터 저장 - User: {}, UID: {}", userSeq, dto.getUid());
+
+                // 세션 저장
+                if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
+                    List<ExerciseSession> sessions = dto.getSessions().stream()
+                            .map(session -> ExerciseSession.builder()
+                                    .startTime(session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                                    .endTime(session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                                    .exerciseType(session.getExerciseType())
+                                    .distance(session.getDistance())
+                                    .calories(session.getCalories())
+                                    .exercise(savedExercise)
+                                    .build()
+                            ).toList();
+
+                    exerciseSessionRepository.saveAll(sessions);
+                    log.info("운동 세션 저장 - Exercise UID: {}, Sessions: {}", dto.getUid(), sessions.size());
+                }
             }
         }
+
+    }
+    /**
+     * 당일 운동 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return ExerciseTypeResponse 리스트
+     */
+    public List<ExerciseResponse> getTodayExercises(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long dayStart = timeStampUtil.getTodayStartTimestamp();
+        Long dayEnd = timeStampUtil.getCurrentTimestamp();
+
+        log.info("당일 운동 데이터 조회 - User: {}, Start: {}, End: {}", userSeq, dayStart, dayEnd);
+
+        List<Exercise> exercises = exerciseRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, dayStart, dayEnd);
+
+        return exercises.stream()
+                .map(this::convertToExerciseTypeResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 이번 주 운동 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return ExerciseTypeResponse 리스트
+     */
+    public List<ExerciseResponse> getThisWeekExercises(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+
+        log.info("이번 주 운동 데이터 조회 - User: {}", userSeq);
+
+        List<Exercise> exercises = exerciseRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, weekStart, now);
+
+        return exercises.stream()
+                .map(this::convertToExerciseTypeResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 3주치 운동 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return ExerciseTypeResponse 리스트
+     */
+    public List<ExerciseResponse> getThreeWeeksExercises(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long threeWeeksAgo = timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+
+        log.info("3주치 운동 데이터 조회 - User: {}", userSeq);
+
+        List<Exercise> exercises = exerciseRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, threeWeeksAgo, now);
+
+        return exercises.stream()
+                .map(this::convertToExerciseTypeResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 기간별 운동 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return ExerciseResponse 리스트
+     */
+    public List<ExerciseResponse> getExercisesByPeriod(
+            int userSeq,
+            LocalDate startDate,
+            LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        log.info("기간별 운동 데이터 조회 - User: {}, startDate: {}, endDate: {}", userSeq, startDate, endDate);
+
+        List<Exercise> exercises = exerciseRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startDateTs, endDateTs);
+
+        return exercises.stream()
+                .map(this::convertToExerciseTypeResponse)
+                .collect(Collectors.toList());
+    }
+
+    private ExerciseResponse convertToExerciseTypeResponse(Exercise exercise) {
+        // ExerciseSession을 ExerciseSessionDto로 변환
+        List<ExerciseSessionDto> sessionDtos = exercise.getSessions().stream()
+                .map(this::convertToExerciseSessionDto)
+                .collect(Collectors.toList());
+
+        ExerciseResponse exerciseResponse = ExerciseResponse.builder()
+                .exerciseId(exercise.getExerciseId())
+                .deviceId(exercise.getDeviceId())
+                .deviceType(exercise.getDeviceType())
+                .uid(exercise.getUid())
+                .startTime(timeStampUtil.toLocalDateTime(exercise.getStartTime()))
+                .endTime(timeStampUtil.toLocalDateTime(exercise.getEndTime()))
+                .exerciseType(exercise.getExerciseType())
+                .sessions(sessionDtos)
+                .build();
+
+        return exerciseResponse;
+    }
+
+    /**
+     * 기간별 운동 통계 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return 운동 통계
+     */
+    public ExerciseStatisticsResponse getExerciseStatistics(
+            int userSeq,
+            Long startTime,
+            Long endTime
+    ) {
+        User user = validateUser(userSeq);
+
+        Long effectiveStartTime = startTime != null ? startTime : timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long effectiveEndTime = endTime != null ? endTime : timeStampUtil.getCurrentTimestamp();
+
+        log.info("운동 통계 조회 - User: {}, Start: {}, End: {}", userSeq, effectiveStartTime, effectiveEndTime);
+
+        Float totalCalories = exerciseRepository
+                .sumTotalCaloriesByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Float totalDistance = exerciseRepository
+                .sumTotalDistanceByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Float avgCalories = exerciseRepository
+                .avgCaloriesByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Long exerciseCount = exerciseRepository
+                .countByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
+
+        return ExerciseStatisticsResponse.builder()
+                .totalCalories(totalCalories)
+                .totalDistance(totalDistance)
+                .averageCalories(avgCalories)
+                .exerciseCount(exerciseCount)
+                .startTime(timeStampUtil.toLocalDateTime(effectiveStartTime))
+                .endTime(timeStampUtil.toLocalDateTime(effectiveEndTime))
+                .build();
+    }
+
+    /**
+     * 기간별 운동 통계 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return 운동 통계
+     */
+    public ExerciseStatisticsResponse getExerciseStatisticsByDate(
+            int userSeq,
+            LocalDate startTime,
+            LocalDate endTime
+    ) {
+        User user = validateUser(userSeq);
+
+        Long effectiveStartTime = startTime != null ? timeStampUtil.getDateStartTimestamp(startTime) : timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long effectiveEndTime = endTime != null ? timeStampUtil.getDateEndTimestamp(endTime) : timeStampUtil.getCurrentTimestamp();
+
+        log.info("(LocalDate) 운동 통계 조회 - User: {}, Start: {}, End: {}", userSeq, effectiveStartTime, effectiveEndTime);
+
+        Float totalCalories = exerciseRepository
+                .sumTotalCaloriesByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Float totalDistance = exerciseRepository
+                .sumTotalDistanceByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Float avgCalories = exerciseRepository
+                .avgCaloriesByUserAndPeriod(user, effectiveStartTime, effectiveEndTime)
+                .orElse(0.0f);
+
+        Long exerciseCount = exerciseRepository
+                .countByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
+
+        return ExerciseStatisticsResponse.builder()
+                .totalCalories(totalCalories)
+                .totalDistance(totalDistance)
+                .averageCalories(avgCalories)
+                .exerciseCount(exerciseCount)
+                .startTime(timeStampUtil.toLocalDateTime(effectiveStartTime))
+                .endTime(timeStampUtil.toLocalDateTime(effectiveEndTime))
+                .build();
+    }
+
+    /**
+     * 당일 운동 통계 조회
+     */
+    public ExerciseStatisticsResponse getTodayExerciseStatistics(int userSeq) {
+        Long dayStart = timeStampUtil.getTodayStartTimestamp();
+        Long dayEnd = timeStampUtil.getCurrentTimestamp();
+        return getExerciseStatistics(userSeq, dayStart, dayEnd);
+    }
+
+    /**
+     * 이번 주 운동 통계 조회
+     */
+    public ExerciseStatisticsResponse getThisWeekExerciseStatistics(int userSeq) {
+        Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+        return getExerciseStatistics(userSeq, weekStart, now);
+    }
+
+    /**
+     * 3주치 운동 통계 조회
+     */
+    public ExerciseStatisticsResponse getThreeWeeksExerciseStatistics(int userSeq) {
+        Long threeWeeksAgo = timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long now = timeStampUtil.getCurrentTimestamp();
+        return getExerciseStatistics(userSeq, threeWeeksAgo, now);
+    }
+
+    private ExerciseSessionDto convertToExerciseSessionDto(ExerciseSession session) {
+        return ExerciseSessionDto.builder()
+                .startTime(timeStampUtil.toLocalDateTime(session.getStartTime()))
+                .endTime(timeStampUtil.toLocalDateTime(session.getEndTime()))
+                .exerciseType(session.getExerciseType())
+                .calories(session.getCalories())
+                .distance(session.getDistance())
+                .build();
+    }
+
+    private User validateUser(int userSeq) {
+        return userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

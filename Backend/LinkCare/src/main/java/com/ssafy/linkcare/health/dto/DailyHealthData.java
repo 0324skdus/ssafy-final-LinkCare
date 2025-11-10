@@ -1,10 +1,13 @@
 package com.ssafy.linkcare.health.dto;
 
-import lombok.Data;
+import lombok.*;
 
 import java.util.List;
 
-@Data
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class DailyHealthData {
     private ActivitySummaryDto activitySummary;
     private List<HeartRateDto> heartRate;

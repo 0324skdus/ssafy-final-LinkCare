@@ -4,6 +4,7 @@ import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.AllHealthDataDto;
 import com.ssafy.linkcare.health.dto.DailyHealthData;
+import com.ssafy.linkcare.health.dto.DailyHealthResponse;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,9 +48,17 @@ public class HealthService {
     }
 
     // 당일 건강 데이터 조회
-//    public DailyHealthData getHealthData(int userSeq) {
-//
-//    }
+    public DailyHealthResponse getTodayHealthData(int userSeq) {
+        return DailyHealthResponse.builder().activitySummary(activitySummaryService.getTodayActivitySummary(userSeq))
+                .bloodPressure(bloodPressureService.getTodayBloodPressures(userSeq))
+                .exercise(exerciseService.getTodayExercises(userSeq))
+                .heartRate(heartRateService.getTodayHeartRate(userSeq))
+                .step(stepService.getTodayStep(userSeq))
+                .exercise(exerciseService.getTodayExercises(userSeq))
+                .waterIntake(waterIntakeService.getTodayWaterIntakes(userSeq))
+                .sleep(sleepService.getTodaySleeps(userSeq))
+                .build();
+    }
 
 
 

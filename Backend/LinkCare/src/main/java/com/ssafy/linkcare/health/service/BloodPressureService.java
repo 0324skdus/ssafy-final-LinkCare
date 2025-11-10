@@ -3,8 +3,11 @@ package com.ssafy.linkcare.health.service;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.BloodPressureDto;
+import com.ssafy.linkcare.health.dto.BloodPressureResponse;
 import com.ssafy.linkcare.health.entity.BloodPressure;
+import com.ssafy.linkcare.health.entity.Exercise;
 import com.ssafy.linkcare.health.repository.BloodPressureRepository;
+import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,8 @@ public class BloodPressureService {
 
     private final UserRepository userRepository;
     private final BloodPressureRepository bloodPressureRepository;
+
+    private final TimeStampUtil timeStampUtil;
 
     @Transactional
     public void saveAllBloodPressureData(List<BloodPressureDto> bloodPressureList, int userSeq) {
@@ -105,5 +110,39 @@ public class BloodPressureService {
                 );
             };
         });
+    }
+
+    // 당일 데이터 조회
+    public List<BloodPressureResponse> getTodayBloodPressures(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
+        Long endTimeTs = timeStampUtil.getCurrentTimestamp();
+
+        List<BloodPressure> bloodPressures = bloodPressureRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startTimeTs, endTimeTs);
+
+        return bloodPressures.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    private BloodPressureResponse convertToResponse(BloodPressure bloodPressure) {
+        return BloodPressureResponse.builder()
+                .bloodPressureId(bloodPressure.getBloodPressureId())
+                .uid(bloodPressure.getUid())
+                .deviceId(bloodPressure.getDeviceId())
+                .deviceType(bloodPressure.getDeviceType())
+                .startTime(timeStampUtil.toLocalDateTime(bloodPressure.getStartTime()))
+                .systolic(bloodPressure.getSystolic())
+                .diastolic(bloodPressure.getDiastolic())
+                .mean(bloodPressure.getMean())
+                .pulseRate(bloodPressure.getPulseRate())
+                .build();
+    }
+
+    private User validateUser(int userSeq) {
+        return userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

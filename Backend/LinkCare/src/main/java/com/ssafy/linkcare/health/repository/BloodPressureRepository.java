@@ -28,4 +28,8 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, In
     @Modifying
     @Query("DELETE FROM BloodPressure bp WHERE bp.user = :user AND bp.uid IN :uids")
     void deleteByUserAndUidIn(@Param("user") User user, @Param("uids") Set<String> uids);
+
+    Optional<BloodPressure> findByUserAndStartTime(User user, Long startTimeTs);
+
+    List<BloodPressure> findByUserAndStartTimeBetweenOrderByStartTimeDesc(User user, Long startTimeTs, Long endTimeTs);
 }

@@ -1,10 +1,13 @@
 package com.ssafy.linkcare.health.dto;
 
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ExerciseSessionDto {
 
     private LocalDateTime startTime;

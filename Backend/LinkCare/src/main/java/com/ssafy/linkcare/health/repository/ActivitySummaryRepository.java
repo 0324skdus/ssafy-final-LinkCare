@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,10 @@ public interface ActivitySummaryRepository extends JpaRepository<ActivitySummary
             "AND a.startTime = :startTime")
     Optional<ActivitySummary> findByUserAndStartTime(@Param("user") User user,
                                                      @Param("startTime") Long startTime);
+    @Query("SELECT as FROM ActivitySummary as WHERE as.user = :user " +
+            "AND FUNCTION('DATE', FUNCTION('FROM_UNIXTIME', as.startTime)) = :startDate")
+    ActivitySummary findByUserAndStartDate(@Param("user") User user,
+                                           @Param("startDate")LocalDate startDate);
 
     /**
      * 특정 사용자의 기간별 ActivitySummary 조회 (핵심 메서드)

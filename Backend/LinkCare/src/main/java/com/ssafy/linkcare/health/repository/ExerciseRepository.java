@@ -27,4 +27,68 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Integer> {
     @Modifying
     @Query("DELETE FROM Exercise e WHERE e.user = :user AND e.uid IN :uids")
     void deleteByUserAndUidIn(@Param("user") User user, @Param("uids") Set<String> uids);
+
+    /**
+     * 특정 사용자의 기간별 Exercise 조회
+     * @param user 사용자
+     * @param startTime 시작 시간
+     * @param endTime 종료 시간
+     * @return Exercise 리스트 (최신순, sessions 포함)
+     */
+    @Query("SELECT DISTINCT e FROM Exercise e " +
+            "LEFT JOIN FETCH e.sessions " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime " +
+            "ORDER BY e.startTime DESC")
+    List<Exercise> findByUserAndStartTimeBetweenOrderByStartTimeDesc(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 총 칼로리 합계
+     */
+    @Query("SELECT SUM(es.calories) FROM ExerciseSession es " +
+            "JOIN es.exercise e " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime")
+    Optional<Float> sumTotalCaloriesByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 총 거리 합계
+     */
+    @Query("SELECT SUM(es.distance) FROM ExerciseSession es " +
+            "JOIN es.exercise e " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime")
+    Optional<Float> sumTotalDistanceByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 운동 횟수
+     */
+    @Query("SELECT COUNT(e) FROM Exercise e " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime")
+    Long countByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
+     * 특정 사용자의 기간별 평균 칼로리
+     */
+    @Query("SELECT AVG(es.calories) FROM ExerciseSession es " +
+            "JOIN es.exercise e " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime")
+    Optional<Float> avgCaloriesByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
 }
