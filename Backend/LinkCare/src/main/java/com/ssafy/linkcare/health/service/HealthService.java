@@ -53,7 +53,7 @@ public class HealthService {
                 .bloodPressure(bloodPressureService.getTodayBloodPressures(userSeq))
                 .exercise(exerciseService.getTodayExercises(userSeq))
                 .heartRate(heartRateService.getTodayHeartRate(userSeq))
-                .step(stepService.getTodayStep(userSeq))
+                .step(stepService.getTodayStepCount(userSeq))
                 .exercise(exerciseService.getTodayExercises(userSeq))
                 .waterIntake(waterIntakeService.getTodayWaterIntakes(userSeq))
                 .sleep(sleepService.getTodaySleeps(userSeq))

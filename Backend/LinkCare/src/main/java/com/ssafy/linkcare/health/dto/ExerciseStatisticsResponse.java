@@ -19,5 +19,5 @@ public class ExerciseStatisticsResponse {
     private Float totalDistance;
     private Float averageCalories;
     private Long exerciseCount;
-
+    private Long totalDuration;
 }

@@ -79,7 +79,11 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다"),
 
     // 헬스 데이터 관련 에러
-    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 데이터를 찾을 수 없습니다");
+    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 데이터를 찾을 수 없습니다"),
+
+    // gpt
+    AI_RESPONSE_NO_CONTENT(HttpStatus.NO_CONTENT, "Chat GPT 응답이 비어있습니다."),
+    AI_PROVIDER_CALL_FAILED(HttpStatus.BAD_GATEWAY, "AI 호출 실패");
 
     private final HttpStatus status;
     private final String message;

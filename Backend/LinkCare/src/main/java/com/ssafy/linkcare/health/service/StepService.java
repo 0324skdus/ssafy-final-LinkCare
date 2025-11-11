@@ -112,9 +112,27 @@ public class StepService {
 
         Step step = stepRepository
                 .findByUserAndStartTime(user, startTimeTs)
-                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_DATA_NOT_FOUND));
+                .orElse(null);
 
         return convertToResponse(step);
+    }
+
+    // 당일 데이터 조회
+    public int getTodayStepCount(int userSeq) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
+        Long endTimeTs = timeStampUtil.getCurrentTimestamp();
+
+        Step step = stepRepository
+                .findByUserAndStartTime(user, startTimeTs)
+                .orElse(null);
+
+        if(step == null) {
+            return 0;
+        } else {
+            return step.getCount();
+        }
     }
 
     // 일주일 데이터 조회

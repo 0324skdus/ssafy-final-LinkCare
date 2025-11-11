@@ -75,6 +75,7 @@ public class ExerciseService {
                                         .exerciseType(sessionDto.getExerciseType())
                                         .calories(sessionDto.getCalories())
                                         .distance(sessionDto.getDistance())
+                                        .duration(sessionDto.getDuration())
                                         .build()
                                 ).toList();
 
@@ -179,6 +180,7 @@ public class ExerciseService {
                                         .exerciseType(session.getExerciseType())
                                         .distance(session.getDistance())
                                         .calories(session.getCalories())
+                                        .duration(session.getDuration())
                                         .exercise(savedExercise)
                                         .build()
                                 ).toList();
@@ -212,6 +214,7 @@ public class ExerciseService {
                                     .exerciseType(session.getExerciseType())
                                     .distance(session.getDistance())
                                     .calories(session.getCalories())
+                                    .duration(session.getDuration())
                                     .exercise(savedExercise)
                                     .build()
                             ).toList();
@@ -408,11 +411,15 @@ public class ExerciseService {
         Long exerciseCount = exerciseRepository
                 .countByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
 
+        Long totalDuration = exerciseRepository
+                .sumTotalDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
+
         return ExerciseStatisticsResponse.builder()
                 .totalCalories(totalCalories)
                 .totalDistance(totalDistance)
                 .averageCalories(avgCalories)
                 .exerciseCount(exerciseCount)
+                .totalDuration(totalDuration)
                 .startTime(timeStampUtil.toLocalDateTime(effectiveStartTime))
                 .endTime(timeStampUtil.toLocalDateTime(effectiveEndTime))
                 .build();
@@ -452,6 +459,7 @@ public class ExerciseService {
                 .exerciseType(session.getExerciseType())
                 .calories(session.getCalories())
                 .distance(session.getDistance())
+                .duration(session.getDuration())
                 .build();
     }
 
