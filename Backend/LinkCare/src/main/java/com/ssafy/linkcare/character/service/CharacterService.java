@@ -56,7 +56,7 @@ public class CharacterService {
         userCharacterRepository.save(userCharacter);
 
         user.getCharacters().add(userCharacter);
-        user.updateMainCharacter(userCharacter);
+        user.setMainCharacter(userCharacter);
         userRepository.save(user);
     }
 
@@ -125,7 +125,7 @@ public class CharacterService {
         UserCharacter newMainCharacter = userCharacterRepository.findByUserAndUserCharacterId(user, userCharacterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND, "사용자가 보유하지 않은 캐릭터입니다."));
 
-        user.updateMainCharacter(newMainCharacter);
+        user.setMainCharacter(newMainCharacter);
         userRepository.save(user);
     }
 

@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
@@ -39,6 +40,7 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final CharacterService characterService;
     private final PointService pointService;
+    private final BackgroundService backgroundService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -102,6 +104,9 @@ public class AuthService {
 
         // 5. 포인트 계정 생성
         pointService.createPointForNewUser(user);
+
+        // 6. 기본 배경 할당
+        backgroundService.assignDefaultBackground(user);
 
         log.info("회원가입 완료: {}", request.email());
     }
