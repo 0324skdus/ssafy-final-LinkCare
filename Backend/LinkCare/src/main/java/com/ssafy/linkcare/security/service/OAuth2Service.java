@@ -4,8 +4,10 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ import java.util.Collections;
 public class OAuth2Service {
 
     private final UserRepository userRepository;
+    private final CharacterService characterService;
+    private final PointService pointService;
 
     @Value("${google.client-id}")
     private String googleClientId;
@@ -73,7 +77,9 @@ public class OAuth2Service {
                                 .providerId(providerId)
                                 .build();
 
-                        return userRepository.save(newUser);
+                        userRepository.save(newUser);
+                        pointService.createPointForNewUser(newUser);
+                        return newUser;
                     });
 
         } catch (CustomException e) {

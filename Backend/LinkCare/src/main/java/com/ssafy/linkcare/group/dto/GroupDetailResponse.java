@@ -27,6 +27,7 @@ public record GroupDetailResponse(
             Long groupMemberSeq,
             Long userSeq,
             String userName,
-            Boolean isLeader
+            Boolean isLeader,
+            List<String> mainCharacterImageUrls
     ) {}
 }
