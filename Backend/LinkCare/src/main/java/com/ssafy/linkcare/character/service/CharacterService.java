@@ -74,6 +74,7 @@ public class CharacterService {
         return allCharacters.stream().map(character -> {
             boolean isUnlocked = unlockedCharacterIds.contains(character.getCharacterId());
             boolean isMain = character.getCharacterId().equals(mainCharacterId);
+            String baseImageUrl = s3Service.generatePresignedGetUrl(character.getBaseImageS3Key());
             List<String> imageUrls = character.getImageS3Keys().stream()
                     .map(s3Service::generatePresignedGetUrl)
                     .collect(Collectors.toList());
@@ -82,6 +83,7 @@ public class CharacterService {
                     .characterId(character.getCharacterId())
                     .name(character.getName())
                     .description(character.getDescription())
+                    .baseImageUrl(baseImageUrl)
                     .imageUrls(imageUrls)
                     .isUnlocked(isUnlocked)
                     .isMain(isMain)
@@ -99,6 +101,7 @@ public class CharacterService {
         }
 
         Character mainCharacter = mainUserCharacter.getCharacter();
+        String baseImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getBaseImageS3Key());
         List<String> imageUrls = mainCharacter.getImageS3Keys().stream()
                 .map(s3Service::generatePresignedGetUrl)
                 .collect(Collectors.toList());
@@ -107,6 +110,7 @@ public class CharacterService {
                 .characterId(mainCharacter.getCharacterId())
                 .name(mainCharacter.getName())
                 .description(mainCharacter.getDescription())
+                .baseImageUrl(baseImageUrl)
                 .imageUrls(imageUrls)
                 .isUnlocked(true)
                 .isMain(true)

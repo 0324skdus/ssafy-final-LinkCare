@@ -30,6 +30,9 @@ public class Character {
     @ColumnDefault("0")
     private int price = 0;
 
+    @Column(name = "base_image_s3_key")
+    private String baseImageS3Key;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "character_images", joinColumns = @JoinColumn(name = "character_id"))
     @Column(name = "image_s3_key", nullable = false)

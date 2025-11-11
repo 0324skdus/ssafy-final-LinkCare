@@ -57,6 +57,7 @@ public class ShopService {
         // 5. ShopCharacterDto 목록 생성
         List<ShopCharacterDto> shopCharacters = allCharacters.stream()
                 .map(character -> {
+                    String baseImageUrl = s3Service.generatePresignedGetUrl(character.getBaseImageS3Key());
                     List<String> imageUrls = character.getImageS3Keys().stream()
                             .map(s3Service::generatePresignedGetUrl)
                             .collect(Collectors.toList());
@@ -65,6 +66,7 @@ public class ShopService {
                             .characterId(character.getCharacterId())
                             .name(character.getName())
                             .description(character.getDescription())
+                            .baseImageUrl(baseImageUrl)
                             .imageUrls(imageUrls)
                             .price(character.getPrice())
                             .isUnlocked(unlockedCharacterIds.contains(character.getCharacterId()))
