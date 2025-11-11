@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 public class ActivitySummaryResponse {
 //    private int activitySummaryId;
     private LocalDateTime startTime;
-    private String deviceId;
-    private String deviceType;
     private double totalCaloriesBurned;
     private double totalDistance;
 }

@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 public class BloodPressureResponse {
 
     private int bloodPressureId;
-    private String deviceId;
-    private String deviceType;
     private String uid;
     private LocalDateTime startTime;
     private float systolic;

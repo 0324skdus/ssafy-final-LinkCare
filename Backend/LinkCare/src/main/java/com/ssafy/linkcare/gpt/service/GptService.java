@@ -3,6 +3,7 @@ package com.ssafy.linkcare.gpt.service;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.gpt.dto.*;
+import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -152,14 +153,48 @@ public class GptService {
      */
     public WeeklyHeaderResponse generateWeeklyHeader(String groupHealthDataText) {
         String systemPrompt = """
-            당신은 건강 그룹의 동기부여를 돕는 AI 코치입니다.
-            지난 주 그룹원들의 건강 데이터를 분석하여 이번 주 목표 문구를 만들어주세요.
+            당신은 건강 그룹의 데이터 분석가이자 응원단장입니다.
+            지난 주 그룹원들의 건강 데이터를 분석하여, 가장 부족했던 부분을 자연스럽게 개선하도록 격려하는 문구를 만들어주세요.
             
-            응답 형식:
-            [20자 이내의 동기부여 문구]
+            [분석 방법]
+            1. 그룹 전체의 데이터에서 가장 부족한 영역 찾기 (걸음수, 수면, 운동, 수분 등)
+            2. 그 부분을 이번 주에 개선할 수 있도록 부드럽게 유도
             
-            예시:
-            걷기에 더 신경써 보아요
+            [중요한 톤 가이드]
+            - "부족해요", "못했어요" 같은 부정적 표현 금지
+            - 명령형(~하세요) 대신 제안형(~어때요?)이나 긍정형(~해봐요)
+            - (~요)체를 활용하여 친근하게
+            - 대괄호 [] 사용하지 말 것
+            - 20자 이내로 간결하게
+            
+            [상황별 예시]
+            
+            걸음수가 부족했다면:
+            ✅ "오늘은 가볍게 걸어볼까요? 🚶"
+            ✅ "산책하기 좋은 날씨네요! ☀️"
+            ✅ "한 정거장 먼저 내려볼까요? 💪"
+            
+            수면이 부족했다면:
+            ✅ "충분한 휴식도 건강이에요 💤"
+            ✅ "오늘은 일찍 자봐요! 🌙"
+            ✅ "푹 자고 활력 충전해요 ⚡"
+            
+            운동이 부족했다면:
+            ✅ "가벼운 스트레칭 어때요? 🤸"
+            ✅ "10분 운동으로 시작해볼까요? 💪"
+            ✅ "몸을 움직일 시간이에요! 🏃"
+            
+            수분섭취가 부족했다면:
+            ✅ "물 한 잔의 여유 어때요? 💧"
+            ✅ "수분 충전 잊지 마세요! 💦"
+            ✅ "오늘은 물 자주 마셔봐요 🥤"
+            
+            나쁜 예시:
+            ❌ "지난주 걸음수가 부족했어요" (부정적, 과거)
+            ❌ "[운동 더 하기!]" (명령형, 대괄호)
+            ❌ "이번 주는 열심히 해봐요" (모호함)
+            
+            응답 형식: 부족한 부분을 개선하도록 유도하는 20자 이내 격려 문구
             """;
 
         String response = getChatCompletion(groupHealthDataText, systemPrompt);
@@ -197,5 +232,41 @@ public class GptService {
             log.error("GPT 응답 파싱 실패: {}", response, e);
             return new HealthSummaryResponse("건강 데이터를 분석했습니다.", HealthSummaryResponse.HealthStatus.GOOD);
         }
+    }
+
+    public String formatHealthDataForGPT(List<HealthStaticsResponse> responses) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== 그룹 건강 데이터 요약 ===\n");
+        sb.append("총 멤버 수: ").append(responses.size()).append("명\n\n");
+
+        for (int i = 0; i < responses.size(); i++) {
+            HealthStaticsResponse data = responses.get(i);
+            sb.append(String.format("【멤버 %d】\n", i + 1));
+
+            if (data.getStepStats() != null) {
+                sb.append("- 걸음 수: ").append(data.getStepStats()).append("\n");
+            }
+            if (data.getSleepStats() != null) {
+                sb.append("- 수면: ").append(data.getSleepStats()).append("\n");
+            }
+            if (data.getExerciseStats() != null) {
+                sb.append("- 운동: ").append(data.getExerciseStats()).append("\n");
+            }
+            if (data.getHeartRateStats() != null) {
+                sb.append("- 심박수: ").append(data.getHeartRateStats()).append("\n");
+            }
+            if (data.getBloodPressureStats() != null) {
+                sb.append("- 혈압: ").append(data.getBloodPressureStats()).append("\n");
+            }
+            if (data.getWaterIntakeStats() != null) {
+                sb.append("- 수분 섭취: ").append(data.getWaterIntakeStats()).append("\n");
+            }
+            if (data.getWaterIntakeStats() != null) {
+                sb.append("- 혈압: ").append(data.getBloodPressureStats()).append("\n");
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString();
     }
 }

@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class HeartRateResponse {
     private int heartRateId;
-    private String deviceId;
-    private String deviceType;
-    private String uid;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Double heartRate;

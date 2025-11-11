@@ -321,9 +321,9 @@ public class ExerciseService {
 
         ExerciseResponse exerciseResponse = ExerciseResponse.builder()
                 .exerciseId(exercise.getExerciseId())
-                .deviceId(exercise.getDeviceId())
-                .deviceType(exercise.getDeviceType())
-                .uid(exercise.getUid())
+//                .deviceId(exercise.getDeviceId())
+//                .deviceType(exercise.getDeviceType())
+//                .uid(exercise.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(exercise.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(exercise.getEndTime()))
                 .exerciseType(exercise.getExerciseType())

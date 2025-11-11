@@ -11,9 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class SleepResponse {
     private int sleepId;
-    private String deviceId;
-    private String deviceType;
-    private String uid;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private int duration;

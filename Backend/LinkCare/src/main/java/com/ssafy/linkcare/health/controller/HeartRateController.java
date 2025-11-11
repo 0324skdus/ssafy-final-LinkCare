@@ -1,19 +1,15 @@
 package com.ssafy.linkcare.health.controller;
 
 import com.ssafy.linkcare.health.dto.HeartRateResponse;
-import com.ssafy.linkcare.health.dto.StepResponse;
+import com.ssafy.linkcare.health.dto.HeartRateStaticsResponse;
 import com.ssafy.linkcare.health.service.HeartRateService;
-import com.ssafy.linkcare.health.service.StepService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -98,6 +94,17 @@ public class HeartRateController {
                 .getThisWeekHeartRates(userSeq);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/stats/{userSeq}")
+    @Operation(summary = "기간별 심박수 통계 조회", description = "특정 기간의 평균/최고/최저 심박수를 조회합니다")
+    public ResponseEntity<HeartRateStaticsResponse> getHeartRateStats(
+            @PathVariable int userSeq,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        HeartRateStaticsResponse response = heartRateService.getHeartRateStatsByDate(userSeq, startDate, endDate);
+        return ResponseEntity.ok(response);
     }
 
 

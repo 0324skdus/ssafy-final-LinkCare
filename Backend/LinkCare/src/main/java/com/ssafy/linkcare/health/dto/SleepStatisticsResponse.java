@@ -19,4 +19,15 @@ public class SleepStatisticsResponse {
     private Integer maxDuration;
     private Integer minDuration;
 
+    @Override
+    public String toString() {
+        return "SleepStatisticsResponse{" +
+                "startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", totalDuration=" + totalDuration +
+                ", averageDuration=" + averageDuration +
+                ", maxDuration=" + maxDuration +
+                ", minDuration=" + minDuration +
+                '}';
+    }
 }

@@ -3,15 +3,12 @@ package com.ssafy.linkcare.health.service;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.*;
-import com.ssafy.linkcare.health.entity.ActivitySummary;
-import com.ssafy.linkcare.health.entity.BloodPressure;
 import com.ssafy.linkcare.health.entity.Step;
 import com.ssafy.linkcare.health.repository.StepRepository;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -181,22 +178,22 @@ public class StepService {
         return getStepStatistics(userSeq, weekStart, now);
     }
 
+//    public StepStatisticsResponse getWeekStepStatisticsByDate(int userSeq, Long startTime) {
+//        Long weekStart = timeStampUtil.getWeekStartTimestamp(startTime);
+//        Long weekEnd = timeStampUtil.getWeekEndTimestamp(weekStart);
+//
+//        return getStepStatistics(userSeq, weekStart, weekEnd);
+//    }
+
     // 해당 날짜가 포함된 주 총 걸음 수 조회
-    public StepStatisticsResponse getWeekStepStatistics(int userSeq, Long startTime) {
-        Long weekStart = timeStampUtil.getWeekStartTimestamp(startTime);
-        Long weekEnd = timeStampUtil.getWeekEndTimestamp(weekStart);
-
-        return getStepStatistics(userSeq, weekStart, weekEnd);
-    }
-
-    public StepStatisticsResponse getWeekStepStatistics(int userSeq, LocalDate startDate) {
+    public StepStatisticsResponse getWeekStepStatisticsByContainDate(int userSeq, LocalDate startDate) {
         Long weekStart = timeStampUtil.getWeekStartTimestamp(startDate);
         Long weekEnd = timeStampUtil.getWeekEndTimestamp(weekStart);
 
         return getStepStatistics(userSeq, weekStart, weekEnd);
     }
 
-    public StepStatisticsResponse getWeekStepStatistics(int userSeq, LocalDate startDate, LocalDate endDate) {
+    public StepStatisticsResponse getWeekStepStatisticsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
         Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
         Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
 
@@ -205,13 +202,13 @@ public class StepService {
 
     private StepResponse convertToResponse(Step step) {
         return StepResponse.builder()
-                .deviceType(step.getDeviceType())
-                .deviceId(step.getDeviceId())
+//                .deviceType(step.getDeviceType())
+//                .deviceId(step.getDeviceId())
                 .count(step.getCount())
                 .startTime(timeStampUtil.toLocalDateTime(step.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(step.getStartTime()))
                 .goal(step.getGoal())
-                .userSeq(Math.toIntExact(step.getUser().getUserPk()))
+//                .userSeq(Math.toIntExact(step.getUser().getUserPk()))
                 .build();
     }
 

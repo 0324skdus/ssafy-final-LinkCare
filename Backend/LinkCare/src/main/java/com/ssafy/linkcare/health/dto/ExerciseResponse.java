@@ -11,9 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class ExerciseResponse {
     private int exerciseId;
-    private String deviceId;
-    private String deviceType;
-    private String uid;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String exerciseType;

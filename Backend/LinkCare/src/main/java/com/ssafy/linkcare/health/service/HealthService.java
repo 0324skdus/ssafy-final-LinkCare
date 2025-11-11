@@ -5,10 +5,14 @@ import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.AllHealthDataDto;
 import com.ssafy.linkcare.health.dto.DailyHealthData;
 import com.ssafy.linkcare.health.dto.DailyHealthResponse;
+import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,8 @@ public class HealthService {
     private final SleepService sleepService;
 
     private final UserRepository userRepository;
+
+    private TimeStampUtil timeStampUtil;
 
     // 전체 데이터 동기화 (초기 1회)
     public void syncAllHealthData(AllHealthDataDto dto, int userSeq) {
@@ -61,7 +67,18 @@ public class HealthService {
     }
 
 
-
+    // 건강 통계 데이터 조회
+    public HealthStaticsResponse getHealthStaticsData(int userSeq, LocalDate startDate, LocalDate endDate) {
+        return HealthStaticsResponse.builder()
+                .activitySummaryStats(activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate))
+                .exerciseStats(exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate))
+                .heartRateStats(heartRateService.getHeartRateStatsByDate(userSeq, startDate, endDate))
+                .stepStats(stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate))
+                .exerciseStats(exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate))
+                .waterIntakeStats(waterIntakeService.getWaterIntakeStatisticsByDate(userSeq, startDate, endDate))
+                .sleepStats(sleepService.getSleepStatisticsByDate(userSeq,startDate,endDate))
+                .build();
+    }
 
 
 
