@@ -78,7 +78,6 @@ public class OAuth2Service {
                                 .build();
 
                         userRepository.save(newUser);
-                        characterService.assignDefaultCharacter(newUser);
                         pointService.createPointForNewUser(newUser);
                         return newUser;
                     });

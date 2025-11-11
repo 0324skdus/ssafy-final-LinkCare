@@ -74,7 +74,6 @@ public class KakaoService {
                             .build();
 
                     userRepository.save(newUser);
-                    characterService.assignDefaultCharacter(newUser);
                     pointService.createPointForNewUser(newUser);
                     return newUser;
                 });
