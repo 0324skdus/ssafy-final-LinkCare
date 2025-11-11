@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Activity Summary", description = "활동 요약 API")
@@ -80,6 +81,46 @@ public class ActivitySummaryController {
 
         return ResponseEntity.ok(responses);
     }
+
+    @Operation(summary = "1주 전 활동 요약 조회",
+            description = "startDate 기준 바로 전 주의 활동 요약 데이터를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userSeq}/last-week")
+    public ResponseEntity<List<ActivitySummaryResponse>> getLastWeekActivitySummaries(
+            @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
+            @Parameter(description = "기준 날짜", required = true) @RequestParam LocalDate startDate
+            ) {
+        log.info("API 호출 - 1주 전 활동 요약 조회: userSeq={}", userSeq);
+
+        List<ActivitySummaryResponse> responses = activitySummaryService
+                .getLastWeekActivitySummaries(userSeq, startDate);
+
+        return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "(LocalDate) 기간별 활동 요약 조회",
+            description = "활동 요약 데이터를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userSeq}/period")
+    public ResponseEntity<List<ActivitySummaryResponse>> getActivitySummariesByDate(
+            @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
+            @Parameter(description = "시작 날짜", required = true) @RequestParam LocalDate startDate,
+            @Parameter(description = "종료 날짜", required = true) @RequestParam LocalDate endDate
+    ) {
+        log.info("API 호출 - 기간별 활동 요약 조회: userSeq={}", userSeq);
+
+        List<ActivitySummaryResponse> responses = activitySummaryService
+                .getActivitySummariesByDate(userSeq, startDate, endDate);
+
+        return ResponseEntity.ok(responses);
+    }
+
 
 
 }
