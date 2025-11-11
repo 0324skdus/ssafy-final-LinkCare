@@ -175,7 +175,7 @@ class ExerciseService : LifecycleService() {
                             )
                             Log.d(
                                 TAG,
-                                "📡 Sent realtime metrics to mobile: HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
+                                "📡 Sent realtime metrics to mobile: ID=${sessionId} HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
                             )
                             delay(2000) // 2초 주기로 전송
                         }

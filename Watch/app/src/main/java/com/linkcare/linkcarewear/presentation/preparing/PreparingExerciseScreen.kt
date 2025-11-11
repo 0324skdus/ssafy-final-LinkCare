@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -22,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -124,7 +127,23 @@ fun PreparingExerciseScreen(
     val location = (uiState as? PreparingScreenState.Preparing)?.locationAvailability
 
     ScreenScaffold(
-        timeText = {},
+        timeText = {
+            LocationStatusText(
+                updatePrepareLocationStatus(
+                    locationAvailability = location ?: LocationAvailability.UNAVAILABLE
+                )
+            )
+//            CurvedLayout(
+//                anchor = 0f, // 오른쪽
+//                anchorType = AnchorType.Center
+//            ) {
+//                curvedText(
+//                    text = "1234 Steps",  // 🔹실제 값 연결
+//                    fontSize = 12.sp,
+//                    color = Color.DarkGray
+//                )
+//            }
+        },
         modifier = Modifier.ambientGray(ambientState)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -135,32 +154,25 @@ fun PreparingExerciseScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize()
             )
+            Image(
+                painter = painterResource(id = R.drawable.duck_idle),
+                contentDescription = "캐릭터",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(1.0f)
+                    .scale(1.5f)
+                    .offset(x = 10.dp, y = 8.dp)
+            )
 
             // 내용 (텍스트 + 버튼)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 30.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 상단 GPS 상태
-                Text(
-                    text = updatePrepareLocationStatus(
-                        locationAvailability = location ?: LocationAvailability.UNAVAILABLE
-                    ),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                // 중앙 준비 텍스트
-                Text(
-                    text = stringResource(id = R.string.preparing_exercise),
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
                 // 하단 시작 버튼
                 FilledIconButton(
                     onClick = onStart,
@@ -197,7 +209,11 @@ private fun updatePrepareLocationStatus(locationAvailability: LocationAvailabili
 @Composable
 private fun LocationStatusText(status: String) {
     CurvedLayout {
-        curvedText(text = status, fontSize = 12.sp)
+        curvedText(
+            text = status,
+            fontSize = 12.sp,
+            color = Color.DarkGray
+        )
     }
 }
 

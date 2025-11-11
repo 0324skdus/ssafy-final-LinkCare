@@ -3,6 +3,7 @@
 package com.linkcare.linkcarewear.presentation.exercise
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,14 +12,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,9 +34,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
+import androidx.wear.compose.material.HorizontalPageIndicator
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.FilledTonalButton
+import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
@@ -151,33 +160,25 @@ fun ExerciseScreen(
     val pagerState = rememberPagerState(
         initialPage = 1, pageCount = { 2 })
 
-    HorizontalPagerScaffold(pagerState = pagerState) {
-        HorizontalPager(
-            state = pagerState
-        ) { page ->
-            ScreenScaffold {
-                    if (page == 0) {
-                        ExerciseControlButtons(
-                            uiState = uiState,
-                            onStartClick = onStartClick,
-                            onEndClick = onEndClick,
-                            onResumeClick = {
-                                onResumeClick()
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(1)
-                                }
-                            },
-                            onPauseClick = {
-                                onPauseClick()
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(1)
-                                }
-                            }
-                        )
-                    } else {
-                        ExerciseMetrics(uiState = uiState)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 🔹 페이지 전환 (0=제어, 1=운동 데이터)
+        HorizontalPager(state = pagerState) { page ->
+            when (page) {
+                0 -> ExerciseControlButtons(
+                    uiState = uiState,
+                    onStartClick = onStartClick,
+                    onEndClick = onEndClick,
+                    onResumeClick = {
+                        onResumeClick()
+                        coroutineScope.launch { pagerState.scrollToPage(1) }
+                    },
+                    onPauseClick = {
+                        onPauseClick()
+                        coroutineScope.launch { pagerState.scrollToPage(1) }
                     }
+                )
 
+                1 -> ExerciseMetrics(uiState = uiState)
             }
         }
 
@@ -197,44 +198,66 @@ private fun ExerciseMetrics(
     uiState: ExerciseScreenState,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // 상단 중앙에 큰 타이머
-        DurationRow(uiState)
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // 하단 한 줄: 심박수 + 칼로리
-        Row(
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 배경 이미지
+        Image(
+            painter = painterResource(id = R.drawable.background_default),
+            contentDescription = "배경",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize()
+        )
+        Image(
+            painter = painterResource(id = R.drawable.duck_idle),
+            contentDescription = "캐릭터",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+                .align(Alignment.Center)
+                .fillMaxWidth(1.0f)
+                .scale(2.5f)
+                .offset(x = 10.dp, y = 0.dp)
+        )
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top  // 🔹 상단 정렬로 변경
         ) {
-            // 좌우 두 칸을 동일한 비율로 분할
-            Box(
+            // --- 상단 타이머 ---
+            DurationRow(uiState)
+
+            //Spacer(modifier = Modifier.height(10.dp))  // 🔹 타이머와 거리 조절
+
+            // --- 심박수 + 칼로리 (타이머 밑으로 이동) ---
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                HeartRateColumn(uiState)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    HeartRateColumn(uiState)
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    CaloriesColumn(uiState)
+                }
             }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CaloriesColumn(uiState)
-            }
+            Spacer(modifier = Modifier.height(24.dp)) // 🔹 캐릭터와 간격 유지
         }
     }
 }
@@ -249,6 +272,12 @@ private fun ExerciseControlButtons(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(id = R.drawable.background_default),
+            contentDescription = "배경",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize()
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -309,11 +338,12 @@ private fun DurationRow(uiState: ExerciseScreenState) {
                 Text(
                     text = formatElapsedTime(it, includeSeconds = true),
                     fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray
                 )
             }
         } else {
-            Text("--:--", fontSize = 40.sp, fontWeight = FontWeight.Bold)
+            Text("--:--", fontSize = 40.sp, fontWeight = FontWeight.Bold,color = Color.DarkGray)
         }
     }
 }
