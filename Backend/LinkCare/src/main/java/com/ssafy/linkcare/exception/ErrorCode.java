@@ -78,7 +78,10 @@ public enum ErrorCode {
 
     // 알림 관련 에러 (Notification)
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다"),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다");
+    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다"),
+
+    // 헬스 데이터 관련 에러
+    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 데이터를 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String message;
