@@ -123,7 +123,15 @@ public class ActivitySummaryService {
         return getActivitySummariesByPeriod(userSeq, weekStart, now);
     }
 
+    // 기간별 데이터 조회
+    public List<ActivitySummaryResponse> getActivitySummariesByPeriod(int userSeq, LocalDate startDate, LocalDate endDate) {
+        Long startDateTs = timeStampUtil.toTimestamp(startDate);
+        Long endDateTs = timeStampUtil.toTimestamp(endDate);
 
+        List<ActivitySummary> summaries = activitySummaryRepository.findByUserSeqAndStartTimeBetween(userSeq, startDateTs, endDateTs);
+
+        return summaries.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
 
     private ActivitySummaryResponse convertToResponse(ActivitySummary activitySummary) {
         return ActivitySummaryResponse.builder()

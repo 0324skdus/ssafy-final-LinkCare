@@ -35,4 +35,7 @@ public interface ActivitySummaryRepository extends JpaRepository<ActivitySummary
             Long startTime,
             Long endTime
     );
+
+    List<ActivitySummary> findByUserSeqAndStartTimeBetween(int userSeq, long startTime, long endTime);
+
 }
