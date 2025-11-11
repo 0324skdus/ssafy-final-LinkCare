@@ -1,6 +1,7 @@
 package com.ssafy.linkcare.gpt.controller;
 
 import com.ssafy.linkcare.gpt.dto.HealthSummaryResponse;
+import com.ssafy.linkcare.gpt.dto.TodayHealthSummaryResponse;
 import com.ssafy.linkcare.gpt.dto.WeeklyHeaderResponse;
 import com.ssafy.linkcare.gpt.service.GptService;
 import com.ssafy.linkcare.group.entity.GroupMember;
@@ -8,6 +9,7 @@ import com.ssafy.linkcare.group.repository.GroupMemberRepository;
 import com.ssafy.linkcare.group.service.GroupService;
 import com.ssafy.linkcare.health.dto.DailyHealthResponse;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.dto.TodayHealthSummary;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,4 +81,5 @@ public class GptController {
 
         return ResponseEntity.ok(response);
     }
+
 }

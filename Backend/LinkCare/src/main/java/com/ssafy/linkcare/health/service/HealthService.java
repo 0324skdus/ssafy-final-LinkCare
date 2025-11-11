@@ -1,19 +1,24 @@
 package com.ssafy.linkcare.health.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.health.dto.AllHealthDataDto;
-import com.ssafy.linkcare.health.dto.DailyHealthData;
-import com.ssafy.linkcare.health.dto.DailyHealthResponse;
-import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.gpt.dto.TodayHealthSummaryResponse;
+import com.ssafy.linkcare.health.dto.*;
+import com.ssafy.linkcare.health.entity.ActivitySummary;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class HealthService {
@@ -28,6 +33,7 @@ public class HealthService {
 
     private final UserRepository userRepository;
 
+    private final ObjectMapper objectMapper;
     private TimeStampUtil timeStampUtil;
 
     // 전체 데이터 동기화 (초기 1회)
@@ -80,11 +86,49 @@ public class HealthService {
                 .build();
     }
 
+    public TodayHealthSummary getTodayHealthSummary(int userSeq) {
+        LocalDate start = LocalDate.now();
+        LocalDate end = LocalDate.now().plusDays(1);
+
+        String dailyActivityReview = createDailyActivityDataForGPT(
+                activitySummaryService.getActivitySummaryStatsToday(userSeq),
+                exerciseService.getTodayExerciseStatistics(userSeq),
+                stepService.getTodayStepCount(userSeq)
+
+        );
+        return TodayHealthSummary
+                .builder()
+                .dailyActivityReview(dailyActivityReview)
+                .heartRateReview(heartRateService.getHeartRateStatsByDate(userSeq, start, end).toString())
+                .bloodPressureReview(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, start, end).toString())
+                .waterIntakeReview(waterIntakeService.getTodayWaterIntakeStatistics(userSeq).toString())
+                .sleepReview(sleepService.getSleepStatisticsByDate(userSeq, start, end).toString()).build();
+    }
 
 
     // validate
     public User validateUser(int userSeq) {
         return userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    // DailyActivity 데이터 통합 메서드
+    private String createDailyActivityDataForGPT(
+            ActivitySummaryStaticsResponse activitySummary,
+            ExerciseStatisticsResponse exercise,
+            int todayStep) {
+
+        try {
+            Map<String, Object> dailyActivity = new HashMap<>();
+            dailyActivity.put("activitySummary", activitySummary);
+            dailyActivity.put("exercise", exercise);
+            dailyActivity.put("steps", todayStep);
+
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(dailyActivity);
+        } catch (JsonProcessingException e) {
+            log.error("DailyActivity 데이터 변환 실패", e);
+            return "{}";
+        }
     }
 }

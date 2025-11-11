@@ -106,10 +106,10 @@ public class ActivitySummaryService {
         Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
         Long endTimeTs = timeStampUtil.getCurrentTimestamp();
 
-        return activitySummaryRepository
-                .findByUserAndStartTime(user, startTimeTs)
-                .map(this::convertToResponse)
-                .orElseGet(() -> createEmptyActivitySummaryResponse(startTimeTs));
+        ActivitySummary activitySummary = activitySummaryRepository
+                        .findByUserAndStartTime(user, startTimeTs)
+                        .orElse(null);
+        return convertToResponse(activitySummary);
     }
 
     // 일주일 데이터 조회
@@ -165,6 +165,27 @@ public class ActivitySummaryService {
         return ActivitySummaryStaticsResponse.builder()
                 .startDate(startDate)
                 .endDate(endDate)
+                .totalCalories(totalCalories != null ? totalCalories : 0.0)
+                .totalDistance(totalDistance != null ? totalDistance : 0.0)
+                .avgCalories(avgCalories != null ? avgCalories : 0.0)
+                .avgDistance(avgDistance != null ? avgDistance : 0.0)
+                .build();
+    }
+
+    public ActivitySummaryStaticsResponse getActivitySummaryStatsToday(int userSeq) {
+        User user = validateUser(userSeq);
+
+        long startTimestamp = timeStampUtil.getTodayStartTimestamp();
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(LocalDate.now());
+
+        Double totalCalories = activitySummaryRepository.findTotalCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double totalDistance = activitySummaryRepository.findTotalDistanceByPeriod(user, startTimestamp, endTimestamp);
+        Double avgCalories = activitySummaryRepository.findAvgCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double avgDistance = activitySummaryRepository.findAvgDistanceByPeriod(user, startTimestamp, endTimestamp);
+
+        return ActivitySummaryStaticsResponse.builder()
+                .startDate(timeStampUtil.toLocalDate(startTimestamp))
+                .endDate(timeStampUtil.toLocalDate(endTimestamp))
                 .totalCalories(totalCalories != null ? totalCalories : 0.0)
                 .totalDistance(totalDistance != null ? totalDistance : 0.0)
                 .avgCalories(avgCalories != null ? avgCalories : 0.0)
