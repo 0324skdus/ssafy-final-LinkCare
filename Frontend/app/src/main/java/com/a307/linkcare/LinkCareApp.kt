@@ -8,8 +8,10 @@ import android.util.Base64
 import android.util.Log
 import com.a307.linkcare.R
 import com.kakao.sdk.common.KakaoSdk
+import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
 
+@HiltAndroidApp
 class LinkCareApp : Application() {
 
     override fun onCreate() {

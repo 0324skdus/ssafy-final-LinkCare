@@ -2,15 +2,26 @@
 
 package com.a307.linkcare.navigation
 
+import android.util.Log
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.feature.auth.OnboardingViewModel
 import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.domain.SendVerificationCodeRequest
 import com.a307.linkcare.feature.auth.domain.SignupRequest
@@ -21,7 +32,6 @@ import com.a307.linkcare.feature.auth.ui.SignupBirthScreen
 import com.a307.linkcare.feature.auth.ui.SignupCharacterScreen
 import com.a307.linkcare.feature.auth.ui.SignupGenderScreen
 import com.a307.linkcare.feature.auth.ui.SignupHeightScreen
-import com.a307.linkcare.feature.auth.ui.SignupNameScreen
 import com.a307.linkcare.feature.auth.ui.SignupScreen
 import com.a307.linkcare.feature.intro.IntroTourScreen
 import kotlinx.coroutines.delay
@@ -124,10 +134,9 @@ fun AppNavGraph(
                     }
                 },
 
-                onSubmit = { email, password ->
+                onSubmit = { name, email, password ->
                     scope.launch {
                         try {
-                            val name = email.substringBefore("@").ifBlank { "사용자" }
                             val res = RetrofitClient.authApi.signup(
                                 SignupRequest(email = email, password = password, name = name)
                             )
@@ -141,8 +150,7 @@ fun AppNavGraph(
                                 toast("회원가입 실패")
                             }
                         } catch (ce: CancellationException) {
-                            // 화면 전환 등으로 코루틴이 취소된 정상 상황 -> 에러 토스트 금지
-                            // 그냥 무시 (필요시 로그만 남겨도 됨)
+                            // 화면 전환 등으로 코루틴이 취소된 정상 상황
                         } catch (e: Exception) {
                             toast("서버 통신 오류")
                         }
@@ -155,20 +163,7 @@ fun AppNavGraph(
         composable(Route.Intro.route) {
             var navigated by remember { mutableStateOf(false) }
 
-            IntroScreen(
-                onDone = {
-                    if (!navigated) {
-                        navigated = true
-                        navController.navigate(Route.Onboarding.route) {
-                            popUpTo(Route.Intro.route) { inclusive = true }
-                        }
-                    }
-                }
-            )
-
-            // 2초 뒤 자동 이동
-            LaunchedEffect(Unit) {
-                delay(2000)
+            fun goOnce() {
                 if (!navigated) {
                     navigated = true
                     navController.navigate(Route.Onboarding.route) {
@@ -176,34 +171,28 @@ fun AppNavGraph(
                     }
                 }
             }
+
+            IntroScreen(onDone = { goOnce() })
+
+            LaunchedEffect(Unit) {
+                delay(2000)
+                goOnce()
+            }
         }
 
         // 온보딩 (회원정보 수집 Flow)
         composable(Route.Onboarding.route) {
-            val pagerCount = 5
-            val pagerState = rememberPagerState(initialPage = 0) { pagerCount }
-
-//            val vm: OnboardingViewModel = viewModel()
-
-            HorizontalPager(state = pagerState) { page ->
-                when (page) {
-                    0 -> SignupNameScreen(pagerState) { }
-                    1 -> SignupGenderScreen(pagerState, pageCount = pagerCount) { }
-                    2 -> SignupBirthScreen(pagerState, pageCount = pagerCount) { }
-                    3 -> SignupHeightScreen(pagerState, pageCount = pagerCount) { }
-                    4 -> SignupCharacterScreen(
-                        pagerState = pagerState,
-                        pageCount = pagerCount,
-                        onStart = { idx, _ -> /* vm.setCharacter(idx) */ },
-                        onNavigateToIntro = {
-                            navController.navigate(Route.IntroTour.route) {
-                                popUpTo(Route.Onboarding.route) { inclusive = true } // 온보딩 스택 제거
-                            }
-                        }
-                    )
+            SignupPager(
+                navController = navController,
+                onFinished = {
+                    navController.navigate(Route.Main.route) {
+                        popUpTo(Route.Onboarding.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
-            }
+            )
         }
+
 
         composable(Route.IntroTour.route) {
             IntroTourScreen(
@@ -229,4 +218,82 @@ fun Route.withArgs(vararg args: Any?): String {
         path = path.replaceFirst("\\{[^/]+\\}".toRegex(), arg.toString())
     }
     return path
+}
+
+@Composable
+fun SignupPager(
+    navController: NavHostController,
+    vm: OnboardingViewModel = hiltViewModel(),
+    onFinished: () -> Unit
+) {
+    val pageCount = 4
+    val pagerState = rememberPagerState { pageCount }
+    val scope = rememberCoroutineScope()
+
+    fun goNext() = scope.launch {
+        val next = (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
+        pagerState.animateScrollToPage(next)
+    }
+
+    // 화면들
+    HorizontalPager(state = pagerState, userScrollEnabled = false) { page ->
+        when (page) {
+            0 -> SignupGenderScreen(
+                pagerState = pagerState,
+                pageCount = pageCount,
+                onSubmit = { gender -> vm.setGender(gender); goNext() }
+            )
+            1 -> SignupBirthScreen(
+                pagerState = pagerState,
+                pageCount = pageCount,
+                onSubmit = { birth -> vm.setBirth(birth); goNext() }
+            )
+            2 -> SignupHeightScreen(
+                pagerState = pagerState,
+                pageCount = pageCount,
+                onSubmit = { (h, w) -> vm.setHeight(h); vm.setWeight(w); goNext() }
+            )
+            3 -> SignupCharacterScreen(
+                pagerState = pagerState,
+                pageCount = pageCount,
+                onStart = { idx, name ->
+                    // 캐릭터 선택 후 프로필 제출
+                   vm.submitProfile()
+                },
+                onNavigateToIntro = onFinished
+            )
+        }
+    }
+
+    val submit by vm.submit.collectAsState()
+    var navigated by remember { mutableStateOf(false) }
+
+    // 프로필 제출 성공 시 다음 화면으로 이동
+    LaunchedEffect(submit) {
+        if (!navigated && submit is OnboardingViewModel.SubmitState.Success) {
+            navigated = true
+            onFinished()
+        }
+    }
+
+    // 로딩 및 에러 UI
+    when (submit) {
+        is OnboardingViewModel.SubmitState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x88000000)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = main)
+            }
+        }
+        is OnboardingViewModel.SubmitState.Error -> {
+            val context = LocalContext.current
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, "프로필 업데이트 실패", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else -> Unit
+    }
 }

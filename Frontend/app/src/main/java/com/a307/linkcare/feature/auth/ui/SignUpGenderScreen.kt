@@ -142,8 +142,8 @@ fun SignupGenderScreen(
                     onClick = {
                         onSubmit(
                             when (selectedGender) {
-                                Gender.MALE -> "male"
-                                Gender.FEMALE -> "female"
+                                Gender.MALE -> "남"
+                                Gender.FEMALE -> "여"
                                 null -> ""
                             }
                         )
@@ -165,7 +165,7 @@ fun SignupGenderScreen(
 
         // 상단 dots
         PagerDots(
-            total = 5,
+            total = pageCount,
             current = pagerState.currentPage,
             onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
         )

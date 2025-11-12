@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.auth.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
@@ -31,7 +32,7 @@ fun SamsungHealthPermissionDialog(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0x88000000))
-            .clickable(onClick = onDismiss),
+            .noRippleClickable { /* 아무것도 안함. 이벤트 소비 */ },
         contentAlignment = Alignment.BottomCenter
     ) {
         Column(
@@ -123,3 +124,12 @@ fun SamsungHealthPermissionDialog(
         }
     }
 }
+
+fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier =
+    composed {
+        clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick = onClick
+        )
+    }

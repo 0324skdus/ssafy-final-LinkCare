@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     id("com.google.gms.google-services")
+    kotlin("kapt")
+    id("com.google.dagger.hilt.android")
 }
 
 val localProps = Properties().apply {
@@ -23,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.a307.linkcare"
-        minSdk = 24
+        minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -129,4 +131,12 @@ dependencies {
     // 토큰
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
+
+    // hilt
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.google.dagger:hilt-android:2.57.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
+
+    implementation(files("libs/samsung-health-data-api-1.0.0.aar"))
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
 }

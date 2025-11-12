@@ -8,7 +8,6 @@ class AuthInterceptor(private val tokenStore: TokenStore) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
 
-        // 로그인/리프레시 등 화이트리스트는 토큰 안 붙임 (필요 시 조건 추가)
         val noAuth = req.url.encodedPath.contains("/api/auth/login") ||
                 req.url.encodedPath.contains("/api/auth/refresh")
 
