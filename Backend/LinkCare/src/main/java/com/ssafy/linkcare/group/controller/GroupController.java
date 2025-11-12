@@ -3,7 +3,10 @@ package com.ssafy.linkcare.group.controller;
 import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.service.GroupService;
+import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
+import com.ssafy.linkcare.health.dto.WaterIntakeStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -295,5 +299,28 @@ public class GroupController {
 
         log.info("참가 신청 거절 API 호출: userId={}, requestSeq={}", userId, requestSeq);
         return ResponseEntity.ok().build();
+    }
+
+
+    // ============== 그룹 건강 데이터 API ==============
+
+    @Operation(summary = "(LocalDate) 기간별 그룹원 총 칼로리, 총 걸음 수, 총 운동 시간 조회",
+            description = "지정된 기간의 그룹원의 총 칼로리, 총 걸음 수, 총 운동 시간 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/total-acitivty/stats")
+    public ResponseEntity<TotalActivityStatisticsResponse> getGroupTotalActivityStatistics(
+            @Parameter(description = "그룹 시퀀스", required = true) @PathVariable Long groupSeq,
+            @Parameter(description = "시작 날짜 (LocalDate)") @RequestParam(required = false) LocalDate startDate,
+            @Parameter(description = "종료 날짜 (LocalDate)") @RequestParam(required = false) LocalDate endDate
+    ) {
+        log.info("API 호출 - (LocalDate) 기간별 그룹원 총 칼로리, 걸음 수, 운동 시간 조회: groupSeq={}, startDate={}, endDate={}",
+                groupSeq, startDate, endDate);
+
+        TotalActivityStatisticsResponse response = groupService.getGroupTotalActivityStatistics(groupSeq, startDate, endDate);
+
+        return ResponseEntity.ok(response);
     }
 }

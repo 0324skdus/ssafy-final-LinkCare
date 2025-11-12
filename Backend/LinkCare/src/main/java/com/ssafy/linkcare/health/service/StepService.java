@@ -114,7 +114,7 @@ public class StepService {
         return convertToResponse(step);
     }
 
-    // 당일 데이터 조회
+    // 당일 데이터 총 걸음 수 조회
     public int getTodayStepCount(int userSeq) {
         User user = validateUser(userSeq);
 
@@ -170,6 +170,33 @@ public class StepService {
                 .build();
     }
 
+    // (localDate)기간별 총 걸음수
+    public StepStatisticsResponse getStepStatisticsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        log.info("기간별 물 섭취 통계 조회 - User: {}, Start: {}, End: {}", userSeq, startDateTs, endDateTs);
+
+        Long totalSteps = stepRepository
+                .sumTotalCountByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0L);
+
+        Float avgSteps = stepRepository
+                .avgCountByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0.0f);
+
+        return StepStatisticsResponse.builder()
+                .userSeq(Math.toIntExact(user.getUserPk()))
+                .startTime(timeStampUtil.toLocalDateTime(startDateTs))
+                .endTime(timeStampUtil.toLocalDateTime(endDateTs))
+                .totalSteps(totalSteps)
+                .averageSteps(avgSteps)
+                .build();
+    }
+
+
     // 이번 주 총 걸음 수 조회
     public StepStatisticsResponse getThisWeekStepStatistics(int userSeq) {
         Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
@@ -194,8 +221,8 @@ public class StepService {
     }
 
     public StepStatisticsResponse getWeekStepStatisticsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
-        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
-        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+        Long startDateTs = timeStampUtil.getWeekStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getWeekEndTimestamp(endDate);
 
         return getStepStatistics(userSeq, startDateTs, endDateTs);
     }

@@ -4,9 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.gpt.dto.TodayHealthSummaryResponse;
 import com.ssafy.linkcare.health.dto.*;
-import com.ssafy.linkcare.health.entity.ActivitySummary;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -126,5 +124,21 @@ public class HealthService {
             log.error("DailyActivity 데이터 변환 실패", e);
             return "{}";
         }
+    }
+
+    // 기간 별 칼로리, 걸음, 운동시간
+    public TotalActivityStatisticsResponse getTotalActivityStatistics(int userSeq, LocalDate startDate, LocalDate endDate) {
+        Long startDateTs = timeStampUtil.toNextDayTimestamp(startDate);
+        Long endDateTs = timeStampUtil.toTimestamp(endDate.plusDays(1));
+
+        ActivitySummaryStaticsResponse activitySummaryStaticsResponse = activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate);
+        ExerciseStatisticsResponse exerciseStatisticsResponse = exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate);
+        Long totalSteps = stepService.getStepStatisticsByDate(userSeq, startDate, endDate).getTotalSteps();
+
+        return TotalActivityStatisticsResponse.builder()
+                .totalCalories(activitySummaryStaticsResponse.getTotalCalories())
+                .totalDuration(exerciseStatisticsResponse.getTotalDuration())
+                .totalSteps(totalSteps)
+                .build();
     }
 }

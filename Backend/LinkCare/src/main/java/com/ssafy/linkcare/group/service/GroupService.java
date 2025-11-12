@@ -9,6 +9,7 @@ import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
@@ -899,6 +900,40 @@ public class GroupService {
                 .filter(Objects::nonNull)  // null 제거
                 .toList();
     }
+
+    // 그룹원 전체 총 걸음 수, 총 칼로리, 총 운동 시간 조회
+    public TotalActivityStatisticsResponse getGroupTotalActivityStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> members = groupMemberRepository.findByGroupWithUser(group);
+
+        // 초기값
+        double totalCalories = 0.0;
+        long totalSteps = 0L;
+        long totalDuration = 0L;
+
+        // 각 멤버의 데이터 합산
+        for (GroupMember member : members) {
+            TotalActivityStatisticsResponse stats = healthService.getTotalActivityStatistics(
+                    Math.toIntExact(member.getUser().getUserPk()),
+                    startDate,
+                    endDate
+            );
+
+            if (stats != null) {
+                totalCalories += (stats.getTotalCalories() != null ? stats.getTotalCalories() : 0.0);
+                totalSteps += (stats.getTotalSteps() != null ? stats.getTotalSteps() : 0L);
+                totalDuration += (stats.getTotalDuration() != null ? stats.getTotalDuration() : 0L);
+            }
+        }
+
+        return TotalActivityStatisticsResponse.builder()
+                .totalCalories(totalCalories)
+                .totalSteps(totalSteps)
+                .totalDuration(totalDuration)
+                .build();
+    }
+
 
     /*
         * GroupInvitation을 InvitationResponse로 변환
