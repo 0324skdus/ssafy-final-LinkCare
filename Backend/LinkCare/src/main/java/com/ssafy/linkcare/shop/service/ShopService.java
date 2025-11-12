@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.shop.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.entity.Character;
 import com.ssafy.linkcare.character.repository.CharacterRepository;
 import com.ssafy.linkcare.character.service.CharacterService;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class ShopService {
 
     private final CharacterService characterService;
+    private final BackgroundService backgroundService;
     private final PointService pointService;
     private final UserRepository userRepository;
     private final CharacterRepository characterRepository;
@@ -32,10 +34,12 @@ public class ShopService {
 
     @Transactional
     public void buyCharacter(Long userPk, Long characterId) {
-        // 상점 관련 로직 (예: 판매중인 캐릭터인지 확인, 할인 적용 등)
-        // 현재는 별도 로직이 없으므로 바로 CharacterService 호출
-
         characterService.unlockCharacter(userPk, characterId);
+    }
+
+    @Transactional
+    public void buyBackground(Long userPk, Long backgroundId) {
+        backgroundService.unlockBackground(userPk, backgroundId);
     }
 
     public ShopResponseDto getShopCharacterList(Long userPk) {
@@ -57,6 +61,7 @@ public class ShopService {
         // 5. ShopCharacterDto 목록 생성
         List<ShopCharacterDto> shopCharacters = allCharacters.stream()
                 .map(character -> {
+                    String baseImageUrl = s3Service.generatePresignedGetUrl(character.getBaseImageS3Key());
                     List<String> imageUrls = character.getImageS3Keys().stream()
                             .map(s3Service::generatePresignedGetUrl)
                             .collect(Collectors.toList());
@@ -65,6 +70,7 @@ public class ShopService {
                             .characterId(character.getCharacterId())
                             .name(character.getName())
                             .description(character.getDescription())
+                            .baseImageUrl(baseImageUrl)
                             .imageUrls(imageUrls)
                             .price(character.getPrice())
                             .isUnlocked(unlockedCharacterIds.contains(character.getCharacterId()))

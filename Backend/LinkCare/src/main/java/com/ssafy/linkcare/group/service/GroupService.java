@@ -220,13 +220,11 @@ public class GroupService {
         List<GroupDetailResponse.MemberDto> memberDtos = members.stream()
                 .map(gm -> {
                     User user = gm.getUser();
-                    List<String> mainCharacterImageUrls = Collections.emptyList();
+                    String baseImageUrl = null;
                     UserCharacter mainCharacter = user.getMainCharacter();
 
                     if (mainCharacter != null && mainCharacter.getCharacter() != null) {
-                        mainCharacterImageUrls = mainCharacter.getCharacter().getImageS3Keys().stream()
-                                .map(s3Service::generatePresignedGetUrl)
-                                .collect(Collectors.toList());
+                        baseImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getCharacter().getBaseImageS3Key());
                     }
 
                     return new GroupDetailResponse.MemberDto(
@@ -234,7 +232,7 @@ public class GroupService {
                             user.getUserPk(),
                             user.getName(),
                             gm.getIsLeader(),
-                            mainCharacterImageUrls
+                            baseImageUrl
                     );
                 })
                 .toList();

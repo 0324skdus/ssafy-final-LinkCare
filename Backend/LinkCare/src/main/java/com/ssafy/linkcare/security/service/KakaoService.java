@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.security.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
@@ -24,6 +25,7 @@ public class KakaoService {
     private final WebClient webClient;
     private final CharacterService characterService;
     private final PointService pointService;
+    private final BackgroundService backgroundService;
 
     @Value("${kakao.user-info-uri}")
     private String userInfoUri;
@@ -74,8 +76,8 @@ public class KakaoService {
                             .build();
 
                     userRepository.save(newUser);
-                    characterService.assignDefaultCharacter(newUser);
                     pointService.createPointForNewUser(newUser);
+                    backgroundService.assignDefaultBackground(newUser);
                     return newUser;
                 });
     }

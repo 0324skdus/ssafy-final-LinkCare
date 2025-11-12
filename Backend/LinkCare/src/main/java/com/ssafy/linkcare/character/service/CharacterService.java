@@ -31,18 +31,32 @@ public class CharacterService {
     private final PointService pointService;
 
     @Transactional
-    public void assignDefaultCharacter(User user) {
-        Character defaultCharacter = characterRepository.findByName("기본")
-                .orElseThrow(() -> new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "기본 캐릭터를 찾을 수 없습니다."));
+    public void selectInitialCharacter(Long userPk, Long characterId) {
+        User user = userRepository.findById(userPk)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 1. 이미 대표 캐릭터가 있는지 확인
+        if (user.getMainCharacter() != null) {
+            throw new CustomException(ErrorCode.ALREADY_COMPLETED, "이미 기본 캐릭터를 선택했습니다.");
+        }
+
+        // 2. 선택한 캐릭터가 무료인지 확인
+        Character selectedCharacter = characterRepository.findById(characterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
+
+        if (selectedCharacter.getPrice() != 0) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "무료 캐릭터만 선택할 수 있습니다.");
+        }
+
+        // 3. 캐릭터 할당
         UserCharacter userCharacter = UserCharacter.builder()
                 .user(user)
-                .character(defaultCharacter)
+                .character(selectedCharacter)
                 .build();
         userCharacterRepository.save(userCharacter);
 
         user.getCharacters().add(userCharacter);
-        user.updateMainCharacter(userCharacter);
+        user.setMainCharacter(userCharacter);
         userRepository.save(user);
     }
 
@@ -60,6 +74,7 @@ public class CharacterService {
         return allCharacters.stream().map(character -> {
             boolean isUnlocked = unlockedCharacterIds.contains(character.getCharacterId());
             boolean isMain = character.getCharacterId().equals(mainCharacterId);
+            String baseImageUrl = s3Service.generatePresignedGetUrl(character.getBaseImageS3Key());
             List<String> imageUrls = character.getImageS3Keys().stream()
                     .map(s3Service::generatePresignedGetUrl)
                     .collect(Collectors.toList());
@@ -68,6 +83,7 @@ public class CharacterService {
                     .characterId(character.getCharacterId())
                     .name(character.getName())
                     .description(character.getDescription())
+                    .baseImageUrl(baseImageUrl)
                     .imageUrls(imageUrls)
                     .isUnlocked(isUnlocked)
                     .isMain(isMain)
@@ -81,10 +97,11 @@ public class CharacterService {
 
         UserCharacter mainUserCharacter = user.getMainCharacter();
         if (mainUserCharacter == null) {
-            return null;
+            return null; // 대표 캐릭터가 없는 경우
         }
 
         Character mainCharacter = mainUserCharacter.getCharacter();
+        String baseImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getBaseImageS3Key());
         List<String> imageUrls = mainCharacter.getImageS3Keys().stream()
                 .map(s3Service::generatePresignedGetUrl)
                 .collect(Collectors.toList());
@@ -93,6 +110,7 @@ public class CharacterService {
                 .characterId(mainCharacter.getCharacterId())
                 .name(mainCharacter.getName())
                 .description(mainCharacter.getDescription())
+                .baseImageUrl(baseImageUrl)
                 .imageUrls(imageUrls)
                 .isUnlocked(true)
                 .isMain(true)
@@ -107,7 +125,7 @@ public class CharacterService {
         UserCharacter newMainCharacter = userCharacterRepository.findByUserAndUserCharacterId(user, userCharacterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND, "사용자가 보유하지 않은 캐릭터입니다."));
 
-        user.updateMainCharacter(newMainCharacter);
+        user.setMainCharacter(newMainCharacter);
         userRepository.save(user);
     }
 

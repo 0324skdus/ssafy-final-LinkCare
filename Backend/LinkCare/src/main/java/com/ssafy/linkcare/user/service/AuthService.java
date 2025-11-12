@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
@@ -39,6 +40,7 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final CharacterService characterService;
     private final PointService pointService;
+    private final BackgroundService backgroundService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -100,11 +102,11 @@ public class AuthService {
         // 4. DB 저장
         userRepository.save(user);
 
-        // 5. 기본 캐릭터 지급
-        characterService.assignDefaultCharacter(user);
-
-        // 6. 포인트 계정 생성
+        // 5. 포인트 계정 생성
         pointService.createPointForNewUser(user);
+
+        // 6. 기본 배경 할당
+        backgroundService.assignDefaultBackground(user);
 
         log.info("회원가입 완료: {}", request.email());
     }
@@ -184,8 +186,8 @@ public class AuthService {
         // 2. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
 
-        // 3. 프로필 완성 여부 확인 (birth가 null이면 추가 정보 입력 필요)
-        Boolean needsProfileCompletion = (user.getBirth() == null);
+        // 3. 프로필/캐릭터 선택 필요 여부 확인
+        boolean needsProfileCompletion = (user.getBirth() == null || user.getMainCharacter() == null);
 
         return new LoginResponse(
                 accessToken,

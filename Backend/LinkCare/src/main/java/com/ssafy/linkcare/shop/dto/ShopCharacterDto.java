@@ -11,6 +11,7 @@ public class ShopCharacterDto {
     private Long characterId;
     private String name;
     private String description;
+    private String baseImageUrl;
     private List<String> imageUrls;
     private int price;
     private boolean isUnlocked;
