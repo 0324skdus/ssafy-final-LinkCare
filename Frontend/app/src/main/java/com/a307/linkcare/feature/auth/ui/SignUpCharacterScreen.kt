@@ -2,8 +2,9 @@
 
 package com.a307.linkcare.feature.auth.ui
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.app.Activity
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -32,14 +33,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.health.connect.client.PermissionController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.cropTransparentBorder
 import com.a307.linkcare.common.util.loadCroppedPainterIO
-import kotlinx.coroutines.Dispatchers
+import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.auth.data.HealthPermissions
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,7 +57,8 @@ fun SignupCharacterScreen(
         R.drawable.char_duck_2
     ),
     onStart: (selectedIndex: Int, name: String) -> Unit = { _, _ -> },
-    onNavigateToIntro: () -> Unit = {}
+    onNavigateToIntro: () -> Unit = {},
+    healthVm: HealthPermissionViewModel = hiltViewModel(),
 ) {
     require(characterImages.isNotEmpty()) { "characterImages must not be empty" }
 
@@ -63,6 +67,46 @@ fun SignupCharacterScreen(
     var name by rememberSaveable { mutableStateOf("") }
     val canStart = name.isNotBlank()
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
+    var shouldSubmitProfile by remember { mutableStateOf(false) }
+
+    // --- 권한 처리 준비 ---
+    val context = LocalContext.current
+    val healthState by healthVm.state.collectAsState()
+
+    // Health Connect 권한 요청 런처
+    val permissionLauncher =
+        rememberLauncherForActivityResult<Set<String>, Set<String>>(
+            PermissionController.createRequestPermissionResultContract()
+        ) { granted: Set<String> ->
+            if (HealthPermissions.permissions.all { it in granted }) {
+                // 권한 승인 후 프로필 제출 트리거
+                shouldSubmitProfile = true
+                // 권한 상태 재확인하여 State.Granted로 전이 유도
+                healthVm.checkPermissions()
+            }
+        }
+
+    // VM 상태 변화 또는 제출 플래그 변화 시, 실제 권한 요청/제출 실행
+    LaunchedEffect(healthState, shouldSubmitProfile) {
+        if (shouldSubmitProfile) {
+            when (healthState) {
+                HealthPermissionViewModel.State.NeedPermission -> {
+                    permissionLauncher.launch(HealthPermissions.permissions)
+                }
+                HealthPermissionViewModel.State.Granted -> {
+                    // 권한이 있으면 바로 프로필 제출
+                    onStart(selectedIndex, name) // 선택한 캐릭터 인덱스와 이름
+                    shouldSubmitProfile = false
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    // 최초 1회 권한 상태 확인
+    LaunchedEffect(Unit) {
+        healthVm.checkPermissions()
+    }
 
     Box(
         modifier = Modifier
@@ -71,7 +115,7 @@ fun SignupCharacterScreen(
     ) {
         // 상단 도트
         PagerDots(
-            total = 5,
+            total = pageCount,
             current = pagerState.currentPage,
             onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
         )
@@ -100,8 +144,6 @@ fun SignupCharacterScreen(
             )
 
             Spacer(Modifier.height(18.dp))
-
-            val context = LocalContext.current
 
             // 캐릭터 이미지 Painter 캐시
             val cachedPainters = remember(characterImages) {
@@ -216,7 +258,7 @@ fun SignupCharacterScreen(
                 buttonTextColor = if (canStart) white else unActiveField,
                 isEnabled = canStart,
                 onClick = {
-                    onStart(selectedIndex, name)
+                    onStart(0, "duck")
                     showPermissionDialog = true
                 }
             )
@@ -228,7 +270,9 @@ fun SignupCharacterScreen(
                 onDismiss = { showPermissionDialog = false },
                 onConnectClick = {
                     showPermissionDialog = false
-                    onNavigateToIntro()
+                    shouldSubmitProfile = true
+                    // 권한 체크 시작
+                    healthVm.checkPermissions()
                 }
             )
         }

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     id("com.google.gms.google-services")
+    kotlin("kapt")
+    id("com.google.dagger.hilt.android")
 }
 
 val localProps = Properties().apply {
@@ -23,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.a307.linkcare"
-        minSdk = 24
+        minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -106,6 +108,7 @@ dependencies {
     // Retrofit (백엔드 API 호출)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Coroutines
@@ -124,4 +127,16 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     // character
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // 토큰
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-core:1.1.1")
+
+    // hilt
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.google.dagger:hilt-android:2.57.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
+
+    implementation(files("libs/samsung-health-data-api-1.0.0.aar"))
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
 }

@@ -1,0 +1,43 @@
+package com.a307.linkcare.feature.auth.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStore
+import com.a307.linkcare.feature.auth.domain.LoginResponse
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+
+private val Context.dataStore by preferencesDataStore("auth_prefs")
+
+object TokenKeys {
+    val ACCESS = stringPreferencesKey("access")
+    val REFRESH = stringPreferencesKey("refresh")
+    val EMAIL = stringPreferencesKey("email")
+    val NAME = stringPreferencesKey("name")
+}
+
+class TokenStore(private val context: Context) {
+    fun getAccess(): String? = runBlocking {
+        context.dataStore.data.first()[TokenKeys.ACCESS]
+    }
+    fun getRefresh(): String? = runBlocking {
+        context.dataStore.data.first()[TokenKeys.REFRESH]
+    }
+    fun save(auth: LoginResponse) = runBlocking {
+        context.dataStore.edit {
+            it[TokenKeys.ACCESS] = auth.accessToken
+            it[TokenKeys.REFRESH] = auth.refreshToken
+            it[TokenKeys.EMAIL] = auth.email
+            it[TokenKeys.NAME] = auth.name
+        }
+    }
+    fun saveTokens(access: String, refresh: String) = runBlocking {
+        context.dataStore.edit {
+            it[TokenKeys.ACCESS] = access
+            it[TokenKeys.REFRESH] = refresh
+        }
+    }
+    fun clear() = runBlocking {
+        context.dataStore.edit { it.clear() }
+    }
+}

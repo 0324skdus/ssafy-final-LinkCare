@@ -36,20 +36,20 @@ import kotlinx.coroutines.launch
 fun SignupHeightScreen(
     pagerState: PagerState,
     pageCount: Int,
-    onSubmit: (Pair<Int, Int>) -> Unit = {}
+    onSubmit: (Pair<Float, Float>) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
 
     var heightText by rememberSaveable { mutableStateOf("") }
     var weightText by rememberSaveable { mutableStateOf("") }
 
-    fun parseIntSafe(s: String) = s.toIntOrNull()
+    fun parseFloatSafe(s: String) = s.toFloatOrNull()
 
-    val height = parseIntSafe(heightText)
-    val weight = parseIntSafe(weightText)
+    val height = parseFloatSafe(heightText)
+    val weight = parseFloatSafe(weightText)
 
-    val isHeightValid = height != null && height in 100..250
-    val isWeightValid = weight != null && weight in 30..250
+    val isHeightValid = height != null && height in 100.0..250.0
+    val isWeightValid = weight != null && weight in 30.0..250.0
     val canSubmit = isHeightValid && isWeightValid
 
     val duckAspect = 462f / 281f
@@ -161,7 +161,7 @@ fun SignupHeightScreen(
 
         // 상단 페이지 도트
         PagerDots(
-            total = 5,
+            total = pageCount,
             current = pagerState.currentPage,
             onDotClick = { index -> scope.launch { pagerState.animateScrollToPage(index) } }
         )

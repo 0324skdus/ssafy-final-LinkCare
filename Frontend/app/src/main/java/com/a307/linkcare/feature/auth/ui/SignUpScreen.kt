@@ -15,22 +15,29 @@ import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.*
 
 @Composable
 fun SignupScreen(
     onVerifyEmail: (String) -> Unit = {},
-    onVerifyCode: (String) -> Unit = {},
-    onSubmit: (email: String, password: String) -> Unit = { _, _ -> }
+    onVerifyCode: (email: String, code: String, onResult: (Boolean) -> Unit) -> Unit,
+    onSubmit: (name: String, email: String, password: String) -> Unit = { _, _, _ -> }
 ) {
     // --- 상태
+    var name by rememberSaveable { mutableStateOf("") }                      // ✅ 이름
+    var nameVerified by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordCheck by rememberSaveable { mutableStateOf("") }
 
+
     var emailLocked by rememberSaveable { mutableStateOf(false) }   // 인증 요청 후 이메일 입력 잠금
     var emailVerified by rememberSaveable { mutableStateOf(false) } // 최종 이메일 인증 완료
     var codeVerified by rememberSaveable { mutableStateOf(false) }  // 코드 검증 완료
+    var isVerifying by rememberSaveable { mutableStateOf(false) }   // 코드 확인 로딩 상태
+
+    val canConfirmName = name.length >= 2 && !nameVerified
 
     // --- 버튼/필드 활성 조건
     val canSendEmail = email.isNotBlank() && !emailLocked && !emailVerified
@@ -42,7 +49,7 @@ fun SignupScreen(
     // 최종 가입: 이메일 인증 완료 + 비번 규칙 + 비번 일치
     val isPwValid = password.length in 8..13 && hasMixedChars(password)
     val isPwSame = password.isNotBlank() && password == passwordCheck
-    val canSubmit = emailVerified && isPwValid && isPwSame
+    val canSubmit = nameVerified && emailVerified && isPwValid && isPwSame
 
     Box(
         modifier = Modifier
@@ -68,6 +75,43 @@ fun SignupScreen(
             )
 
             Spacer(Modifier.height(23.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LcInputField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        nameVerified = false
+                    },
+                    placeholder = "이름을 입력하세요",
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+
+                val nameBtnText = if (nameVerified) "완료" else "확인"
+                val nameBtnColor =
+                    if (nameVerified) unActiveBtn else if (canConfirmName) main else unActiveBtn
+                val nameBtnTextColor =
+                    if (nameVerified) unActiveField else if (canConfirmName) white else unActiveField
+
+                LcBtn(
+                    text = nameBtnText,
+                    modifier = Modifier.width(75.dp).height(46.dp),
+                    buttonColor = nameBtnColor,
+                    buttonTextColor = nameBtnTextColor,
+                    isEnabled = canConfirmName,
+                    onClick = {
+                        if (canConfirmName) {
+                            nameVerified = true
+                        }
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
 
             // 이메일 인증
             Row(
@@ -160,6 +204,7 @@ fun SignupScreen(
 
                 val codeBtnText = if (codeVerified) "완료" else "확인"
                 val codeBtnEnabled = if (codeVerified) false else canClickCode
+
                 val codeBtnColor = when {
                     codeVerified -> unActiveBtn
                     canClickCode -> main
@@ -179,9 +224,14 @@ fun SignupScreen(
                     isEnabled = codeBtnEnabled,
                     onClick = {
                         if (!codeVerified && canClickCode) {
-                            onVerifyCode(code)
-                            codeVerified = true
-                            emailVerified = true
+                            onVerifyCode(email, code) { success ->
+                                if (success) {
+                                    codeVerified = true
+                                    emailVerified = true
+                                } else {
+                                    // 실패면 그대로 '확인' 상태 유지
+                                }
+                            }
                         }
                     }
                 )
@@ -228,7 +278,7 @@ fun SignupScreen(
                 buttonColor = if (canSubmit) main else unActiveBtn,
                 buttonTextColor = if (canSubmit) white else unActiveField,
                 isEnabled = canSubmit,
-                onClick = { onSubmit(email, password) }
+                onClick = { onSubmit(name, email, password) }
             )
         }
     }
