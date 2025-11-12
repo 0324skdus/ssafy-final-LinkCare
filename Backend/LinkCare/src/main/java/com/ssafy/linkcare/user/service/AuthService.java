@@ -167,9 +167,9 @@ public class AuthService {
     }
 
     /**
-        * 토큰 생성 및 LoginResponse 반환 (공통 함수)
-        * @param user 사용자 정보
-        * @return LoginResponse
+     * 토큰 생성 및 LoginResponse 반환 (공통 함수)
+     * @param user 사용자 정보
+     * @return LoginResponse
      */
     private LoginResponse generateTokenResponse(User user) {
         String userId = user.getUserPk().toString();
@@ -196,10 +196,10 @@ public class AuthService {
 
 
     /*
-        * Google 소셜 로그인
-        * @param idToken Android 앱에서 받은 Google ID Token
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * Google 소셜 로그인
+     * @param idToken Android 앱에서 받은 Google ID Token
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse googleLogin(String idToken) {
 
@@ -213,10 +213,10 @@ public class AuthService {
     }
 
     /*
-        * 카카오 소셜 로그인
-        * @param code Android 앱에서 받은 인가 코드
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * 카카오 소셜 로그인
+     * @param code Android 앱에서 받은 인가 코드
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse kakaoLogin(String accessToken) {
         // 1. Access Token으로 사용자 정보 직접 조회 (토큰 발급 단계 생략!)
