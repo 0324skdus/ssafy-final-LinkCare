@@ -34,6 +34,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(length = 50)
+    private String petName;
+
     private Float height;
 
     private Float weight;

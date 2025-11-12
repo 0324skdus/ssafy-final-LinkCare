@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -24,6 +25,24 @@ import java.time.LocalDate;
 public class UserController {
 
     private final UserService userService;
+
+    @Operation(summary = "초기 설정 완료", description = "사용자의 초기 설정(기본 캐릭터 선택, 펫 이름 설정)을 완료합니다. 쿼리 파라미터로 characterId와 petName을 전달합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "초기 설정 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (입력값 오류)"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "사용자 또는 캐릭터를 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "이미 초기 설정이 완료됨")
+    })
+    @PostMapping("/initial-setup")
+    public ResponseEntity<Void> completeInitialSetup(
+            Authentication authentication,
+            @RequestParam("characterId") Long characterId,
+            @RequestParam("petName") String petName) {
+        Long userPk = Long.parseLong(authentication.getName());
+        userService.completeInitialSetup(userPk, characterId, petName);
+        return ResponseEntity.ok().build();
+    }
 
     /*
      * 프로필 업데이트
