@@ -62,7 +62,6 @@ import com.a307.linkcare.feature.mypage.ProfileEditScreen
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
-        // MyPage 위로는 모두 유지, MyPage가 없으면 생성
         popUpTo(Route.MyPage.route) { inclusive = false }
         launchSingleTop = true
         restoreState = true

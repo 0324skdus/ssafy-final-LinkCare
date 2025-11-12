@@ -1,36 +1,71 @@
 package com.a307.linkcare.feature.auth
 
-
-import androidx.lifecycle.SavedStateHandle
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.domain.OnboardingForm
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class OnboardingViewModel(
-    private val savedStateHandle: SavedStateHandle
+@HiltViewModel
+class OnboardingViewModel @Inject constructor(
+    private val repo: ProfileRepository
 ) : ViewModel() {
-    companion object { private const val KEY = "onboarding_form" }
-
-    private val _form = MutableStateFlow(
-        savedStateHandle.get<OnboardingForm>(KEY) ?: OnboardingForm()
-    )
+    private val _form = MutableStateFlow(OnboardingForm())
     val form = _form.asStateFlow()
 
-    private fun update(block: (OnboardingForm) -> OnboardingForm) {
-        _form.update(block)
-        savedStateHandle[KEY] = _form.value
+    init { Log.wtf("OnboardingVM", "CREATED: $this") }
+
+    fun update(block: (OnboardingForm) -> OnboardingForm) {
+        val updated = block(_form.value)
+        _form.value = updated
     }
 
-    fun setName(v: String) = update { it.copy(name = v) }
     fun setGender(v: String) = update { it.copy(gender = v) }
     fun setBirth(v: String) = update { it.copy(birth = v) }
-    fun setHeight(v: Int?) = update { it.copy(height = v) }
-    fun setCharacter(v: Int?) = update { it.copy(characterIndex = v) }
+    fun setHeight(v: Float?) = update { it.copy(height = v) }
+    fun setWeight(v: Float?) = update { it.copy(weight = v) }
+    fun setExerciseStartYear(v: Int?) = update { it.copy(exerciseStartYear = v) }
+//    fun setCharacter(v: Int?) = update { it.copy(characterIndex = v) }
 
     fun isComplete() = with(_form.value) {
-        name.isNotBlank() && gender.isNotBlank() && birth.isNotBlank()
-                && height != null && characterIndex != null
+        gender.isNotBlank() && birth.isNotBlank() &&
+                height != null && weight != null // && characterIndex != null
+        // exerciseStartYear는 제외
+    }
+
+    sealed interface SubmitState {
+        data object Idle: SubmitState
+        data object Loading: SubmitState
+        data object Success: SubmitState
+        data class Error(val message: String): SubmitState
+    }
+    private val _submit = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val submit = _submit.asStateFlow()
+
+    fun submitProfile() {
+        val f = _form.value
+        if (!isComplete()) {
+            _submit.value = SubmitState.Error("필수 항목이 비어 있어요.")
+            return
+        }
+        viewModelScope.launch {
+            _submit.value = SubmitState.Loading
+            _submit.value = try {
+                repo.updateProfile(
+                    birth = f.birth,
+                    height = f.height,
+                    weight = f.weight,
+                    gender = f.gender,
+                    exerciseStartYear = null
+                )
+                SubmitState.Success
+            } catch (t: Throwable) {
+                SubmitState.Error(t.message ?: "요청 실패")
+            }
+        }
     }
 }
