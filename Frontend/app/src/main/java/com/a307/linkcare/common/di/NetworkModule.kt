@@ -2,6 +2,7 @@ package com.a307.linkcare.common.di
 
 import android.content.Context
 import com.a307.linkcare.feature.auth.data.*
+import com.a307.linkcare.feature.character.data.CharacterApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -69,4 +70,10 @@ object NetworkModule {
     @Singleton
     fun provideProfileApi(retrofit: Retrofit): ProfileApi =
         retrofit.create(ProfileApi::class.java) // :contentReference[oaicite:8]{index=8}
+
+    @Provides
+    @Singleton
+    fun provideCharacterApi(retrofit: Retrofit): CharacterApi =
+        retrofit.create(CharacterApi::class.java) // :contentReference[oaicite:8]{index=8}
+
 }
