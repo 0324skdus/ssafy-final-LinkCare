@@ -18,4 +18,15 @@ public class StepStatisticsResponse {
     private LocalDateTime endTime;
     private Long totalSteps;
     private Float averageSteps;
+
+    @Override
+    public String toString() {
+        return "StepStatisticsResponse{" +
+                "userSeq=" + userSeq +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", totalSteps=" + totalSteps +
+                ", averageSteps=" + averageSteps +
+                '}';
+    }
 }

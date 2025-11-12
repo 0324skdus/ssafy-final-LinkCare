@@ -4,6 +4,7 @@ import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.ActivitySummaryDto;
 import com.ssafy.linkcare.health.dto.ActivitySummaryResponse;
+import com.ssafy.linkcare.health.dto.ActivitySummaryStaticsResponse;
 import com.ssafy.linkcare.health.entity.ActivitySummary;
 import com.ssafy.linkcare.health.repository.ActivitySummaryRepository;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
@@ -81,7 +82,7 @@ public class ActivitySummaryService {
         }
     }
 
-    // 3주치 데이터 조회
+    // 기간별 데이터 조회
     public List<ActivitySummaryResponse> getActivitySummariesByPeriod(int userSeq, Long startTime, Long endTime) {
         User user = validateUser(userSeq);
 
@@ -105,10 +106,10 @@ public class ActivitySummaryService {
         Long startTimeTs = timeStampUtil.getTodayStartTimestamp();
         Long endTimeTs = timeStampUtil.getCurrentTimestamp();
 
-        return activitySummaryRepository
-                .findByUserAndStartTime(user, startTimeTs)
-                .map(this::convertToResponse)
-                .orElseGet(() -> createEmptyActivitySummaryResponse(startTimeTs));
+        ActivitySummary activitySummary = activitySummaryRepository
+                        .findByUserAndStartTime(user, startTimeTs)
+                        .orElse(null);
+        return convertToResponse(activitySummary);
     }
 
     // 일주일 데이터 조회
@@ -123,14 +124,78 @@ public class ActivitySummaryService {
         return getActivitySummariesByPeriod(userSeq, weekStart, now);
     }
 
+    // 오늘 기준 바로 전 주 데이터 조회
+    public List<ActivitySummaryResponse> getLastWeekActivitySummaries(int userSeq, LocalDate today) {
+        User user = validateUser(userSeq);
 
+        Long startDateTs = timeStampUtil.toTimestamp(timeStampUtil.getLastWeekMonday());
+        Long endDateTs = timeStampUtil.toTimestamp(timeStampUtil.getLastWeekSunday());
+
+        List<ActivitySummary> summaries = activitySummaryRepository.findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startDateTs, endDateTs);
+
+        return summaries.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
+    // 기간별 활동 요약 조회
+    public List<ActivitySummaryResponse> getActivitySummariesByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.toTimestamp(startDate);
+        Long endDateTs = timeStampUtil.toTimestamp(endDate);
+
+        List<ActivitySummary> summaries = activitySummaryRepository.findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startDateTs, endDateTs);
+
+        return summaries.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * 기간별 활동 요약 통계 조회
+     */
+    public ActivitySummaryStaticsResponse getActivitySummaryStatsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        long startTimestamp = timeStampUtil.toTimestamp(startDate);
+        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+
+        Double totalCalories = activitySummaryRepository.findTotalCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double totalDistance = activitySummaryRepository.findTotalDistanceByPeriod(user, startTimestamp, endTimestamp);
+        Double avgCalories = activitySummaryRepository.findAvgCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double avgDistance = activitySummaryRepository.findAvgDistanceByPeriod(user, startTimestamp, endTimestamp);
+
+        return ActivitySummaryStaticsResponse.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalCalories(totalCalories != null ? totalCalories : 0.0)
+                .totalDistance(totalDistance != null ? totalDistance : 0.0)
+                .avgCalories(avgCalories != null ? avgCalories : 0.0)
+                .avgDistance(avgDistance != null ? avgDistance : 0.0)
+                .build();
+    }
+
+    public ActivitySummaryStaticsResponse getActivitySummaryStatsToday(int userSeq) {
+        User user = validateUser(userSeq);
+
+        long startTimestamp = timeStampUtil.getTodayStartTimestamp();
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(LocalDate.now());
+
+        Double totalCalories = activitySummaryRepository.findTotalCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double totalDistance = activitySummaryRepository.findTotalDistanceByPeriod(user, startTimestamp, endTimestamp);
+        Double avgCalories = activitySummaryRepository.findAvgCaloriesByPeriod(user, startTimestamp, endTimestamp);
+        Double avgDistance = activitySummaryRepository.findAvgDistanceByPeriod(user, startTimestamp, endTimestamp);
+
+        return ActivitySummaryStaticsResponse.builder()
+                .startDate(timeStampUtil.toLocalDate(startTimestamp))
+                .endDate(timeStampUtil.toLocalDate(endTimestamp))
+                .totalCalories(totalCalories != null ? totalCalories : 0.0)
+                .totalDistance(totalDistance != null ? totalDistance : 0.0)
+                .avgCalories(avgCalories != null ? avgCalories : 0.0)
+                .avgDistance(avgDistance != null ? avgDistance : 0.0)
+                .build();
+    }
 
     private ActivitySummaryResponse convertToResponse(ActivitySummary activitySummary) {
         return ActivitySummaryResponse.builder()
                 .totalDistance(activitySummary.getTotalDistance())
-//                .activitySummaryId(activitySummary.getActivitySummaryId())
-                .deviceId(activitySummary.getDeviceId())
-                .deviceType(activitySummary.getDeviceType())
                 .totalCaloriesBurned(activitySummary.getTotalCaloriesBurned())
                 .startTime(timeStampUtil.toLocalDateTime(activitySummary.getStartTime()))
                 .build();
@@ -139,8 +204,6 @@ public class ActivitySummaryService {
     // Helper 메서드
     private ActivitySummaryResponse createEmptyActivitySummaryResponse(Long startTime) {
         return ActivitySummaryResponse.builder()
-                .deviceId(null)
-                .deviceType(null)
                 .startTime(timeStampUtil.toLocalDateTime(startTime))
                 .totalCaloriesBurned(0.0)
                 .totalDistance(0.0)

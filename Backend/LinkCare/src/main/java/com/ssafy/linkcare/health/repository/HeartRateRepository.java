@@ -31,4 +31,22 @@ public interface HeartRateRepository extends JpaRepository<HeartRate, Integer> {
 
 
     Optional<HeartRate> findByUserAndStartTime(User user, Long startTimeTs);
+
+    /**
+     * 기간별 평균 심박수 조회
+     */
+    @Query("SELECT AVG(h.heartRate) FROM HeartRate h WHERE h.user = :user AND h.startTime BETWEEN :startTime AND :endTime")
+    Double findAverageHeartRateByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 최고 심박수 조회
+     */
+    @Query("SELECT MAX(h.heartRate) FROM HeartRate h WHERE h.user = :user AND h.startTime BETWEEN :startTime AND :endTime")
+    Double findMaxHeartRateByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 최저 심박수 조회
+     */
+    @Query("SELECT MIN(h.heartRate) FROM HeartRate h WHERE h.user = :user AND h.startTime BETWEEN :startTime AND :endTime")
+    Double findMinHeartRateByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
 }

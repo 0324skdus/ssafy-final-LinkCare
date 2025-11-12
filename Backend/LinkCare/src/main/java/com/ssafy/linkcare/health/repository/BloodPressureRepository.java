@@ -32,4 +32,34 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, In
     Optional<BloodPressure> findByUserAndStartTime(User user, Long startTimeTs);
 
     List<BloodPressure> findByUserAndStartTimeBetweenOrderByStartTimeDesc(User user, Long startTimeTs, Long endTimeTs);
+
+    /**
+     * 기간별 평균 수축기 혈압 조회
+     */
+    @Query("SELECT AVG(b.systolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
+    Double findAverageSystolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 평균 이완기 혈압 조회
+     */
+    @Query("SELECT AVG(b.diastolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
+    Double findAverageDiastolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 평균 맥박 조회
+     */
+    @Query("SELECT AVG(b.pulseRate) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
+    Double findAveragePulseRateByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 최고 이완기 혈압 조회
+     */
+    @Query("SELECT MAX(b.diastolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
+    Double findMaxDiastolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 최저 이완기 혈압 조회
+     */
+    @Query("SELECT MIN(b.diastolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
+    Double findMinDiastolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
 }

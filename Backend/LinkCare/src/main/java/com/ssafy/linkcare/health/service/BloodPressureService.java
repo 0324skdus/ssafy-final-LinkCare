@@ -4,6 +4,7 @@ import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.health.dto.BloodPressureDto;
 import com.ssafy.linkcare.health.dto.BloodPressureResponse;
+import com.ssafy.linkcare.health.dto.BloodPressureStaticsResponse;
 import com.ssafy.linkcare.health.entity.BloodPressure;
 import com.ssafy.linkcare.health.entity.Exercise;
 import com.ssafy.linkcare.health.repository.BloodPressureRepository;
@@ -131,13 +132,36 @@ public class BloodPressureService {
         return BloodPressureResponse.builder()
                 .bloodPressureId(bloodPressure.getBloodPressureId())
                 .uid(bloodPressure.getUid())
-                .deviceId(bloodPressure.getDeviceId())
-                .deviceType(bloodPressure.getDeviceType())
+//                .deviceId(bloodPressure.getDeviceId())
+//                .deviceType(bloodPressure.getDeviceType())
                 .startTime(timeStampUtil.toLocalDateTime(bloodPressure.getStartTime()))
                 .systolic(bloodPressure.getSystolic())
                 .diastolic(bloodPressure.getDiastolic())
                 .mean(bloodPressure.getMean())
                 .pulseRate(bloodPressure.getPulseRate())
+                .build();
+    }
+
+    /**
+     * 기간별 혈압 통계 조회
+     */
+    public BloodPressureStaticsResponse getBloodPressureStatsByPeriod(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        long startTimestamp = timeStampUtil.toTimestamp(startDate);
+        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+
+        Double avgSystolic = bloodPressureRepository.findAverageSystolicByPeriod(user, startTimestamp, endTimestamp);
+        Double avgDiastolic = bloodPressureRepository.findAverageDiastolicByPeriod(user, startTimestamp, endTimestamp);
+//        Double maxSystolic = bloodPressureRepository.findMaxDiastolicByPeriod()
+
+        return BloodPressureStaticsResponse.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .avgSystolic(avgSystolic != null ? avgSystolic : 0.0)
+                .avgDiastolic(avgDiastolic != null ? avgDiastolic : 0.0)
+//                .maxDiastolic(0.0)
+//                .minDiastolic(0.0)
                 .build();
     }
 

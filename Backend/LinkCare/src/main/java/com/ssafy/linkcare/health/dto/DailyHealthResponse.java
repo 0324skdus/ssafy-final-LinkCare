@@ -12,11 +12,24 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyHealthResponse {
+    @Override
+    public String toString() {
+        return "DailyHealthResponse{" +
+                "활동 요약=" + activitySummary +
+                ", 심박수=" + heartRate +
+                ", 수면=" + sleep +
+                ", 음수량=" + waterIntake +
+                ", 혈압=" + bloodPressure +
+                ", 운동기록=" + exercise +
+                ", 걸음수=" + step +
+                '}';
+    }
+
     private ActivitySummaryResponse activitySummary;
     private List<HeartRateResponse> heartRate;
     private List<SleepResponse> sleep;
     private List<WaterIntakeResponse> waterIntake;
     private List<BloodPressureResponse> bloodPressure;
     private List<ExerciseResponse> exercise;
-    private StepResponse step;
+    private int step;
 }

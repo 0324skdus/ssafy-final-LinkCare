@@ -362,6 +362,51 @@ public class SleepService {
     }
 
     /**
+     * 기간별 수면 통계 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startDate 시작 시간
+     * @param endDate 종료 시간
+     * @return 수면 통계
+     */
+    public SleepStatisticsResponse getSleepStatisticsByDate(
+            int userSeq,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.toTimestamp(startDate);
+        Long endDateTs = timeStampUtil.toTimestamp(endDate);
+
+        log.info("수면 통계 조회 - User: {}, Start: {}, End: {}", userSeq, startDateTs, endDateTs);
+
+        Long totalDuration = sleepRepository
+                .sumTotalDurationByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0L);
+
+        Double avgDuration = sleepRepository
+                .avgDurationByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0.0);
+
+        Integer maxDuration = sleepRepository
+                .maxDurationByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0);
+
+        Integer minDuration = sleepRepository
+                .minDurationByUserAndPeriod(user, startDateTs, endDateTs)
+                .orElse(0);
+
+        return SleepStatisticsResponse.builder()
+                .totalDuration(totalDuration)
+                .averageDuration(avgDuration)
+                .maxDuration(maxDuration)
+                .minDuration(minDuration)
+                .startTime(timeStampUtil.toLocalDateTime(startDateTs))
+                .endTime(timeStampUtil.toLocalDateTime(endDateTs))
+                .build();
+    }
+
+    /**
      * 당일 수면 통계 조회
      */
     public SleepStatisticsResponse getTodaySleepStatistics(int userSeq) {
@@ -387,9 +432,9 @@ public class SleepService {
 
         return SleepResponse.builder()
                 .sleepId(sleep.getSleepId())
-                .deviceId(sleep.getDeviceId())
-                .deviceType(sleep.getDeviceType())
-                .uid(sleep.getUid())
+//                .deviceId(sleep.getDeviceId())
+//                .deviceType(sleep.getDeviceType())
+//                .uid(sleep.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(sleep.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(sleep.getEndTime()))
                 .duration(sleep.getDuration())

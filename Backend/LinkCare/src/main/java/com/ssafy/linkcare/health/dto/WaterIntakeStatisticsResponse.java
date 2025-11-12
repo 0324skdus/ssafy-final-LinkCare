@@ -20,4 +20,17 @@ public class WaterIntakeStatisticsResponse {
     private Long intakeCount;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+
+    @Override
+    public String toString() {
+        return "WaterIntakeStatisticsResponse{" +
+                "totalAmount=" + totalAmount +
+                ", averageAmount=" + averageAmount +
+                ", dailyGoal=" + dailyGoal +
+                ", goalAchievementRate=" + goalAchievementRate +
+                ", intakeCount=" + intakeCount +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                '}';
+    }
 }

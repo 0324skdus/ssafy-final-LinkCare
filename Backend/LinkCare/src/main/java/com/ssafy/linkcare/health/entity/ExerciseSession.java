@@ -34,6 +34,9 @@ public class ExerciseSession {
     @Column(name = "distance")
     private float distance;
 
+    @Column(name = "duration")
+    private Long duration;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_id")
     private Exercise exercise;
