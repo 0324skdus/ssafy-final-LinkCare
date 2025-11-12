@@ -11,21 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TodayHealthSummary {
 
-    private String dailyActivityReview;
-    private String bloodPressureReview;
-    private String waterIntakeReview;
-    private String sleepReview;
-    private String heartRateReview;
+    private ActivitySummaryStaticsResponse activitySummary;
+    private ExerciseStatisticsResponse exercise;
+    private int step;
+    private HeartRateStaticsResponse heartRate;
+    private BloodPressureStaticsResponse bloodPressure;
+    private WaterIntakeStatisticsResponse waterIntake;
+    private SleepStatisticsResponse sleep;
 
-    @Override
-    public String toString() {
-        return "TodayHealthSummary{" +
-                "dailyActivityReview='" + dailyActivityReview + '\'' +
-                ", bloodPressureReview='" + bloodPressureReview + '\'' +
-                ", waterIntakeReview='" + waterIntakeReview + '\'' +
-                ", sleepReview='" + sleepReview + '\'' +
-                ", heartRateReview='" + heartRateReview + '\'' +
-                '}';
-    }
 }
 

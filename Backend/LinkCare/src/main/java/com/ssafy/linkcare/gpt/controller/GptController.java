@@ -82,4 +82,23 @@ public class GptController {
         return ResponseEntity.ok(response);
     }
 
+
+    @GetMapping("/health-summary/today/{userSeq}")
+    @Operation(summary = "개인 건강 데이터별 한줄평 생성", description = "사용자의 일일 건강 데이터를 분석하여 데이터별 한줄평을 제공합니다")
+    public ResponseEntity<TodayHealthSummaryResponse> getTodayHealthSummary(@PathVariable int userSeq) {
+
+        log.info("=== 오늘의 건강 한줄평 생성 시작 ===");
+        log.info("사용자 ID: {}", userSeq);
+
+        // 1. 오늘의 건강 데이터 조회
+        TodayHealthSummary todayHealthData = healthService.getTodayHealthSummary(userSeq);
+        log.info("건강 데이터 조회 완료");
+
+        // 2. GPT로 한줄평 생성
+        TodayHealthSummaryResponse response = gptService.generateTodayHealthReviews(todayHealthData);
+        log.info("한줄평 생성 완료");
+        log.info("=== 건강 한줄평 생성 완료 ===");
+
+        return ResponseEntity.ok(response);
+    }
 }

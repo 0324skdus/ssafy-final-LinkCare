@@ -296,6 +296,8 @@ public class WaterIntakeService {
             goalAchievementRate = (totalAmount / dailyGoal) * 100;
         }
 
+        log.info("당일 총 음수량 - amount: {}", totalAmount);
+
         return WaterIntakeStatisticsResponse.builder()
                 .totalAmount(totalAmount)
                 .averageAmount(avgAmount)

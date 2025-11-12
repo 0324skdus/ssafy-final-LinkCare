@@ -1,17 +1,18 @@
 package com.ssafy.linkcare.gpt.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.gpt.dto.*;
-import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -28,6 +29,7 @@ public class GptService {
     private String model;
 
     private WebClient webClient;
+    private final ObjectMapper objectMapper;
 
     private WebClient getWebClient() {
         if(webClient == null) {
@@ -270,5 +272,219 @@ public class GptService {
         return sb.toString();
     }
 
+    /**
+     * 오늘의 건강 데이터 한줄평 생성
+     */
+    public TodayHealthSummaryResponse generateTodayHealthReviews(TodayHealthSummary healthData) {
+        log.info("GPT 한줄평 생성 시작...");
 
+        return TodayHealthSummaryResponse.builder()
+                .dailyActivityReview(generateDailyActivityReview(
+                        healthData.getActivitySummary(),
+                        healthData.getExercise(),
+                        healthData.getStep()
+                ))
+                .bloodPressureReview(generateBloodPressureReview(
+                        healthData.getBloodPressure()
+                ))
+                .waterIntakeReview(generateWaterIntakeReview(
+                        healthData.getWaterIntake()
+                ))
+                .sleepReview(generateSleepReview(
+                        healthData.getSleep()
+                ))
+                .heartRateReview(generateHeartRateReview(
+                        healthData.getHeartRate()
+                ))
+                .build();
+    }
+
+    /**
+     * 일일 활동 리뷰 (ActivitySummary + Exercise + Step 통합)
+     */
+    private String generateDailyActivityReview(
+            ActivitySummaryStaticsResponse activitySummary,
+            ExerciseStatisticsResponse exercise,
+            int step) {
+
+        String dataJson = createDailyActivityJson(activitySummary, exercise, step);
+        log.info("DailyActivity 데이터:\n{}", dataJson);
+
+        String systemPrompt = """
+            운동 및 활동 데이터를 한 줄로 요약해주세요.
+            
+            [요약 방식]
+            - 격려나 평가가 아닌 데이터 그 자체를 요약
+            - 걸음수, 운동시간 등 주요 수치 포함
+            - 객관적인 상태 표현
+            
+            좋은 예시:
+            - "평균 5000보의 적정한 활동을 진행 중"
+            - "오늘 3000보 활동 부족"
+            - "운동 30분, 8000보 활발한 활동"
+            
+            나쁜 예시:
+            - "오늘 정말 잘했어요!" ❌ (격려형)
+            - "조금 더 움직여볼까요?" ❌ (권유형)
+            
+            응답 형식: 25자 이내 데이터 요약 (이모지 없이)
+            """;
+
+        String review = getChatCompletion(dataJson, systemPrompt).trim();
+        log.info("DailyActivity 리뷰: {}", review);
+        return review;
+    }
+
+    /**
+     * 혈압 리뷰
+     */
+    private String generateBloodPressureReview(BloodPressureStaticsResponse bloodPressure) {
+        String dataJson = toJson(bloodPressure);
+        log.info("BloodPressure 데이터:\n{}", dataJson);
+
+        String systemPrompt = """
+            혈압 데이터를 한 줄로 요약해주세요.
+            
+            [요약 방식]
+            - 수치를 포함한 객관적 요약
+            - 정상/높음/낮음 등의 상태 표현
+            
+            좋은 예시:
+            - "정상 혈압 120/80mmH 기록"
+            - "평균 혈압 135/85mmH 약간 높음"
+            - "수축기 110mmH 안정적 수치"
+            
+            나쁜 예시:
+            - "혈압 관리 잘하고 계세요!" ❌ (격려형)
+            
+            응답 형식: 20자 이내 데이터 요약 (이모지 없이)
+            """;
+
+        String review = getChatCompletion(dataJson, systemPrompt).trim();
+        log.info("BloodPressure 리뷰: {}", review);
+        return review;
+    }
+
+    /**
+     * 수분 섭취 리뷰
+     */
+    private String generateWaterIntakeReview(WaterIntakeStatisticsResponse waterIntake) {
+        String dataJson = toJson(waterIntake);
+        log.info("WaterIntake 데이터:\n{}", dataJson);
+
+        String systemPrompt = """
+            수분 섭취 데이터를 한 줄로 요약해주세요.
+            
+            [요약 방식]
+            - 섭취량과 상태를 명시
+            
+            좋은 예시:
+            - "하루 1L 섭취 기록"
+            - "목표 2L 중 1.5L 섭취"
+            - "오늘 800ml 섭취 부족"
+            
+            나쁜 예시:
+            - "물 조금만 더 마셔봐요" ❌ (권유형)
+            
+            응답 형식: 20자 이내 데이터 요약 (이모지 없이)
+            """;
+
+        String review = getChatCompletion(dataJson, systemPrompt).trim();
+        log.info("WaterIntake 리뷰: {}", review);
+        return review;
+    }
+
+    /**
+     * 수면 리뷰
+     */
+    private String generateSleepReview(SleepStatisticsResponse sleep) {
+        String dataJson = toJson(sleep);
+        log.info("Sleep 데이터:\n{}", dataJson);
+
+        String systemPrompt = """
+            수면 데이터를 한 줄로 요약해주세요.
+            
+            [요약 방식]
+            - 수면 시간과 상태를 포함
+            
+            좋은 예시:
+            - "평균 7.2시간의 적정한 수면을 유지 중"
+            - "6시간 수면으로 부족한 상태"
+            - "8시간 충분한 수면 기록"
+            
+            나쁜 예시:
+            - "숙면하셨네요!" ❌ (평가형)
+            
+            응답 형식: 25자 이내 데이터 요약 (이모지 없이)
+            """;
+
+        String review = getChatCompletion(dataJson, systemPrompt).trim();
+        log.info("Sleep 리뷰: {}", review);
+        return review;
+    }
+
+    /**
+     * 심박수 리뷰
+     */
+    private String generateHeartRateReview(HeartRateStaticsResponse heartRate) {
+        String dataJson = toJson(heartRate);
+        log.info("HeartRate 데이터:\n{}", dataJson);
+
+        String systemPrompt = """
+            심박수 데이터를 한 줄로 요약해주세요.
+            
+            [요약 방식]
+            - 평균 심박수와 상태를 명시
+            
+            좋은 예시:
+            - "평균 심박수 72bpm 정상 범위"
+            - "안정 심박수 65bpm 양호"
+            - "평균 85bpm 약간 높은 수치"
+            
+            나쁜 예시:
+            - "심박수 안정적이에요!" ❌ (평가형)
+            
+            응답 형식: 20자 이내 데이터 요약 (이모지 없이)
+            """;
+
+        String review = getChatCompletion(dataJson, systemPrompt).trim();
+        log.info("HeartRate 리뷰: {}", review);
+        return review;
+    }
+
+    // ========== 유틸리티 메서드 ==========
+
+    /**
+     * DailyActivity 통합 JSON 생성
+     */
+    private String createDailyActivityJson(
+            ActivitySummaryStaticsResponse activity,
+            ExerciseStatisticsResponse exercise,
+            int step) {
+
+        Map<String, Object> combined = new LinkedHashMap<>();
+        combined.put("활동요약", activity != null ? activity : "데이터 없음");
+        combined.put("운동", exercise != null ? exercise : "데이터 없음");
+        combined.put("걸음수", step != 0 ? step : "데이터 없음");
+
+        return toJson(combined);
+    }
+
+    /**
+     * 객체를 JSON 문자열로 변환
+     */
+    private String toJson(Object obj) {
+        if (obj == null) {
+            return "{\"message\": \"데이터 없음\"}";
+        }
+
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            log.error("JSON 변환 실패: {}", obj.getClass().getSimpleName(), e);
+            return "{\"error\": \"데이터 변환 실패\"}";
+        }
+    }
 }
+

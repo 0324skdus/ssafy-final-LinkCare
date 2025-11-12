@@ -90,19 +90,15 @@ public class HealthService {
         LocalDate start = LocalDate.now();
         LocalDate end = LocalDate.now().plusDays(1);
 
-        String dailyActivityReview = createDailyActivityDataForGPT(
-                activitySummaryService.getActivitySummaryStatsToday(userSeq),
-                exerciseService.getTodayExerciseStatistics(userSeq),
-                stepService.getTodayStepCount(userSeq)
-
-        );
-        return TodayHealthSummary
-                .builder()
-                .dailyActivityReview(dailyActivityReview)
-                .heartRateReview(heartRateService.getHeartRateStatsByDate(userSeq, start, end).toString())
-                .bloodPressureReview(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, start, end).toString())
-                .waterIntakeReview(waterIntakeService.getTodayWaterIntakeStatistics(userSeq).toString())
-                .sleepReview(sleepService.getSleepStatisticsByDate(userSeq, start, end).toString()).build();
+        return TodayHealthSummary.builder()
+                .activitySummary(activitySummaryService.getActivitySummaryStatsToday(userSeq))
+                .exercise(exerciseService.getTodayExerciseStatistics(userSeq))
+                .step(stepService.getTodayStepCount(userSeq))
+                .heartRate(heartRateService.getHeartRateStatsByDate(userSeq, start, end))
+                .bloodPressure(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, start, end))
+                .waterIntake(waterIntakeService.getTodayWaterIntakeStatistics(userSeq))
+                .sleep(sleepService.getSleepStatisticsByDate(userSeq, start, end))
+                .build();
     }
 
 
