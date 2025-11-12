@@ -320,4 +320,37 @@ public class TimeStampUtil {
             return startDate + " ~ " + endDate;
         }
     }
+
+    /**
+     * 현재 날짜 기준 지난주 월요일 날짜 반환
+     * @return 지난주 월요일 LocalDate
+     */
+    public LocalDate getLastWeekMonday() {
+        LocalDate today = LocalDate.now();
+        LocalDate thisMonday = today.with(DayOfWeek.MONDAY);
+        return thisMonday.minusWeeks(1);
+    }
+
+    public LocalDate getLastWeekMonday(LocalDate date) {
+        LocalDate today = LocalDate.now();
+        LocalDate thisMonday = date.with(DayOfWeek.MONDAY);
+        return thisMonday.minusWeeks(1);
+    }
+
+
+
+    /**
+     * 현재 날짜 기준 지난주 일요일 날짜 반환
+     * @return 지난주 일요일 LocalDate
+     */
+    public LocalDate getLastWeekSunday() {
+        LocalDate today = LocalDate.now();
+        LocalDate thisMonday = today.with(DayOfWeek.MONDAY);
+        return thisMonday.minusDays(1);
+    }
+
+    public LocalDate getLastWeekSunday(LocalDate date) {
+        LocalDate thisMonday = date.with(DayOfWeek.MONDAY);
+        return thisMonday.minusDays(1);
+    }
 }

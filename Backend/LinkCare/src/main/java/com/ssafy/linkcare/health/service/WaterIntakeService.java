@@ -296,6 +296,8 @@ public class WaterIntakeService {
             goalAchievementRate = (totalAmount / dailyGoal) * 100;
         }
 
+        log.info("당일 총 음수량 - amount: {}", totalAmount);
+
         return WaterIntakeStatisticsResponse.builder()
                 .totalAmount(totalAmount)
                 .averageAmount(avgAmount)
@@ -333,9 +335,9 @@ public class WaterIntakeService {
     private WaterIntakeResponse convertToResponse(WaterIntake waterIntake) {
         return WaterIntakeResponse.builder()
                 .waterIntakeId(waterIntake.getWaterIntakeId())
-                .deviceId(waterIntake.getDeviceId())
-                .deviceType(waterIntake.getDeviceType())
-                .uid(waterIntake.getUid())
+//                .deviceId(waterIntake.getDeviceId())
+//                .deviceType(waterIntake.getDeviceType())
+//                .uid(waterIntake.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(waterIntake.getStartTime()))
                 .amount(waterIntake.getAmount())
                 .build();

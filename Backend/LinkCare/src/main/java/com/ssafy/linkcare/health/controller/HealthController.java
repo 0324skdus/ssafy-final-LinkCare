@@ -24,7 +24,7 @@ public class HealthController {
 
     private final HealthService healthSyncService;
 
-    // 일별 전체 데이터 동기화
+    // 일별 데이터 동기화
     @PostMapping("/users/{userId}/daily")
     public ResponseEntity<ApiResponse<DailyHealthData>> uploadUserDailyHealthData(
             @PathVariable int userId, @RequestBody DailyHealthData data) {

@@ -15,5 +15,6 @@ public class ExerciseSessionDto {
     private String exerciseType;
     private float calories;
     private float distance;
+    private Long duration;
 
 }

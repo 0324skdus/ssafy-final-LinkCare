@@ -35,4 +35,29 @@ public interface ActivitySummaryRepository extends JpaRepository<ActivitySummary
             Long startTime,
             Long endTime
     );
+
+//    List<ActivitySummary> findByUserAndStartTimeBetween(User user, long startTime, long endTime);
+    /**
+     * 기간별 총 소모 칼로리 조회
+     */
+    @Query("SELECT SUM(a.totalCaloriesBurned) FROM ActivitySummary a WHERE a.user = :user AND a.startTime BETWEEN :startTime AND :endTime")
+    Double findTotalCaloriesByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 총 이동 거리 조회
+     */
+    @Query("SELECT SUM(a.totalDistance) FROM ActivitySummary a WHERE a.user = :user AND a.startTime BETWEEN :startTime AND :endTime")
+    Double findTotalDistanceByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 평균 소모 칼로리 조회
+     */
+    @Query("SELECT AVG(a.totalCaloriesBurned) FROM ActivitySummary a WHERE a.user = :user AND a.startTime BETWEEN :startTime AND :endTime")
+    Double findAvgCaloriesByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+
+    /**
+     * 기간별 평균 이동 거리 조회
+     */
+    @Query("SELECT AVG(a.totalDistance) FROM ActivitySummary a WHERE a.user = :user AND a.startTime BETWEEN :startTime AND :endTime")
+    Double findAvgDistanceByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
 }
