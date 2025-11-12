@@ -8,6 +8,8 @@ import com.ssafy.linkcare.group.entity.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
+import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
@@ -20,9 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,6 +37,7 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private final S3Service s3Service;
+    private final HealthService healthService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final NotificationService notificationService;
@@ -215,13 +220,11 @@ public class GroupService {
         List<GroupDetailResponse.MemberDto> memberDtos = members.stream()
                 .map(gm -> {
                     User user = gm.getUser();
-                    List<String> mainCharacterImageUrls = Collections.emptyList();
+                    String baseImageUrl = null;
                     UserCharacter mainCharacter = user.getMainCharacter();
 
                     if (mainCharacter != null && mainCharacter.getCharacter() != null) {
-                        mainCharacterImageUrls = mainCharacter.getCharacter().getImageS3Keys().stream()
-                                .map(s3Service::generatePresignedGetUrl)
-                                .collect(Collectors.toList());
+                        baseImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getCharacter().getBaseImageS3Key());
                     }
 
                     return new GroupDetailResponse.MemberDto(
@@ -229,7 +232,7 @@ public class GroupService {
                             user.getUserPk(),
                             user.getName(),
                             gm.getIsLeader(),
-                            mainCharacterImageUrls
+                            baseImageUrl
                     );
                 })
                 .toList();
@@ -872,6 +875,31 @@ public class GroupService {
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());
     }
 
+    // 그룹 건강 요약 데이터 반환
+    public List<HealthStaticsResponse> getLastWeekGroupHealthStats(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> members = groupMemberRepository
+                .findByGroupWithUser(group);  // fetch join user
+
+        return members.stream()
+                .map(member -> {
+                    try {
+                        return healthService.getHealthStaticsData(
+                                Math.toIntExact(member.getUser().getUserPk()),
+                                startDate,
+                                endDate
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to get health data for user: {}",
+                                member.getUser().getUserPk(), e);
+                        return null;  // 또는 기본값
+                    }
+                })
+                .filter(Objects::nonNull)  // null 제거
+                .toList();
+    }
+
     /*
         * GroupInvitation을 InvitationResponse로 변환
         * invitationUrl은 null로 반환 - 프론트엔드에서 자유롭게 사용
@@ -890,6 +918,11 @@ public class GroupService {
                 invitation.getExpiredAt(),
                 null  // 프론트엔드에서 직접 URL/메시지 구성
         );
+    }
+
+    private Group validateGroup(Long groupSeq) {
+        return groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
     }
 
 }

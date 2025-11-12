@@ -2,19 +2,13 @@ package com.ssafy.linkcare.health.service;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
-import com.ssafy.linkcare.health.dto.BloodPressureDto;
-import com.ssafy.linkcare.health.dto.HeartRateDto;
-import com.ssafy.linkcare.health.dto.HeartRateResponse;
-import com.ssafy.linkcare.health.dto.StepResponse;
-import com.ssafy.linkcare.health.entity.BloodPressure;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.entity.HeartRate;
-import com.ssafy.linkcare.health.entity.Step;
 import com.ssafy.linkcare.health.repository.HeartRateRepository;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -175,12 +169,34 @@ public class HeartRateService {
     private HeartRateResponse convertToResponse(HeartRate heartRate) {
         return HeartRateResponse.builder()
                 .heartRateId(heartRate.getHeartRateId())
-                .uid(heartRate.getUid())
+//                .uid(heartRate.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(heartRate.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(heartRate.getEndTime()))
-                .deviceId(heartRate.getDeviceId())
-                .deviceType(heartRate.getDeviceType())
+//                .deviceId(heartRate.getDeviceId())
+//                .deviceType(heartRate.getDeviceType())
                 .heartRate(heartRate.getHeartRate())
+                .build();
+    }
+
+    /**
+     * 기간별 심박수 통계 조회
+     */
+    public HeartRateStaticsResponse getHeartRateStatsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        long startTimestamp = timeStampUtil.toTimestamp(startDate);
+        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+
+        Double avgHeartRate = heartRateRepository.findAverageHeartRateByPeriod(user, startTimestamp, endTimestamp);
+        Double maxHeartRate = heartRateRepository.findMaxHeartRateByPeriod(user, startTimestamp, endTimestamp);
+        Double minHeartRate = heartRateRepository.findMinHeartRateByPeriod(user, startTimestamp, endTimestamp);
+
+        return HeartRateStaticsResponse.builder()
+                .startTime(startDate)
+                .endTime(endDate)
+                .avgHeartRate(avgHeartRate != null ? avgHeartRate : 0.0)
+                .maxHeartRate(maxHeartRate != null ? maxHeartRate : 0.0)
+                .minHeartRate(minHeartRate != null ? minHeartRate : 0.0)
                 .build();
     }
 

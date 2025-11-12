@@ -1,20 +1,12 @@
 package com.ssafy.linkcare.health.controller;
 
-import com.ssafy.linkcare.health.dto.ActivitySummaryResponse;
 import com.ssafy.linkcare.health.dto.StepResponse;
 import com.ssafy.linkcare.health.dto.StepStatisticsResponse;
-import com.ssafy.linkcare.health.service.ActivitySummaryService;
 import com.ssafy.linkcare.health.service.StepService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -111,7 +103,7 @@ public class StepController {
         log.info("API 호출 - 해당 날짜 포함 일주일 총 걸음 수 조회: userSeq ={}, startDate ={}", userSeq, startDate);
 
         StepStatisticsResponse response =
-                stepService.getWeekStepStatistics(userSeq, startDate);
+                stepService.getWeekStepStatisticsByContainDate(userSeq, startDate);
 
         return ResponseEntity.ok(response);
     }
@@ -130,7 +122,7 @@ public class StepController {
                 userSeq, startDate, endDate);
 
         StepStatisticsResponse response =
-                stepService.getWeekStepStatistics(userSeq, startDate, endDate);
+                stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
     }

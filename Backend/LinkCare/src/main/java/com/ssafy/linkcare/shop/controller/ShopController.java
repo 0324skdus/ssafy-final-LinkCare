@@ -29,4 +29,13 @@ public class ShopController {
         shopService.buyCharacter(userPk, characterId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/buy/background/{backgroundId}")
+    public ResponseEntity<Void> buyBackground(
+            Authentication authentication,
+            @PathVariable Long backgroundId) {
+        Long userPk = Long.parseLong(authentication.getName());
+        shopService.buyBackground(userPk, backgroundId);
+        return ResponseEntity.ok().build();
+    }
 }

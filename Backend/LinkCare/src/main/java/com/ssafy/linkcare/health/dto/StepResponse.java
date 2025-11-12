@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 public class StepResponse {
 
     private int stepId;
-    private int userSeq;
-    private String deviceId;
-    private String deviceType;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private int count;

@@ -70,6 +70,18 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Integer> {
     );
 
     /**
+     * 특정 사용자의 기간별 총 운동 시간 합계
+     */
+    @Query("SELECT SUM(es.duration) FROM ExerciseSession es " +
+            "JOIN es.exercise e " +
+            "WHERE e.user = :user AND e.startTime BETWEEN :startTime AND :endTime")
+    Long sumTotalDurationByUserAndPeriod(
+            @Param("user") User user,
+            @Param("startTime") Long startTime,
+            @Param("endTime") Long endTime
+    );
+
+    /**
      * 특정 사용자의 기간별 운동 횟수
      */
     @Query("SELECT COUNT(e) FROM Exercise e " +

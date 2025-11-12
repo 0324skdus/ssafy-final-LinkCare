@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -39,6 +41,7 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final CharacterService characterService;
     private final PointService pointService;
+    private final BackgroundService backgroundService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -102,6 +105,9 @@ public class AuthService {
 
         // 5. 포인트 계정 생성
         pointService.createPointForNewUser(user);
+
+        // 6. 기본 배경 할당
+        backgroundService.assignDefaultBackground(user);
 
         log.info("회원가입 완료: {}", request.email());
     }
@@ -181,8 +187,10 @@ public class AuthService {
         // 2. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
 
-        // 3. 프로필/캐릭터 선택 필요 여부 확인
-        boolean needsProfileCompletion = (user.getBirth() == null || user.getMainCharacter() == null);
+        // 3. 프로필/캐릭터/펫이름 선택 필요 여부 확인
+        boolean needsProfileCompletion = (user.getBirth() == null
+                || user.getMainCharacter() == null
+                || !StringUtils.hasText(user.getPetName()));
 
         return new LoginResponse(
                 accessToken,
