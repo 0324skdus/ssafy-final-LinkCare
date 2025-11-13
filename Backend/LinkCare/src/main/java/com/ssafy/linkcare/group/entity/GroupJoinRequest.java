@@ -12,6 +12,30 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/*
+    * 그룹 참가 신청 엔티티
+
+    * 역할: 사용자가 그룹에 참가 신청할 때 신청 정보와 권한 동의 내역을 저장
+
+    * 신청 방법:
+        * 1. 초대 링크로 신청 (POST /api/groups/invitations/{token}/join)
+        * 2. 검색으로 신청 (POST /api/groups/{groupSeq}/join)
+
+    * 신청 상태 (RequestStatus):
+        * - PENDING: 방장의 승인 대기 중
+        * - APPROVED: 방장이 승인 (GroupMember로 등록됨)
+        * - REJECTED: 방장이 거절
+
+    * 권한 동의 정보:
+        * - 필수 권한(걸음수, 심박수, 운동)은 무조건 동의되어야 신청 가능
+        * - 선택 권한(수면, 물섭취량, 혈압, 혈당)은 그룹 요구사항에 따라 검증
+        * - CARE 그룹: GroupRequiredPermission과 비교하여 검증
+        * - HEALTH 그룹: 선택 권한 검증 불필요
+
+    * 연관 엔티티:
+        * - Group (N:1) - 신청한 그룹
+        * - User (N:1) - 신청한 사용자
+*/
 @Entity
 @Table(name = "group_join_requests")
 @Getter

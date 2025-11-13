@@ -12,6 +12,8 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력값입니다"),
     INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "이메일 형식이 올바르지 않습니다"),
     INVALID_PASSWORD_FORMAT(HttpStatus.BAD_REQUEST, "비밀번호 형식이 올바르지 않습니다"),
+    INSUFFICIENT_POINTS(HttpStatus.BAD_REQUEST, "포인트가 부족합니다."),
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
 
     // 이메일 인증 관련
     VERIFICATION_CODE_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 코드가 만료되었거나 존재하지 않습니다"),
@@ -24,9 +26,13 @@ public enum ErrorCode {
 
     // 404 Not Found
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"),
+    CHARACTER_NOT_FOUND(HttpStatus.NOT_FOUND, "캐릭터를 찾을 수 없습니다"),
+    BACKGROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "배경을 찾을 수 없습니다"),
 
     // 409 Conflict
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 존재하는 이메일입니다"),
+    DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "이미 존재하는 리소스입니다"),
+    ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
 
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다"),
@@ -55,12 +61,13 @@ public enum ErrorCode {
 
     // 403 Forbidden
     NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
-    ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버입니다"),
+    ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버임"),
 
     // 409 Conflict
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
     DUPLICATE_JOIN_REQUEST(HttpStatus.CONFLICT, "이미 가입 신청한 그룹입니다"),
     GROUP_CAPACITY_FULL(HttpStatus.CONFLICT, "그룹 정원이 가득 차서 초대 링크를 생성할 수 없습니다"),
+    GROUP_REQUIRED_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹 요구 권한을 찾을 수 없습니다"),
 
     // 400 Bad Request
     INVALID_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 초대 링크입니다"),
@@ -68,7 +75,18 @@ public enum ErrorCode {
     JOIN_REQUEST_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 가입 신청입니다"),
 
     PERMISSION_AGREEMENT_INVALID(HttpStatus.BAD_REQUEST, "권한 동의 정보가 유효하지 않습니다"),
-    HEALTH_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 정보 권한 설정을 찾을 수 없습니다");
+    HEALTH_PERMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 정보 권한 설정을 찾을 수 없습니다"),
+
+    // 알림 관련 에러 (Notification)
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다"),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다"),
+
+    // 헬스 데이터 관련 에러
+    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "건강 데이터를 찾을 수 없습니다"),
+
+    // gpt
+    AI_RESPONSE_NO_CONTENT(HttpStatus.NO_CONTENT, "Chat GPT 응답이 비어있습니다."),
+    AI_PROVIDER_CALL_FAILED(HttpStatus.BAD_GATEWAY, "AI 호출 실패");
 
     private final HttpStatus status;
     private final String message;

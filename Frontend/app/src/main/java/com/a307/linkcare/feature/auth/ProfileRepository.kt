@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.auth
 
 import android.util.Log
 import com.a307.linkcare.feature.auth.data.ProfileApi
+import com.a307.linkcare.feature.auth.domain.UpdateCharacterRequest
 import com.a307.linkcare.feature.auth.domain.UpdateProfileRequest
 import javax.inject.Inject
 
@@ -24,12 +25,28 @@ class ProfileRepository @Inject constructor(
             exerciseStartYear = exerciseStartYear
         )
 
-        Log.d("ProfileRepository", "updateProfile() 시작: $body")
         val res = api.updateProfile(body)
-        Log.d("ProfileRepository", "응답  ${res.code()} / 성공 여부: ${res.isSuccessful}")
 
         if (!res.isSuccessful) {
             throw Exception("프로필 업데이트 실패: ${res.code()}")
+        }
+    }
+
+    suspend fun selectInitial(
+        characterId: Long,
+        petName: String
+    ) {
+        val body = UpdateCharacterRequest(
+            characterId = characterId,
+            petName = petName
+        )
+
+        Log.d("ProfileRepository", "selectInitial body = $body")
+
+        val res = api.selectInitial(characterId, petName)
+
+        if (!res.isSuccessful) {
+            throw Exception("프로필 - 캐릭터 업데이트 실패: ${res.code()}")
         }
     }
 }

@@ -10,6 +10,22 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/*
+    * 그룹 멤버의 건강 정보 공유 동의 엔티티
+
+    * 역할: 각 그룹 멤버가 실제로 동의한 건강 정보 항목을 저장
+
+    * 주의: GroupRequiredPermission과 역할이 다름!
+        * - GroupRequiredPermission: 그룹이 요구하는 권한 (그룹 정책)
+        * - GroupHealthPermission: 멤버가 실제로 동의한 권한 (개인 동의)
+
+    * 권한 항목:
+        * - 필수 동의: 걸음수, 심박수, 운동 (모든 그룹 필수)
+        * - 선택 동의: 수면, 물섭취량, 혈압, 혈당 (CARE 그룹만 해당)
+
+    * 연관 엔티티:
+        * - GroupMember (1:1) - 이 권한을 소유한 그룹 멤버
+*/
 @Entity
 @Table(name = "group_health_permissions")
 @Getter

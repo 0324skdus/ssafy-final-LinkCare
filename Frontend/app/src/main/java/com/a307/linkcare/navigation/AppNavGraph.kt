@@ -257,7 +257,9 @@ fun SignupPager(
                 pageCount = pageCount,
                 onStart = { idx, name ->
                     // 캐릭터 선택 후 프로필 제출
-                   vm.submitProfile()
+//                    vm.setCharacterId(idx);
+//                    vm.setCharacterName(name);
+//                   vm.submitProfile();
                 },
                 onNavigateToIntro = onFinished
             )

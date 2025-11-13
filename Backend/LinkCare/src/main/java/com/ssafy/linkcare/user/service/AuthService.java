@@ -1,9 +1,12 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.background.service.BackgroundService;
+import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.email.service.EmailService;
 import com.ssafy.linkcare.email.service.EmailVerificationService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.security.jwt.JwtUtil;
 import com.ssafy.linkcare.security.service.KakaoService;
 import com.ssafy.linkcare.security.service.OAuth2Service;
@@ -20,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -35,6 +39,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
+    private final CharacterService characterService;
+    private final PointService pointService;
+    private final BackgroundService backgroundService;
 
 
     @Value("${jwt.refresh-token-expiration}")
@@ -95,6 +102,12 @@ public class AuthService {
 
         // 4. DB 저장
         userRepository.save(user);
+
+        // 5. 포인트 계정 생성
+        pointService.createPointForNewUser(user);
+
+        // 6. 기본 배경 할당
+        backgroundService.assignDefaultBackground(user);
 
         log.info("회원가입 완료: {}", request.email());
     }
@@ -160,9 +173,9 @@ public class AuthService {
     }
 
     /**
-        * 토큰 생성 및 LoginResponse 반환 (공통 함수)
-        * @param user 사용자 정보
-        * @return LoginResponse
+     * 토큰 생성 및 LoginResponse 반환 (공통 함수)
+     * @param user 사용자 정보
+     * @return LoginResponse
      */
     private LoginResponse generateTokenResponse(User user) {
         String userId = user.getUserPk().toString();
@@ -174,8 +187,10 @@ public class AuthService {
         // 2. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
 
-        // 3. 프로필 완성 여부 확인 (birth가 null이면 추가 정보 입력 필요)
-        Boolean needsProfileCompletion = (user.getBirth() == null);
+        // 3. 프로필/캐릭터/펫이름 선택 필요 여부 확인
+        boolean needsProfileCompletion = (user.getBirth() == null
+                || user.getMainCharacter() == null
+                || !StringUtils.hasText(user.getPetName()));
 
         return new LoginResponse(
                 accessToken,
@@ -189,10 +204,10 @@ public class AuthService {
 
 
     /*
-        * Google 소셜 로그인
-        * @param idToken Android 앱에서 받은 Google ID Token
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * Google 소셜 로그인
+     * @param idToken Android 앱에서 받은 Google ID Token
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse googleLogin(String idToken) {
 
@@ -206,10 +221,10 @@ public class AuthService {
     }
 
     /*
-        * 카카오 소셜 로그인
-        * @param code Android 앱에서 받은 인가 코드
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * 카카오 소셜 로그인
+     * @param code Android 앱에서 받은 인가 코드
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse kakaoLogin(String accessToken) {
         // 1. Access Token으로 사용자 정보 직접 조회 (토큰 발급 단계 생략!)
