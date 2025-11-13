@@ -64,16 +64,16 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi =
-        retrofit.create(AuthApi::class.java) // :contentReference[oaicite:7]{index=7}
+        retrofit.create(AuthApi::class.java)
 
     @Provides
     @Singleton
     fun provideProfileApi(retrofit: Retrofit): ProfileApi =
-        retrofit.create(ProfileApi::class.java) // :contentReference[oaicite:8]{index=8}
+        retrofit.create(ProfileApi::class.java)
 
     @Provides
     @Singleton
     fun provideCharacterApi(retrofit: Retrofit): CharacterApi =
-        retrofit.create(CharacterApi::class.java) // :contentReference[oaicite:8]{index=8}
+        retrofit.create(CharacterApi::class.java)
 
 }
