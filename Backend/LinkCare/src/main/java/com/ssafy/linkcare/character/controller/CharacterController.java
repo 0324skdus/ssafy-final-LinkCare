@@ -16,15 +16,6 @@ public class CharacterController {
 
     private final CharacterService characterService;
 
-    @PostMapping("/select-initial/{characterId}")
-    public ResponseEntity<Void> selectInitialCharacter(
-            Authentication authentication,
-            @PathVariable Long characterId) {
-        Long userPk = Long.parseLong(authentication.getName());
-        characterService.selectInitialCharacter(userPk, characterId);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping
     public ResponseEntity<List<CharacterStatusDto>> getCharacterStatuses(Authentication authentication) {
         Long userPk = Long.parseLong(authentication.getName());

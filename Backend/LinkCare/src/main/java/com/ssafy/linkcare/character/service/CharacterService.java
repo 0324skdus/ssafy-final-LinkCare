@@ -30,36 +30,6 @@ public class CharacterService {
     private final S3Service s3Service;
     private final PointService pointService;
 
-    @Transactional
-    public void selectInitialCharacter(Long userPk, Long characterId) {
-        User user = userRepository.findById(userPk)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        // 1. 이미 대표 캐릭터가 있는지 확인
-        if (user.getMainCharacter() != null) {
-            throw new CustomException(ErrorCode.ALREADY_COMPLETED, "이미 기본 캐릭터를 선택했습니다.");
-        }
-
-        // 2. 선택한 캐릭터가 무료인지 확인
-        Character selectedCharacter = characterRepository.findById(characterId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
-
-        if (selectedCharacter.getPrice() != 0) {
-            throw new CustomException(ErrorCode.INVALID_REQUEST, "무료 캐릭터만 선택할 수 있습니다.");
-        }
-
-        // 3. 캐릭터 할당
-        UserCharacter userCharacter = UserCharacter.builder()
-                .user(user)
-                .character(selectedCharacter)
-                .build();
-        userCharacterRepository.save(userCharacter);
-
-        user.getCharacters().add(userCharacter);
-        user.setMainCharacter(userCharacter);
-        userRepository.save(user);
-    }
-
     public List<CharacterStatusDto> getCharacterStatuses(Long userPk) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));

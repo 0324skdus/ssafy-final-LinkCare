@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -172,9 +173,9 @@ public class AuthService {
     }
 
     /**
-        * 토큰 생성 및 LoginResponse 반환 (공통 함수)
-        * @param user 사용자 정보
-        * @return LoginResponse
+     * 토큰 생성 및 LoginResponse 반환 (공통 함수)
+     * @param user 사용자 정보
+     * @return LoginResponse
      */
     private LoginResponse generateTokenResponse(User user) {
         String userId = user.getUserPk().toString();
@@ -186,8 +187,10 @@ public class AuthService {
         // 2. Refresh Token을 Redis에 저장
         refreshTokenService.saveRefreshToken(userId, refreshToken, refreshTokenExpiration);
 
-        // 3. 프로필/캐릭터 선택 필요 여부 확인
-        boolean needsProfileCompletion = (user.getBirth() == null || user.getMainCharacter() == null);
+        // 3. 프로필/캐릭터/펫이름 선택 필요 여부 확인
+        boolean needsProfileCompletion = (user.getBirth() == null
+                || user.getMainCharacter() == null
+                || !StringUtils.hasText(user.getPetName()));
 
         return new LoginResponse(
                 accessToken,
@@ -201,10 +204,10 @@ public class AuthService {
 
 
     /*
-        * Google 소셜 로그인
-        * @param idToken Android 앱에서 받은 Google ID Token
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * Google 소셜 로그인
+     * @param idToken Android 앱에서 받은 Google ID Token
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse googleLogin(String idToken) {
 
@@ -218,10 +221,10 @@ public class AuthService {
     }
 
     /*
-        * 카카오 소셜 로그인
-        * @param code Android 앱에서 받은 인가 코드
-        * @return LoginResponse (JWT 토큰 포함)
-    */
+     * 카카오 소셜 로그인
+     * @param code Android 앱에서 받은 인가 코드
+     * @return LoginResponse (JWT 토큰 포함)
+     */
     @Transactional
     public LoginResponse kakaoLogin(String accessToken) {
         // 1. Access Token으로 사용자 정보 직접 조회 (토큰 발급 단계 생략!)

@@ -8,8 +8,10 @@ import android.util.Base64
 import android.util.Log
 import com.a307.linkcare.R
 import com.kakao.sdk.common.KakaoSdk
+import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
 
+@HiltAndroidApp
 class LinkCareApp : Application() {
 
     override fun onCreate() {
@@ -17,7 +19,7 @@ class LinkCareApp : Application() {
 
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
 
-        // 개발 중 필요하면 KeyHash 출력 (카카오 콘솔 등록용)
+        // KeyHash 출력 (카카오 콘솔 등록용)
         printKeyHash()
     }
 
