@@ -7,6 +7,7 @@ import com.ssafy.linkcare.character.repository.UserCharacterRepository;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
+import com.ssafy.linkcare.user.dto.UserProfileResponse;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +87,23 @@ public class UserService {
     public User getUserById(Long userPk) {
         return userRepository.findById(userPk)
             .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    /**
+     * 사용자 프로필 조회
+     */
+    public UserProfileResponse getUserProfile(Long userPk) {
+        User user = userRepository.findById(userPk)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return new UserProfileResponse(
+                user.getName(),
+                user.getBirth(),
+                user.getHeight(),
+                user.getWeight(),
+                user.getGender(),
+                user.getExerciseStartYear()
+        );
     }
 
     /*

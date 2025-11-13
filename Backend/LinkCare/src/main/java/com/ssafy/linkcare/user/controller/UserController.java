@@ -4,6 +4,7 @@ import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
 import com.ssafy.linkcare.user.dto.UpdateFcmTokenRequest;
+import com.ssafy.linkcare.user.dto.UserProfileResponse;
 import com.ssafy.linkcare.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,6 +43,26 @@ public class UserController {
         Long userPk = Long.parseLong(authentication.getName());
         userService.completeInitialSetup(userPk, characterId, petName);
         return ResponseEntity.ok().build();
+    }
+
+    /*
+     * 내 프로필 조회
+     * GET /api/users/me
+     */
+    @Operation(summary = "내 프로필 조회",
+        description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "프로필 조회 성공"),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileResponse> getMyProfile(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        UserProfileResponse profile = userService.getUserProfile(userId);
+
+        log.info("프로필 조회: userId={}", userId);
+        return ResponseEntity.ok(profile);
     }
 
     /*
