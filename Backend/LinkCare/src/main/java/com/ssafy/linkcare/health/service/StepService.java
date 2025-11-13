@@ -83,7 +83,7 @@ public class StepService {
     }
 
     // 3주치 데이터 조회
-    public List<StepResponse> getStepsByPeriod(int userSeq, Long startTime, Long endTime) {
+    public List<StepResponse> getStepsThreeWeeks(int userSeq, Long startTime, Long endTime) {
         User user = validateUser(userSeq);
 
         // 기본값 3주
@@ -129,6 +129,37 @@ public class StepService {
         } else {
             return step.getCount();
         }
+    }
+
+    public List<StepResponse> getStepsByPeriod(int userSeq, Long startTime, Long endTime) {
+        User user = validateUser(userSeq);
+
+        // 기본값 3주
+        Long startTimeTs = timeStampUtil.getThreeWeeksAgoTimestamp();
+        Long endTimeTs = timeStampUtil.getCurrentTimestamp();
+
+        log.info("기간별 조회 - User: {}, Start: {}, End: {}",
+                userSeq, startTimeTs, endTimeTs);
+
+        List<Step> steps = stepRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user,startTimeTs, endTimeTs);
+
+        return steps.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
+    public List<StepResponse> getStepsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        log.info("(LocalDate) 기간별 조회 - User: {}, Start: {}, End: {}",
+                userSeq, startTimeTs, endTimeTs);
+
+        List<Step> steps = stepRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user,startTimeTs, endTimeTs);
+
+        return steps.stream().map(this::convertToResponse).collect(Collectors.toList());
     }
 
     // 일주일 데이터 조회

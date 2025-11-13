@@ -128,6 +128,20 @@ public class BloodPressureService {
                 .collect(Collectors.toList());
     }
 
+    public List<BloodPressureResponse> getBloodPressureByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        List<BloodPressure> bloodPressures = bloodPressureRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startTimeTs, endTimeTs);
+
+        return bloodPressures.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     private BloodPressureResponse convertToResponse(BloodPressure bloodPressure) {
         return BloodPressureResponse.builder()
                 .bloodPressureId(bloodPressure.getBloodPressureId())

@@ -6,6 +6,7 @@ import com.ssafy.linkcare.health.dto.DailyHealthResponse;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -72,6 +73,17 @@ public class HealthController {
         TotalActivityStatisticsResponse response = healthService.getTotalActivityStatistics(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 특정 그룹의 모든 멤버 데이터 동기화 (그룹 페이지 진입 시)
+     */
+    @PostMapping("/sync/group/{groupSeq}")
+    @Operation(summary = "그룹 데이터 동기화", description = "특정 그룹의 모든 멤버 데이터를 동기화합니다")
+    public ResponseEntity<String> syncGroup(@PathVariable Long groupSeq) {
+        log.info("그룹 {} 동기화 요청", groupSeq);
+        healthService.syncGroupMembersHealthData(groupSeq);
+        return ResponseEntity.ok("동기화 완료");
     }
 
 }
