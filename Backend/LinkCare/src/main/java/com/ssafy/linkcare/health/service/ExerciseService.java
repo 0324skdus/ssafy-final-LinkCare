@@ -367,9 +367,13 @@ public class ExerciseService {
         Long exerciseCount = exerciseRepository
                 .countByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
 
+        Long totalDuration = exerciseRepository
+                .sumTotalDurationByUserAndPeriod(user, effectiveStartTime, effectiveEndTime);
+
         return ExerciseStatisticsResponse.builder()
                 .totalCalories(totalCalories)
                 .totalDistance(totalDistance)
+                .totalDuration(totalDuration)
                 .averageCalories(avgCalories)
                 .exerciseCount(exerciseCount)
                 .startTime(timeStampUtil.toLocalDateTime(effectiveStartTime))

@@ -2,7 +2,7 @@ package com.ssafy.linkcare.health.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
@@ -11,6 +11,7 @@ import com.ssafy.linkcare.group.entity.GroupMember;
 import com.ssafy.linkcare.group.repository.GroupMemberRepository;
 import com.ssafy.linkcare.group.repository.GroupRepository;
 import com.ssafy.linkcare.health.dto.*;
+import com.ssafy.linkcare.health.entity.BloodPressure;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -40,7 +41,7 @@ public class HealthService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
-//    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
+    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
 
 
     private final ObjectMapper objectMapper;
@@ -100,20 +101,26 @@ public class HealthService {
     }
 
     public TodayHealthSummary getTodayHealthSummary(int userSeq) {
-        LocalDate start = LocalDate.now();
-        LocalDate end = LocalDate.now().plusDays(1);
+        LocalDate today = LocalDate.now();
 
         return TodayHealthSummary.builder()
                 .activitySummary(activitySummaryService.getActivitySummaryStatsToday(userSeq))
                 .exercise(exerciseService.getTodayExerciseStatistics(userSeq))
                 .step(stepService.getTodayStepCount(userSeq))
-                .heartRate(heartRateService.getHeartRateStatsByDate(userSeq, start, end))
-                .bloodPressure(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, start, end))
+                .heartRate(heartRateService.getHeartRateStatsByDate(userSeq, today, today))
+                .bloodPressure(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, today, today))
                 .waterIntake(waterIntakeService.getTodayWaterIntakeStatistics(userSeq))
-                .sleep(sleepService.getSleepStatisticsByDate(userSeq, start, end))
+                .sleep(sleepService.getSleepStatisticsByDate(userSeq, today, today))
                 .build();
     }
 
+    /**
+     * 기간별 총 소모 칼로리, 총 걸음수, 총 운동 시간 조회
+     * @param userSeq
+     * @param startDate
+     * @param endDate
+     * @return TotalActivityStatisticsResponse
+     */
     public TotalActivityStatisticsResponse getTotalActivityStatistics(int userSeq, LocalDate startDate, LocalDate endDate) {
         Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
         Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
@@ -130,6 +137,27 @@ public class HealthService {
     }
 
 
+    public TodayStatisticsResponse getTodayStatisticsForDialogs(int userSeq) {
+        LocalDate today = LocalDate.now();
+        String lastBloodPressure = "데이터 없음";
+        TodayHealthSummary todayHealthSummary = getTodayHealthSummary(userSeq);
+        BloodPressureResponse bloodPressureResponse = bloodPressureService.getLastBloodPressureByDate(userSeq, today,today);
+
+        if(bloodPressureResponse != null) {
+            lastBloodPressure = (int) bloodPressureResponse.getSystolic() + "/" + (int) bloodPressureResponse.getDiastolic();
+        }
+
+        return TodayStatisticsResponse.builder()
+                .totalSteps(todayHealthSummary.getStep())
+                .totalCalories(todayHealthSummary.getActivitySummary().getTotalCalories())
+                .totalDuration(todayHealthSummary.getExercise().getTotalDuration())
+                .totalDistances(todayHealthSummary.getActivitySummary().getTotalDistance())
+                .avgHeartRates(todayHealthSummary.getHeartRate().getAvgHeartRate())
+                .sleepDuration(todayHealthSummary.getSleep().getTotalDuration())
+                .totalWaterIntakes(todayHealthSummary.getWaterIntake().getTotalAmount())
+                .lastBloodPressure(lastBloodPressure)
+                .build();
+    }
 
 
 
@@ -155,7 +183,7 @@ public class HealthService {
                     .putData("timestamp", String.valueOf(System.currentTimeMillis()))
                     .build();
 
-//            String response = firebaseMessaging.send(message);
+            String response = firebaseMessaging.send(message);
             log.debug("✓ 사용자 {}에게 동기화 요청 전송", userSeq);
 
         } catch (Exception e) {

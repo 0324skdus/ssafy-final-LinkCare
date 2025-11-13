@@ -1,9 +1,6 @@
 package com.ssafy.linkcare.health.controller;
 
-import com.ssafy.linkcare.health.dto.AllHealthDataDto;
-import com.ssafy.linkcare.health.dto.DailyHealthData;
-import com.ssafy.linkcare.health.dto.DailyHealthResponse;
-import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,4 +83,15 @@ public class HealthController {
         return ResponseEntity.ok("동기화 완료");
     }
 
+    @GetMapping("/dialogs/{userSeq}/stats/today")
+    @Operation(summary = "AI 대사 생성을 위한 오늘 건강 데이터 요약 조회", description = "사용자의 오늘 건강 데이터 요약을 조회합니다")
+    public ResponseEntity<TodayStatisticsResponse> getTodayStatsForDialogs(
+            @PathVariable int userSeq
+    ) {
+        log.info("AI 대사 생성용 오늘 건강 데이터 요약 조회 - User: {} ", userSeq);
+
+        TodayStatisticsResponse response = healthService.getTodayStatisticsForDialogs(userSeq);
+
+        return ResponseEntity.ok(response);
+    }
 }

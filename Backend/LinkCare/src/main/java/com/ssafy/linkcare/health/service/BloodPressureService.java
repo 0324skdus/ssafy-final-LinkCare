@@ -143,6 +143,8 @@ public class BloodPressureService {
     }
 
     private BloodPressureResponse convertToResponse(BloodPressure bloodPressure) {
+        if(bloodPressure == null) return null;
+
         return BloodPressureResponse.builder()
                 .bloodPressureId(bloodPressure.getBloodPressureId())
                 .uid(bloodPressure.getUid())
@@ -187,6 +189,18 @@ public class BloodPressureService {
                 .minSystolic(minSystolic != null ? minSystolic : 0.0)
                 .minDiastolic(minDiastolic != null ? minDiastolic : 0.0)
                 .build();
+    }
+
+    public BloodPressureResponse getLastBloodPressureByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        BloodPressure bloodPressure = bloodPressureRepository.findFirstByUserAndStartTimeBetweenOrderByStartTimeDesc(
+                user, startDateTs, endDateTs).orElse(null);
+
+        return convertToResponse(bloodPressure);
     }
 
     private User validateUser(int userSeq) {
