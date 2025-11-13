@@ -51,18 +51,17 @@
             android:name=".service.ExerciseService"
             android:exported="false"
             android:foregroundServiceType="health|location" />
-
-        <!-- Optional: Data Layer listener (워치가 모바일로부터 메시지를 수신할 경우 필요)
-             현재는 워치가 송신만 하므로 제거 가능하지만, 양방향 대비해 주석 형태로 남김 -->
-        <!--
         <service
-            android:name=".service.WatchDataLayerListener"
+            android:name=".data.DataLayerListenerService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/mission/update" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/linkcare/theme"
+                    android:scheme="wear" />
             </intent-filter>
         </service>
-        -->
+
     </application>
 </manifest>

@@ -16,9 +16,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -30,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.health.services.client.data.ExerciseState
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.pager.HorizontalPager
@@ -61,7 +66,9 @@ import com.google.android.horologist.compose.ambient.AmbientAware
 import com.google.android.horologist.compose.ambient.AmbientState
 import com.google.android.horologist.health.composables.ActiveDurationText
 import com.linkcare.linkcarewear.data.DataLayerManager
+import com.linkcare.linkcarewear.data.ThemePreferences
 import com.linkcare.linkcarewear.presentation.summary.toWorkoutSummary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -198,18 +205,28 @@ private fun ExerciseMetrics(
     uiState: ExerciseScreenState,
     modifier: Modifier = Modifier
 ) {
+    val exerciseState = uiState.exerciseState?.exerciseState
+    val isAnimating = exerciseState == ExerciseState.ACTIVE
+    val context = LocalContext.current
+    val characterId = remember { ThemePreferences.getCharacterId(context) }
+    val backgroundId = remember { ThemePreferences.getBackgroundId(context) }
     Box(modifier = Modifier.fillMaxSize()) {
         // 배경 이미지
+        val backgroundRes = when (backgroundId) {
+            2001L -> R.drawable.background_default
+            2002L -> R.drawable.background_rock
+            else -> R.drawable.background_default
+        }
+        // 배경 이미지
         Image(
-            painter = painterResource(id = R.drawable.background_default),
+            painter = painterResource(id = backgroundRes),
             contentDescription = "배경",
             contentScale = ContentScale.Crop,
             modifier = Modifier.matchParentSize()
         )
-        Image(
-            painter = painterResource(id = R.drawable.duck_idle),
-            contentDescription = "캐릭터",
-            contentScale = ContentScale.Fit,
+        AnimatedCharacter(
+            characterId = characterId,
+            isAnimating = !uiState.isPaused,
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth(1.0f)
@@ -410,3 +427,34 @@ fun ExerciseControlButtonsPreview() {
         )
     }
 }
+@Composable
+fun AnimatedCharacter(
+    characterId: Long,
+    isAnimating: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val frames = when (characterId) {
+        1001L -> listOf(R.drawable.duck_walk1, R.drawable.duck_walk2, R.drawable.duck_walk3,R.drawable.duck_walk4,R.drawable.duck_walk5)
+        1002L -> listOf(R.drawable.bear_walk1, R.drawable.bear_walk2, R.drawable.bear_walk3, R.drawable.bear_walk4)
+        else -> listOf(R.drawable.duck_walk1, R.drawable.duck_walk2, R.drawable.duck_walk3,R.drawable.duck_walk4,R.drawable.duck_walk5)
+    }
+
+    var currentFrame by remember { mutableStateOf(0) }
+
+    LaunchedEffect(isAnimating) {
+        if (isAnimating) {
+            while (true) {
+                delay(150)
+                currentFrame = (currentFrame + 1) % frames.size
+            }
+        } else currentFrame = 0
+    }
+
+    Image(
+        painter = painterResource(id = frames[currentFrame]),
+        contentDescription = "캐릭터",
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
+}
+

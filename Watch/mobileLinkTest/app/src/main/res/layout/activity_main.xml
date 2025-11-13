@@ -17,4 +17,9 @@
         android:textStyle="bold"
         android:gravity="center"
         android:padding="16dp" />
+    <Button
+        android:id="@+id/themeTestButton"
+        android:text="워치로 캐릭터 변경 보내기"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 </LinearLayout>

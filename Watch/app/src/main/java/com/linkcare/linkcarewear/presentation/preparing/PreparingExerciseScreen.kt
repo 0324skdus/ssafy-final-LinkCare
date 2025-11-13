@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +58,7 @@ import com.google.android.horologist.compose.ambient.AmbientAware
 import com.google.android.horologist.compose.ambient.AmbientState
 import com.google.android.horologist.compose.layout.ColumnItemType
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnPadding
+import com.linkcare.linkcarewear.data.ThemePreferences
 
 @Composable
 fun PreparingExerciseRoute(
@@ -125,6 +127,9 @@ fun PreparingExerciseScreen(
     onStart: () -> Unit = {}
 ) {
     val location = (uiState as? PreparingScreenState.Preparing)?.locationAvailability
+    val context = LocalContext.current
+    val characterId = remember { ThemePreferences.getCharacterId(context) }
+    val backgroundId = remember { ThemePreferences.getBackgroundId(context) }
 
     ScreenScaffold(
         timeText = {
@@ -147,15 +152,25 @@ fun PreparingExerciseScreen(
         modifier = Modifier.ambientGray(ambientState)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            val backgroundRes = when (backgroundId) {
+                2001L -> R.drawable.background_default
+                2002L -> R.drawable.background_rock
+                else -> R.drawable.background_default
+            }
             // 배경 이미지
             Image(
-                painter = painterResource(id = R.drawable.background_default),
+                painter = painterResource(id = backgroundRes),
                 contentDescription = "배경",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize()
             )
+            val charracterRes = when (characterId) {
+                1001L -> R.drawable.duck_walk1
+                1002L -> R.drawable.bear_walk1
+                else -> R.drawable.duck_walk1
+            }
             Image(
-                painter = painterResource(id = R.drawable.duck_idle),
+                painter = painterResource(id = charracterRes),
                 contentDescription = "캐릭터",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
