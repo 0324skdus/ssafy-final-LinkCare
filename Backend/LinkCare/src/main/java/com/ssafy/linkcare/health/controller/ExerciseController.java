@@ -187,7 +187,7 @@ public class ExerciseController {
                 userSeq, startDate, endDate);
 
         List<ExerciseResponse> response = exerciseService
-                .getExercisesByPeriod(userSeq, startDate, endDate);
+                .getExercisesByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
     }

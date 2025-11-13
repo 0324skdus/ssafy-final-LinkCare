@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 "/api/auth/google",
                                 "/api/auth/kakao",
                                 "/actuator/health",
-                                "/api/health/**"
+                                "/api/health/**",
+                                "/api/groups/generate-weekly-stats"
 
                 ).permitAll()
                         .anyRequest().authenticated()
