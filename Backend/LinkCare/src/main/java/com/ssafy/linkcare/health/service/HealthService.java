@@ -115,8 +115,8 @@ public class HealthService {
     }
 
     public TotalActivityStatisticsResponse getTotalActivityStatistics(int userSeq, LocalDate startDate, LocalDate endDate) {
-        Long startDateTs = timeStampUtil.toNextDayTimestamp(startDate);
-        Long endDateTs = timeStampUtil.toTimestamp(endDate.plusDays(1));
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
 
         ActivitySummaryStaticsResponse activitySummaryStaticsResponse = activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate);
         ExerciseStatisticsResponse exerciseStatisticsResponse = exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate);
@@ -128,6 +128,10 @@ public class HealthService {
                 .totalSteps(totalSteps)
                 .build();
     }
+
+
+
+
 
     // ================== 건강 데이터 동기화 ==================
 
