@@ -19,7 +19,7 @@ class ExerciseViewModel @Inject constructor(
 ) : ViewModel() {
 
     /** 운동 세션 고유 ID */
-    private var sessionId: String = ""
+    private var sessionId: Long = 0L
 
     /** UI 상태 */
     val uiState: StateFlow<ExerciseScreenState> =
@@ -50,7 +50,7 @@ class ExerciseViewModel @Inject constructor(
 
     /** ✅ 운동 시작 */
     fun startExercise() {
-        sessionId = System.currentTimeMillis().toString()
+        sessionId = System.currentTimeMillis()
         viewModelScope.launch {
             try {
                 healthServicesRepository.startExerciseWithSession(sessionId)

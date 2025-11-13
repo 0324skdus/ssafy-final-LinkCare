@@ -32,11 +32,13 @@ class WatchListenerService : WearableListenerService() {
 
                 "/linkcare/summary" -> {
                     val summary = WorkoutSummary(
-                        sessionId = dataMap.getString("sessionId") ?: "",
+                        sessionId = dataMap.getLong("sessionId") ?: 0L,
                         avgHeartRate = dataMap.getInt("avgHeartRate"),
                         calories = dataMap.getInt("calories"),
                         distance = dataMap.getInt("distance"),
-                        durationSec = dataMap.getInt("durationSec")
+                        durationSec = dataMap.getInt("durationSec"),
+                        startTimestamp = dataMap.getLong("startTimestamp"),
+                        endTimestamp = dataMap.getLong("endTimestamp")
                     )
                     Log.d("DataLayer", "📩 Summary received: $summary")
                     sendBroadcast(Intent("WORKOUT_SUMMARY_RECEIVED").apply {

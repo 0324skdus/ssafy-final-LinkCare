@@ -105,7 +105,7 @@ fun SummaryScreenPreview() {
                 totalDistance = 2000.0,
                 totalCalories = 100.0,
                 elapsedTime = Duration.ofMinutes(17).plusSeconds(1),
-                sessionId = "preview-session"
+                sessionId = 123
             ),
             onRestartClick = {}
         )

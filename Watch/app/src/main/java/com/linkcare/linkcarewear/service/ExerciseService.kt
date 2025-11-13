@@ -43,17 +43,17 @@ class ExerciseService : LifecycleService() {
     //중복 방지 플래그
     private var summarySent = false
     private var isExerciseEnded = false
-    private var currentSessionId: String = ""
+    private var currentSessionId: Long = 0L
 
     var startTimestamp: Long? = null
 
     // companion으로 세션 단위 중복 방지
     companion object {
         private val UNBIND_DELAY = 3.seconds
-        private val sentSessionSummaries = mutableSetOf<String>()
+        private val sentSessionSummaries = mutableSetOf<Long>()
     }
 
-    val sessionId: String?
+    val sessionId: Long
         get() = currentSessionId
 
     private val serviceRunningInForeground: Boolean
@@ -66,7 +66,7 @@ class ExerciseService : LifecycleService() {
         exerciseClientManager.prepareExercise()
     }
 
-    suspend fun startExercise(sessionId: String) {
+    suspend fun startExercise(sessionId: Long) {
         currentSessionId = sessionId
         summarySent = false
         isExerciseEnded = false
@@ -94,21 +94,25 @@ class ExerciseService : LifecycleService() {
         // 우선 세션 종료 요청
         exerciseClientManager.endExercise()
 
-        // 300~500ms 기다려서 마지막 업데이트 반영
+        // 잠깐대기, 마지막 업데이트 반영
         delay(500)
 
         // 이제 상태 가져오기
         val currentState = exerciseServiceMonitor.exerciseServiceState.value
         val metrics = currentState.exerciseMetrics
+        val endTimestamp = System.currentTimeMillis()
         val durationSec =
             (currentState.activeDurationCheckpoint?.activeDuration?.seconds ?: 0L).toInt()
+        val startTimestamp = endTimestamp - (durationSec * 1000L)
 
         val summary = WorkoutSummary(
             sessionId = currentSessionId,
             avgHeartRate = (metrics.heartRateAverage ?: 0.0).toInt(),
             calories = (metrics.calories ?: 0.0).toInt(),
             distance = (metrics.distance ?: 0.0).toInt(),
-            durationSec = durationSec
+            durationSec = durationSec,
+            startTimestamp = startTimestamp,
+            endTimestamp = endTimestamp
         )
 
         DataLayerManager.sendWorkoutSummary(this, summary)
@@ -116,7 +120,7 @@ class ExerciseService : LifecycleService() {
         Log.d(TAG, "✅ Workout summary sent after delay: $summary")
 
         removeOngoingActivityNotification()
-        currentSessionId = ""
+        currentSessionId = 0L
     }
 
     fun markLap() {
@@ -146,7 +150,7 @@ class ExerciseService : LifecycleService() {
             lifecycleScope.launch(Dispatchers.Default) {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     exerciseServiceMonitor.exerciseServiceState.collect { state ->
-                        if (state.exerciseState == ExerciseState.ACTIVE && currentSessionId.isNotEmpty()) {
+                        if (state.exerciseState == ExerciseState.ACTIVE && currentSessionId != 0L) {
                             val metrics = state.exerciseMetrics
                             Log.d(
                                 "DurationDebug",
@@ -171,7 +175,7 @@ class ExerciseService : LifecycleService() {
                             )
                             Log.d(
                                 TAG,
-                                "📡 Sent realtime metrics to mobile: HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
+                                "📡 Sent realtime metrics to mobile: ID=${sessionId} HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
                             )
                             delay(2000) // 2초 주기로 전송
                         }
