@@ -61,7 +61,7 @@ public class HealthController {
     }
 
     // 기간 별 칼로리, 걸음, 운동 시간
-    @GetMapping("/{userSeq/total-activity/stats")
+    @GetMapping("/{userSeq}/total-activity/stats")
     public ResponseEntity<TotalActivityStatisticsResponse> getTotalActivityStatistics(
             @PathVariable int userSeq,
             @RequestParam LocalDate startDate,

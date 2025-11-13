@@ -15,8 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -237,6 +236,30 @@ public class StepService {
                 .goal(step.getGoal())
 //                .userSeq(Math.toIntExact(step.getUser().getUserPk()))
                 .build();
+    }
+
+    /**
+     * 표준 편차 계산
+     * @param steps
+     * @return double
+     */
+    public Float calculateStdDev(List<Long> steps) {
+        if (steps == null || steps.isEmpty()) return 0f;
+
+        double mean = steps.stream()
+                .mapToDouble(Long::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        double variance = steps.stream()
+                .mapToDouble(v -> {
+                    double diff = v - mean;
+                    return diff * diff;
+                })
+                .average()
+                .orElse(0.0); // 모집단 분산
+
+        return (float) Math.sqrt(variance);
     }
 
     private User validateUser(int userSeq) {

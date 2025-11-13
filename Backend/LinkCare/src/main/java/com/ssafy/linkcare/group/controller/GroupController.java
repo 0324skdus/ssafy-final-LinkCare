@@ -3,6 +3,7 @@ package com.ssafy.linkcare.group.controller;
 import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.service.GroupService;
+import com.ssafy.linkcare.group.service.WeeklyStatsService;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.dto.WaterIntakeStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ import java.util.List;
 public class GroupController {
 
     private final GroupService groupService;
+    private final WeeklyStatsService weeklyStatsService;
 
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
@@ -322,5 +324,11 @@ public class GroupController {
         TotalActivityStatisticsResponse response = groupService.getGroupTotalActivityStatistics(groupSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/generate-weekly-stats")
+    public ResponseEntity<String> generateWeeklyStats() {
+        weeklyStatsService.generateAllGroupWeeklyStats();
+        return ResponseEntity.ok("주간 통계 생성 완료");
     }
 }

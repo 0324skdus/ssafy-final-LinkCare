@@ -148,7 +148,7 @@ public class SleepController {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
-    @GetMapping("/{userSeq}/statistics")
+    @GetMapping("/{userSeq}/statistics/date")
     public ResponseEntity<SleepStatisticsResponse> getSleepStatisticsByDate(
             @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
             @Parameter(description = "시작 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
@@ -206,7 +206,7 @@ public class SleepController {
             @ApiResponse(responseCode = "400", description = "잘못된 날짜 형식"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
-    @GetMapping("/{userSeq}/date-period")
+    @GetMapping("/{userSeq}/total-duration/date-period")
     public ResponseEntity<List<Long>> getTotalSleepDurationByDate(
             @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
             @Parameter(description = "시작 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
