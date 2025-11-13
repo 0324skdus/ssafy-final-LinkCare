@@ -11,6 +11,25 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/*
+    * 그룹 초대 링크 엔티티
+
+    * 역할: 그룹에 참가할 수 있는 초대 링크를 생성하고 관리
+
+    * 특징:
+        * - 방장이 초대 링크를 생성하면 고유한 UUID 토큰 발급
+        * - 초대 링크는 7일 후 자동 만료 (expiredAt)
+        * - 한 그룹에 여러 개의 초대 링크 생성 가능 (1:N 관계)
+        * - usedAt: 링크 사용 시점 기록 (현재는 미사용, 향후 확장 가능)
+
+    * 사용 흐름:
+        * 1. 방장이 초대 링크 생성 (POST /api/groups/{groupSeq}/invitations)
+        * 2. 초대 받은 사람이 링크 미리보기 (GET /api/groups/invitations/{token}/preview)
+        * 3. 참가 신청 (POST /api/groups/invitations/{token}/join)
+
+    * 연관 엔티티:
+        * - Group (N:1) - 이 초대 링크가 속한 그룹
+*/
 @Entity
 @Table(name = "group_invitations")
 @Getter

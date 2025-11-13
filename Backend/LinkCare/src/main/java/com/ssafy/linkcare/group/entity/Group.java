@@ -12,6 +12,22 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/*
+    * 그룹 (헬스/케어 모임) 엔티티
+
+    * 역할: 헬스 그룹과 케어 그룹의 기본 정보를 저장
+
+    * 그룹 타입:
+        * - HEALTH 그룹: 운동 목표 기반 모임 (GroupGoalCriteria와 1:1 관계)
+        * - CARE 그룹: 건강 데이터 공유 기반 모임 (GroupRequiredPermission과 1:1 관계)
+
+    * 연관 엔티티:
+        * - GroupMember (1:N) - 그룹 멤버들
+        * - GroupGoalCriteria (1:1) - 헬스 그룹의 목표 기준
+        * - GroupRequiredPermission (1:1) - 케어 그룹이 요구하는 권한
+        * - GroupInvitation (1:N) - 초대 링크들
+        * - GroupJoinRequest (1:N) - 가입 신청들
+*/
 @Entity
 @Table(name = "`groups`")
 @Getter

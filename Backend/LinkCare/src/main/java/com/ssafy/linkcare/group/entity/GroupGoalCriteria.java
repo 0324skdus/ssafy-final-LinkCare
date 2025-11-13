@@ -11,6 +11,24 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/*
+    * 그룹 목표 기준 엔티티
+
+    * 역할: HEALTH 그룹의 운동 목표 기준을 저장
+
+    * 사용 범위:
+        * - HEALTH 그룹만 사용 (운동 목표 기반 모임)
+        * - CARE 그룹은 사용 안 함 (건강 데이터 공유 기반 모임)
+
+    * 목표 항목 (모두 선택 항목, null 가능):
+        * - minCalorie: 최소 칼로리 소모 (kcal)
+        * - minStep: 최소 걸음수 (보)
+        * - minDistance: 최소 이동 거리 (km)
+        * - minDuration: 최소 운동 시간 (분)
+
+    * 연관 엔티티:
+        * - Group (1:1) - 이 목표 기준을 가진 HEALTH 그룹
+*/
 @Entity
 @Table(name = "group_goal_criteria")
 @Getter

@@ -1,5 +1,5 @@
 ## 🔗 Jira Issue
-- 관련 티켓: `PROJ-123` [Jira 링크](https://ssafy.atlassian.net/browse/S13P11A407-{번호 입력})
+- 관련 티켓: `PROJ-123` [Jira 링크](https://ssafy.atlassian.net/browse/S13P31A307-{번호 입력})
 - > 브랜치명 또는 커밋 메시지에 Jira 키 포함 (ex. `feat/PROJ-123-login-api`)
 
 ---
