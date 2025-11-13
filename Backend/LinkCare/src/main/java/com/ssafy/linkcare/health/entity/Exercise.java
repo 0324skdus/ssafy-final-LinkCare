@@ -32,6 +32,9 @@ public class Exercise {
     @Column(name = "uid")
     private String uid;
 
+    @Column(name = "session_id")
+    private Long sessionId;
+
     @Column(name = "zone_off_set")
     private String zoneOffset;
 
@@ -47,11 +50,15 @@ public class Exercise {
     @Column(name = "exercise_type")
     private String exerciseType;
 
+    @Column(name = "avg_heart_rate")
+    private Integer avgHeartRate;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_seq")
     private User user;
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ExerciseSession> sessions = new ArrayList<>();
 
 }

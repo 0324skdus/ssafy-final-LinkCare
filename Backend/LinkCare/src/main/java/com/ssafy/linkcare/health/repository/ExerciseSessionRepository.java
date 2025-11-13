@@ -28,4 +28,18 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
     void deleteByExercise(Exercise exercise);
 
     long countByExercise(Exercise exercise);
+
+    /**
+     * 특정 운동의 특정 시간대 세션 찾기
+     * (±2분 여유)
+     */
+    @Query("SELECT es FROM ExerciseSession es " +
+            "WHERE es.exercise = :exercise " +
+            "AND es.startTime <= :endWindow " +
+            "AND es.endTime >= :startWindow")
+    Optional<ExerciseSession> findByExerciseAndTimeBetween(
+            @Param("exercise") Exercise exercise,
+            @Param("startWindow") Long startWindow,
+            @Param("endWindow") Long endWindow
+    );
 }

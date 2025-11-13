@@ -3,6 +3,7 @@ package com.ssafy.linkcare.health.controller;
 
 import com.ssafy.linkcare.health.dto.ExerciseResponse;
 import com.ssafy.linkcare.health.dto.ExerciseStatisticsResponse;
+import com.ssafy.linkcare.health.dto.WatchExerciseData;
 import com.ssafy.linkcare.health.service.ExerciseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -190,5 +191,23 @@ public class ExerciseController {
                 .getExercisesByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 워치 운동 데이터 저장
+     */
+    @PostMapping("/users/{userId}/watch")
+    @Operation(summary = "워치 운동 데이터 저장",
+            description = "워치에서 전송한 운동 데이터를 저장합니다")
+    public ResponseEntity<String> uploadWatchExercise(
+            @PathVariable int userId,
+            @RequestBody WatchExerciseData data) {
+
+        log.info("워치 운동 데이터 수신: userId={}, sessionId={}",
+                userId, data.getSessionId());
+
+        exerciseService.saveWatchExercise(data, userId);
+
+        return ResponseEntity.ok().build();
     }
 }
