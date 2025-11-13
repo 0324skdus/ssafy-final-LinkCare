@@ -2,7 +2,7 @@ package com.ssafy.linkcare.health.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.firebase.messaging.FirebaseMessaging;
+//import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
@@ -40,7 +40,7 @@ public class HealthService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
-    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
+//    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
 
 
     private final ObjectMapper objectMapper;
@@ -151,7 +151,7 @@ public class HealthService {
                     .putData("timestamp", String.valueOf(System.currentTimeMillis()))
                     .build();
 
-            String response = firebaseMessaging.send(message);
+//            String response = firebaseMessaging.send(message);
             log.debug("✓ 사용자 {}에게 동기화 요청 전송", userSeq);
 
         } catch (Exception e) {
