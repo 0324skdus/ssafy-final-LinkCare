@@ -235,7 +235,7 @@ fun MainTabs(
                                 HeaderDropDown(
                                     title = currentGroupCare,
                                     menuItems = careGroups.map { it.groupName },
-                                    onMenuSelect = { idx, _ -> selectedIndexCare = idx },
+                                    onMenuSelect = { idx, _ -> selectedIndexCare = idx; selectedCareGroup = careGroups[idx].groupSeq; },
                                     onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { navController.navigate(Route.CareSearch) },
                                     moreMenu = { dismiss ->
@@ -258,7 +258,7 @@ fun MainTabs(
                                 HeaderDropDown(
                                     title = currentGroupHealth,
                                     menuItems = healthGroups.map { it.groupName },
-                                    onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
+                                    onMenuSelect = { idx, _ -> selectedIndexHealth = idx; selectedHealthGroup = healthGroups[idx].groupSeq; },
                                     onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { navController.navigate(Route.HealthSearch) },
                                     moreMenu = { dismiss ->
@@ -310,12 +310,9 @@ fun MainTabs(
                         )
                     } else {
                         CareGroupHome(
-                            membersAll = listOf(
-                                Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
-                                Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
-                                Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
-                                Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-                            )
+                            groupSeq = selectedCareGroup!!,
+                            modifier = Modifier,
+                            vm = groupvm
                         )
                     }
                 }
@@ -358,18 +355,9 @@ fun MainTabs(
                         )
                     } else {
                         HealthGroupHome(
-                            membersAll = listOf(
-                                Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
-                                Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
-                                Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
-                                Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-                            ),
-                            isLeader = true,            // 현재 유저가 그룹장일 때만 true
-                            currentGoal = 20000,        // null이면 미설정
-                            onSaveGoal = { newGoal ->
-                                // TODO: API 요청으로 저장
-                                // ex) viewModel.saveGroupGoal(groupId, newGoal)
-                            }
+                            groupSeq = selectedHealthGroup!!,
+                            modifier = Modifier,
+                            vm = groupvm
                         )
                     }
                 }
