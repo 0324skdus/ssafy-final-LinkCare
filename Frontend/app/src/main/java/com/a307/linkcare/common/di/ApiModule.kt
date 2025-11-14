@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import com.a307.linkcare.feature.caregroup.data.CareGroupApi
 import com.a307.linkcare.feature.healthgroup.data.HealthGroupApi
+import com.a307.linkcare.feature.commongroup.data.GroupApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,4 +35,10 @@ object HealthConnectModule {
     fun provideCareGroupApi(
         retrofit: Retrofit
     ): CareGroupApi = retrofit.create(CareGroupApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideGroupApi(retrofit: Retrofit): GroupApi {
+        return retrofit.create(GroupApi::class.java)
+    }
 }

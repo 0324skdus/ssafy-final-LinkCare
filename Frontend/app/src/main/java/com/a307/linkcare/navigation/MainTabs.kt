@@ -1,7 +1,5 @@
 package com.a307.linkcare.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Divider
@@ -35,8 +33,8 @@ import com.a307.linkcare.feature.caregroup.CareGroupEdit
 import com.a307.linkcare.feature.caregroup.CareGroupHome
 import com.a307.linkcare.feature.caregroup.GroupMember
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
-import com.a307.linkcare.feature.commongroup.GroupSearch
-import com.a307.linkcare.feature.commongroup.MainWithNoGroup
+import com.a307.linkcare.feature.commongroup.ui.GroupSearch
+import com.a307.linkcare.feature.commongroup.ui.MainWithNoGroup
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.HealthGroup
 import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
@@ -50,13 +48,13 @@ import com.a307.linkcare.feature.mypage.StoreItem
 import com.a307.linkcare.feature.mypage.StoreScreen
 import com.a307.linkcare.feature.mypage.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
-import androidx.activity.compose.BackHandler
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.a307.linkcare.common.component.molecules.HeaderBasic
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.mypage.Gender
 import com.a307.linkcare.feature.mypage.Profile
 import com.a307.linkcare.feature.mypage.ProfileEditScreen
@@ -71,31 +69,46 @@ private fun NavController.goBackToMyPage() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTabs(rootNavController: NavHostController) {
+fun MainTabs(
+    rootNavController: NavHostController,
+    groupvm: MyGroupsViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
 
-    // 그룹 더미 데이터
-    val careGroups = listOf("307", "2번째 그룹", "3번째 그룹")
-    val healthGroups = listOf("만수무강", "2번째 그룹", "3번째 그룹")
+    // CARE / HEALTH 데이터
+    val careGroups by groupvm.careGroups.collectAsState()
+    val healthGroups by groupvm.healthGroups.collectAsState()
 
     var selectedIndexCare by remember { mutableStateOf(0) }
     var selectedIndexHealth by remember { mutableStateOf(0) }
 
+    // 현재 선택된 그룹 이름 표시
     val currentGroupCare =
-        if (careGroups.isNotEmpty()) careGroups[selectedIndexCare] else "케어"
+        careGroups.getOrNull(selectedIndexCare)?.groupName ?: "케어"
+
     val currentGroupHealth =
-        if (healthGroups.isNotEmpty()) healthGroups[selectedIndexHealth] else "헬스"
+        healthGroups.getOrNull(selectedIndexHealth)?.groupName ?: "헬스"
 
-    // 현재 선택 그룹 상태
-    var selectedHealthGroup by remember { mutableStateOf<String?>(null) }
-    var selectedCareGroup by remember { mutableStateOf<String?>(null) }
+    var selectedCareGroup by remember { mutableStateOf<Long?>(null) }
+    var selectedHealthGroup by remember { mutableStateOf<Long?>(null) }
 
+    // 첫 진입 시 API 호출
     LaunchedEffect(Unit) {
-        if (selectedHealthGroup == null && healthGroups.isNotEmpty())
-            selectedHealthGroup = healthGroups.first()
-        if (selectedCareGroup == null && careGroups.isNotEmpty())
-            selectedCareGroup = careGroups.first()
+        groupvm.loadCare()
+        groupvm.loadHealth()
+    }
+
+    LaunchedEffect(careGroups) {
+        if (selectedCareGroup == null && careGroups.isNotEmpty()) {
+            selectedCareGroup = careGroups.first().groupSeq
+        }
+    }
+
+    LaunchedEffect(healthGroups) {
+        if (selectedHealthGroup == null && healthGroups.isNotEmpty()) {
+            selectedHealthGroup = healthGroups.first().groupSeq
+        }
     }
 
     // 검색 상태
@@ -221,7 +234,7 @@ fun MainTabs(rootNavController: NavHostController) {
                             currentDestination?.hierarchy?.any { it.route == Route.Care.route } == true -> {
                                 HeaderDropDown(
                                     title = currentGroupCare,
-                                    menuItems = careGroups,
+                                    menuItems = careGroups.map { it.groupName },
                                     onMenuSelect = { idx, _ -> selectedIndexCare = idx },
                                     onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { navController.navigate(Route.CareSearch) },
@@ -230,9 +243,9 @@ fun MainTabs(rootNavController: NavHostController) {
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = careGroups[selectedIndexCare]
+                                                val currentId = careGroups[selectedIndexCare].groupSeq
                                                 navController.navigate(
-                                                    Route.EditCareGroup.withArgs(currentId)
+                                                    Route.EditCareGroup.withArgs(currentId.toString())
                                                 )
                                             }
                                         )
@@ -244,7 +257,7 @@ fun MainTabs(rootNavController: NavHostController) {
                             currentDestination?.hierarchy?.any { it.route == Route.Health.route } == true -> {
                                 HeaderDropDown(
                                     title = currentGroupHealth,
-                                    menuItems = healthGroups,
+                                    menuItems = healthGroups.map { it.groupName },
                                     onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
                                     onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { navController.navigate(Route.HealthSearch) },
@@ -253,9 +266,9 @@ fun MainTabs(rootNavController: NavHostController) {
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = healthGroups[selectedIndexHealth]
+                                                val currentId = healthGroups[selectedIndexHealth].groupSeq
                                                 navController.navigate(
-                                                    Route.EditHealthGroup.withArgs(currentId)
+                                                    Route.EditHealthGroup.withArgs(currentId.toString())
                                                 )
                                             }
                                         )

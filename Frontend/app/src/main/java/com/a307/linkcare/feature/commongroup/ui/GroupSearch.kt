@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.commongroup
+package com.a307.linkcare.feature.commongroup.ui
 
 import com.a307.linkcare.feature.commongroup.domain.GroupItem
 import com.a307.linkcare.R
@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
 
