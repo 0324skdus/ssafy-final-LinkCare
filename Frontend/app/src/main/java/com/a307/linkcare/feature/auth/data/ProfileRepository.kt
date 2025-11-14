@@ -1,11 +1,9 @@
-package com.a307.linkcare.feature.auth
+package com.a307.linkcare.feature.auth.data
 
 import android.util.Log
-import com.a307.linkcare.feature.auth.data.ProfileApi
 import com.a307.linkcare.feature.auth.domain.UpdateCharacterRequest
 import com.a307.linkcare.feature.auth.domain.UpdateProfileRequest
 import javax.inject.Inject
-
 
 class ProfileRepository @Inject constructor(
     private val api: ProfileApi
