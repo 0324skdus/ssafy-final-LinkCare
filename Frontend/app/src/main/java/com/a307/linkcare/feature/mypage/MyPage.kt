@@ -2,6 +2,9 @@
 
 package com.a307.linkcare.feature.mypage
 
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -17,20 +20,28 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.painterResourceCropped
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.auth.data.RetrofitClient
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.navigation.Route
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /* ---------- 앱 팔레트 ---------- */
 private val cardStroke = Color(0xFFE5E5EA)
@@ -52,8 +63,12 @@ fun MyPage(
     onEditClick: () -> Unit = {},
     onGroupsClick: () -> Unit = {},
     onStoreClick: () -> Unit = {},
-    onDecorateClick: () -> Unit = {}
+    onDecorateClick: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -91,8 +106,11 @@ fun MyPage(
 
             // 하단 카드 2열
             MenuRow(
+                context = context,
+                scope = scope,
                 onStoreClick = onStoreClick,
-                onDecorateClick = onDecorateClick
+                onDecorateClick = onDecorateClick,
+                onLogout = onLogout
             )
 
             Spacer(Modifier.weight(1f))
@@ -198,8 +216,11 @@ private fun ProfileCard(
 
 @Composable
 private fun MenuRow(
+    context: Context,
+    scope: CoroutineScope,
     onStoreClick: () -> Unit,
-    onDecorateClick: () -> Unit
+    onDecorateClick: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
         // 상단: 버튼(카드) 두 개
@@ -229,13 +250,35 @@ private fun MenuRow(
                     .weight(1f)
                     .padding(top = 2.dp)
                     .clickable {
-                        // TODO: 로그아웃 API 연결 예정
-                        println("로그아웃되었습니다")
+                        scope.launch {
+                            try {
+                                val access = TokenStore(context).getAccess()
+                                if (access == null) {
+                                    Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+
+                                val res = RetrofitClient.authApi.logout("Bearer $access")
+
+                                if (res.isSuccessful) {
+                                    TokenStore(context).clear()
+                                    Toast.makeText(context, "로그아웃되었습니다.", Toast.LENGTH_SHORT).show()
+
+                                    onLogout()
+                                } else {
+                                    Toast.makeText(context, "로그아웃 실패", Toast.LENGTH_SHORT).show()
+                                }
+
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "서버 오류", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     },
                 fontSize = 15.sp,
                 color = Color(0xFF8E8E93),
                 textAlign = TextAlign.Center
             )
+
 
             Text(
                 "탈퇴하기",
@@ -243,7 +286,6 @@ private fun MenuRow(
                     .weight(1f)
                     .padding(top = 2.dp)
                     .clickable {
-                        // TODO: 탈퇴 API 연결 예정
                         println("탈퇴하였습니다")
                     },
                 fontSize = 15.sp,
