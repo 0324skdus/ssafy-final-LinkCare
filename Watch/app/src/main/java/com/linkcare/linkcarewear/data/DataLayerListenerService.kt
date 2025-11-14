@@ -2,7 +2,6 @@ package com.linkcare.linkcarewear.data
 
 import android.content.Context
 import android.util.Log
-import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
@@ -21,23 +20,29 @@ class DataLayerListenerService : WearableListenerService() {
             for (event in events) {
                 if (event.type == DataEvent.TYPE_CHANGED) {
                     val path = event.dataItem.uri.path
-                    if (path == "/linkcare/theme") {
-                        val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
-                        val characterId = dataMap.getLong("selected_character_id", 1001L)
-                        val backgroundId = dataMap.getLong("selected_background_id", 2001L)
 
-                        saveThemeToPrefs(applicationContext, characterId, backgroundId)
-                        Log.d("DataLayer", "✅ Received theme: char=$characterId bg=$backgroundId")
+                    if (path == "/linkcare/theme") {
+
+                        val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
+
+                        // 🔹 모바일과 동일한 key로 맞춤
+                        val charId = dataMap.getInt("characterId", 1)
+                        val bgId = dataMap.getInt("backgroundId", 1)
+
+                        saveThemeToPrefs(applicationContext, charId, bgId)
+
+                        Log.d("DataLayer", "⬅️ Received theme from phone: char=$charId bg=$bgId")
                     }
                 }
             }
         }
     }
-    private fun saveThemeToPrefs(context: Context, characterId: Long, backgroundId: Long) {
-        val prefs = context.getSharedPreferences("character_prefs", Context.MODE_PRIVATE)
+
+    private fun saveThemeToPrefs(context: Context, characterId: Int, backgroundId: Int) {
+        val prefs = context.getSharedPreferences("customize_prefs", Context.MODE_PRIVATE)
         prefs.edit()
-            .putLong("selected_character_id", characterId)
-            .putLong("selected_background_id", backgroundId)
+            .putInt("characterId", characterId)
+            .putInt("backgroundId", backgroundId)
             .apply()
     }
 }

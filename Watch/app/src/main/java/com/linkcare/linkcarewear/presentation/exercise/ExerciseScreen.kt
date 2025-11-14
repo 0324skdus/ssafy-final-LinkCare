@@ -2,6 +2,8 @@
 
 package com.linkcare.linkcarewear.presentation.exercise
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -34,18 +37,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.health.services.client.data.ExerciseState
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material.HorizontalPageIndicator
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.FilledTonalButton
-import androidx.wear.compose.material3.HorizontalPageIndicator
-import androidx.wear.compose.material3.HorizontalPagerScaffold
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.linkcare.linkcarewear.R
@@ -205,25 +203,46 @@ private fun ExerciseMetrics(
     uiState: ExerciseScreenState,
     modifier: Modifier = Modifier
 ) {
-    val exerciseState = uiState.exerciseState?.exerciseState
-    val isAnimating = exerciseState == ExerciseState.ACTIVE
     val context = LocalContext.current
-    val characterId = remember { ThemePreferences.getCharacterId(context) }
-    val backgroundId = remember { ThemePreferences.getBackgroundId(context) }
+
+    // 1. 상태 관리 (remember → mutableState)
+    var characterId by remember { mutableStateOf(ThemePreferences.getCharacterId(context)) }
+    var backgroundId by remember { mutableStateOf(ThemePreferences.getBackgroundId(context)) }
+
+    // 2. SharedPreferences Listener 등록
+    DisposableEffect(Unit) {
+        val prefs = context.getSharedPreferences("customize_prefs", Context.MODE_PRIVATE)
+
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "characterId" -> characterId = prefs.getInt("characterId", 1)
+                "backgroundId" -> backgroundId = prefs.getInt("backgroundId", 1)
+            }
+        }
+
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // 배경 이미지
+
+        // 3. Int 기반 리소스 매핑
         val backgroundRes = when (backgroundId) {
-            2001L -> R.drawable.background_default
-            2002L -> R.drawable.background_rock
+            1 -> R.drawable.background_default
+            2 -> R.drawable.background_2
             else -> R.drawable.background_default
         }
-        // 배경 이미지
+
         Image(
             painter = painterResource(id = backgroundRes),
             contentDescription = "배경",
             contentScale = ContentScale.Crop,
             modifier = Modifier.matchParentSize()
         )
+
         AnimatedCharacter(
             characterId = characterId,
             isAnimating = !uiState.isPaused,
@@ -233,19 +252,16 @@ private fun ExerciseMetrics(
                 .scale(2.5f)
                 .offset(x = 10.dp, y = 0.dp)
         )
+
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top  // 🔹 상단 정렬로 변경
+            verticalArrangement = Arrangement.Top
         ) {
-            // --- 상단 타이머 ---
             DurationRow(uiState)
 
-            //Spacer(modifier = Modifier.height(10.dp))  // 🔹 타이머와 거리 조절
-
-            // --- 심박수 + 칼로리 (타이머 밑으로 이동) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -254,9 +270,7 @@ private fun ExerciseMetrics(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     HeartRateColumn(uiState)
@@ -265,16 +279,14 @@ private fun ExerciseMetrics(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     CaloriesColumn(uiState)
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp)) // 🔹 캐릭터와 간격 유지
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -429,14 +441,31 @@ fun ExerciseControlButtonsPreview() {
 }
 @Composable
 fun AnimatedCharacter(
-    characterId: Long,
+    characterId: Int,
     isAnimating: Boolean,
     modifier: Modifier = Modifier
 ) {
     val frames = when (characterId) {
-        1001L -> listOf(R.drawable.duck_walk1, R.drawable.duck_walk2, R.drawable.duck_walk3,R.drawable.duck_walk4,R.drawable.duck_walk5)
-        1002L -> listOf(R.drawable.bear_walk1, R.drawable.bear_walk2, R.drawable.bear_walk3, R.drawable.bear_walk4)
-        else -> listOf(R.drawable.duck_walk1, R.drawable.duck_walk2, R.drawable.duck_walk3,R.drawable.duck_walk4,R.drawable.duck_walk5)
+        1 -> listOf(
+            R.drawable.duck_walk1,
+            R.drawable.duck_walk2,
+            R.drawable.duck_walk3,
+            R.drawable.duck_walk4,
+            R.drawable.duck_walk5
+        )
+        2 -> listOf(
+            R.drawable.bear_walk1,
+            R.drawable.bear_walk2,
+            R.drawable.bear_walk3,
+            R.drawable.bear_walk4
+        )
+        else -> listOf(
+            R.drawable.duck_walk1,
+            R.drawable.duck_walk2,
+            R.drawable.duck_walk3,
+            R.drawable.duck_walk4,
+            R.drawable.duck_walk5
+        )
     }
 
     var currentFrame by remember { mutableStateOf(0) }
@@ -447,7 +476,9 @@ fun AnimatedCharacter(
                 delay(150)
                 currentFrame = (currentFrame + 1) % frames.size
             }
-        } else currentFrame = 0
+        } else {
+            currentFrame = 0
+        }
     }
 
     Image(
