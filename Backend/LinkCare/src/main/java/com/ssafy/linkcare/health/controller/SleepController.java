@@ -91,15 +91,15 @@ public class SleepController {
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
     @GetMapping("/{userSeq}/date-period")
-    public ResponseEntity<List<SleepResponse>> getSleepsByPeriod(
+    public ResponseEntity<List<SleepResponse>> getSleepsByDate(
             @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
-            @Parameter(description = "시작 날짜 (yyyy-MM-dd'T'HH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
-            @Parameter(description = "종료 날짜 (yyyy-MM-dd'T'HH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate endDate
+            @Parameter(description = "시작 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
+            @Parameter(description = "종료 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate endDate
     ) {
         log.info("API 호출 - 특정 기간 수면 데이터 조회: userSeq = {}, " +
                 "startTime = {},  endTime = {}", userSeq, startDate, endDate);
 
-        List<SleepResponse> responses = sleepService.getSleepsByPeriod(userSeq, startDate, endDate);
+        List<SleepResponse> responses = sleepService.getSleepsByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(responses);
     }
@@ -121,7 +121,7 @@ public class SleepController {
         return ResponseEntity.ok(responses);
     }
 
-    @Operation(summary = "기간별 수면 통계 조회",
+    @Operation(summary = "(TimeStamp) 기간별 수면 통계 조회",
             description = "지정된 기간의 수면 통계(총 수면 시간, 평균, 최대/최소)를 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
@@ -138,6 +138,27 @@ public class SleepController {
 
         SleepStatisticsResponse response = sleepService
                 .getSleepStatistics(userSeq, startTime, endTime);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "(LocalDate) 기간별 수면 통계 조회",
+            description = "지정된 기간의 수면 통계(총 수면 시간, 평균, 최대/최소)를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userSeq}/statistics/date")
+    public ResponseEntity<SleepStatisticsResponse> getSleepStatisticsByDate(
+            @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
+            @Parameter(description = "시작 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
+            @Parameter(description = "종료 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate endDate
+    ) {
+        log.info("API 호출 - (LocalDate) 수면 통계 조회: userSeq={}, startTime={}, endTime={}",
+                userSeq, startDate, endDate);
+
+        SleepStatisticsResponse response = sleepService
+                .getSleepStatisticsByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
     }
@@ -176,5 +197,26 @@ public class SleepController {
                 .getThisWeekSleepStatistics(userSeq);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "기간별 수면 시간 조회",
+            description = "LocalDate 기준으로 기간별 수면 시간을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 날짜 형식"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userSeq}/total-duration/date-period")
+    public ResponseEntity<List<Long>> getTotalSleepDurationByDate(
+            @Parameter(description = "사용자 시퀀스", required = true) @PathVariable int userSeq,
+            @Parameter(description = "시작 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate startDate,
+            @Parameter(description = "종료 날짜") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate endDate
+    ) {
+        log.info("API 호출 - 기간별 수면 시간 조회: userSeq = {}, " +
+                "startTime = {},  endTime = {}", userSeq, startDate, endDate);
+
+        List<Long> responses = sleepService.getTotalSleepDurationByDate(userSeq, startDate, endDate);
+
+        return ResponseEntity.ok(responses);
     }
 }

@@ -294,7 +294,7 @@ public class ExerciseService {
      * @param userSeq 사용자 시퀀스
      * @return ExerciseResponse 리스트
      */
-    public List<ExerciseResponse> getExercisesByPeriod(
+    public List<ExerciseResponse> getExercisesByDate(
             int userSeq,
             LocalDate startDate,
             LocalDate endDate) {
