@@ -55,6 +55,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.a307.linkcare.common.component.molecules.HeaderBasic
 import com.a307.linkcare.feature.mypage.Gender
 import com.a307.linkcare.feature.mypage.Profile
@@ -68,10 +69,9 @@ private fun NavController.goBackToMyPage() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTabs() {
+fun MainTabs(rootNavController: NavHostController) {
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
 
@@ -408,7 +408,13 @@ fun MainTabs() {
                         onGroupsClick = { navController.navigate(Route.MyGroups.route) },
                         onEditClick = { navController.navigate(Route.EditProfile.route) },
                         onStoreClick = { navController.navigate(Route.Store.route) },
-                        onDecorateClick = { navController.navigate(Route.Decorate.route) }
+                        onDecorateClick = { navController.navigate(Route.Decorate.route) },
+                        onLogout = {
+                            rootNavController.navigate(Route.Login.route) {
+                                popUpTo(rootNavController.graph.id) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
 

@@ -184,7 +184,7 @@ fun AppNavGraph(
             SignupPager(
                 navController = navController,
                 onFinished = {
-                    navController.navigate(Route.Main.route) {
+                    navController.navigate(Route.IntroTour.route) {
                         popUpTo(Route.Onboarding.route) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -205,9 +205,9 @@ fun AppNavGraph(
 
         // 메인 화면
         composable(Route.Main.route) {
-            MainTabs(
-            )
+            MainTabs(rootNavController = navController)
         }
+
     }
 }
 
