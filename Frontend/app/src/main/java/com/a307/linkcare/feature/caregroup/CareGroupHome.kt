@@ -23,10 +23,13 @@ import java.time.*
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.feature.caregroup.domain.CareWeekSummary
 import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*;
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -78,11 +81,33 @@ enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CareGroupHome(
-    membersAll: List<Member>,
-    modifier: Modifier = Modifier
+    groupSeq: Long,
+    modifier: Modifier = Modifier,
+    vm: MyGroupsViewModel = hiltViewModel()
 ) {
-    // 데모 데이터
-    val members = remember {
+    LaunchedEffect(groupSeq) {
+        vm.loadGroupDetail(groupSeq)
+    }
+
+   val detail by vm.detail.collectAsState()
+    val membersResponse by vm.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
+    val groupName by vm.groupName.collectAsState()
+
+    val apiMembers = remember(membersResponse) {
+        membersResponse.map { m ->
+            Member(
+                name = m.userName,
+                progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
+                goal = 30000,                        // TODO: 그룹 목표 값으로 교체
+                avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
+                bubbleText = "컨디션 좋아요!",       // TODO: AI 한 줄 요약 나오면 교체
+                isLeader = m.isLeader
+            )
+        }
+    }
+
+    // 더미 fallback
+    val demoMembers = remember {
         listOf(
             Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
             Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
@@ -90,47 +115,69 @@ fun CareGroupHome(
             Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
         )
     }
-    val leader = remember(members) { members.first { it.isLeader } }
 
-    var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    // 실제로 사용할 멤버 리스트
+    val members = if (apiMembers.isNotEmpty()) apiMembers else demoMembers
+
+    val leader = remember(members) {
+        members.firstOrNull { it.isLeader } ?: members.first()
+    }
+
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
 
-    // 주차/일자 데이터 (데모)
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(0.62f) }
-    var todayGroupProgress by remember { mutableStateOf(10234) }
-    var totalGroupGoal by remember { mutableStateOf(20000) }
+    var todayGroupPercent by remember { mutableStateOf(0.62f) }   // TODO: API 나오면 교체
+    var todayGroupProgress by remember { mutableStateOf(10234) }  // TODO
+    var totalGroupGoal by remember { mutableStateOf(20000) }      // TODO
 
     // 날짜 이동
     val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
     val onNextDay = { selectedDate = selectedDate.plusDays(1) }
 
-    // 주차 변경 시
+    // 주차 변경 시 → 해당 주의 멤버 데이터
     val year = selectedDate.year
     val month = selectedDate.monthValue
     val wom = selectedDate.weekOfMonth()
-    LaunchedEffect(year, month, wom) {
+    LaunchedEffect(year, month, wom, members) {
         val start = selectedDate.startOfWeek()
         val end = selectedDate.endOfWeek()
-        // TODO API 교체
-        weekMembers = membersAll.ifEmpty { members }
+        // TODO: 해당 주차 health/care 데이터 API 나오면 여기서 교체
+        weekMembers = members
     }
 
-    // 날짜 변경 시
+    // 날짜 변경 시 → 오늘 멤버 목록
     LaunchedEffect(selectedDate, weekMembers) {
-        // TODO API 교체
-        todayMembers = weekMembers.ifEmpty { members }
+        // TODO: 선택한 날짜 데이터만 필터링 하려면 여기에서 필터
+        todayMembers = weekMembers
     }
 
-    // 다이얼로그는 리스트 바깥에서 remember
+    // 날짜 선택 다이얼로그 상태
+    // 날짜 선택 다이얼로그용 상태
     val dpState = rememberDatePickerState(
-        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal()
+        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val date = epochMilliToLocalDate(utcTimeMillis)
+                // minDate ~ today 사이만 선택 가능
+                return !date.isBefore(minDate) && !date.isAfter(today)
+            }
+
+            override fun isSelectableYear(year: Int): Boolean {
+                // 연도도 같이 제한
+                return year in minDate.year..today.year
+            }
+        }
     )
+
 
     val taps = remember {
         mutableStateListOf(
@@ -142,7 +189,7 @@ fun CareGroupHome(
     // 지표 탭 상태
     var metricType by rememberSaveable { mutableStateOf(MetricType.ACTIVITY) }
 
-    // 날짜 또는 지표가 바뀔 때마다 요약 갱신
+    // 날짜/지표에 따른 요약
     val summary = remember(selectedDate, metricType) {
         sampleSummary(selectedDate.korLabel(), metricType)
     }
@@ -151,7 +198,6 @@ fun CareGroupHome(
     val todayHealthByName = remember(selectedDate, todayMembers) {
         todayMembers.associate { m -> m.name to sampleHealthToday(m) }
     }
-
 
     Scaffold { _ ->
         Box(modifier = modifier.fillMaxSize()) {
@@ -186,21 +232,26 @@ fun CareGroupHome(
                         onPrev = onPrevDay,
                         onNext = onNextDay,
                         label = selectedDate.korLabel(),
-                        onClick = { showCalendar = true } // 클릭으로 달력 열기
+                        onClick = { showCalendar = true }
                     )
                 }
 
-                // 멤버 리스트(선택 날짜 기준)
-                items(todayMembers, key = { it.name }) { m ->
+                // 멤버 리스트
+                itemsIndexed(todayMembers, key = { _, item -> item.name }) { index, m ->
                     MemberRow(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
-                            expandedMemberName = if (expandedMemberName == m.name) null else m.name
+                            expandedMemberName =
+                                if (expandedMemberName == m.name) null else m.name
                         },
                         onClick = { selectedMember = m }
                     )
-                    Divider(color = Color(0x11000000))
+
+                    // 마지막 아이템이 아닌 경우에만 Divider 표시
+                    if (index < todayMembers.lastIndex) {
+                        Divider(color = Color(0x11000000))
+                    }
                 }
 
                 item {
@@ -217,10 +268,10 @@ fun CareGroupHome(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally 
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "만수무강 그룹의 건강을 분석했어요",
+                            text = "${(groupName.ifBlank { "케어" })} 그룹의 건강을 분석했어요",
                             fontWeight = FontWeight.SemiBold,
                             color = black
                         )
@@ -236,7 +287,6 @@ fun CareGroupHome(
                     Spacer(Modifier.height(6.dp))
                 }
 
-                // 운동 탭일 때만 진행률 카드
                 if (metricType == MetricType.ACTIVITY) {
                     item {
                         Spacer(Modifier.height(6.dp))
@@ -248,7 +298,6 @@ fun CareGroupHome(
                         )
                     }
                 } else {
-                    // 혈압/수면: 멤버별 라인 + 전체 평균 라인
                     item {
                         Spacer(Modifier.height(6.dp))
                         val chartData = remember(selectedDate, weekMembers, metricType) {
@@ -258,7 +307,7 @@ fun CareGroupHome(
                             title = when (metricType) {
                                 MetricType.BLOOD_PRESSURE -> "주간 혈압 추이"
                                 MetricType.SLEEP -> "주간 수면 시간 추이"
-                                else -> "" // 사용 안됨
+                                else -> ""
                             },
                             unit = when (metricType) {
                                 MetricType.BLOOD_PRESSURE -> "mmHg"
@@ -309,6 +358,7 @@ fun CareGroupHome(
         }
     }
 }
+
 
 /* ---------- 컴포넌트 ---------- */
 @Composable

@@ -9,4 +9,7 @@ class GroupRepository @Inject constructor(
     suspend fun getMyGroups(type: String?): List<MyGroupResponse> {
         return api.getMyGroups(type)
     }
+
+    suspend fun getGroupDetail(groupSeq: Long) =
+        api.getMyGroupDetail(groupSeq)
 }

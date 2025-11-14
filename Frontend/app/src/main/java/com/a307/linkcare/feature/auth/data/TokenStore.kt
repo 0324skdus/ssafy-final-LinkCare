@@ -14,6 +14,7 @@ object TokenKeys {
     val REFRESH = stringPreferencesKey("refresh")
     val EMAIL = stringPreferencesKey("email")
     val NAME = stringPreferencesKey("name")
+    val USER_PK = longPreferencesKey("userPk")
 }
 
 class TokenStore(private val context: Context) {
@@ -23,12 +24,19 @@ class TokenStore(private val context: Context) {
     fun getRefresh(): String? = runBlocking {
         context.dataStore.data.first()[TokenKeys.REFRESH]
     }
+    fun getUserPk(): Long? = runBlocking {
+        context.dataStore.data.first()[TokenKeys.USER_PK]
+    }
+    fun getName(): String? = runBlocking {
+        context.dataStore.data.first()[TokenKeys.NAME]
+    }
     fun save(auth: LoginResponse) = runBlocking {
         context.dataStore.edit {
             it[TokenKeys.ACCESS] = auth.accessToken
             it[TokenKeys.REFRESH] = auth.refreshToken
             it[TokenKeys.EMAIL] = auth.email
             it[TokenKeys.NAME] = auth.name
+            it[TokenKeys.USER_PK] = auth.userPk
         }
     }
     fun saveTokens(access: String, refresh: String) = runBlocking {
@@ -43,6 +51,7 @@ class TokenStore(private val context: Context) {
             it.remove(TokenKeys.REFRESH)
             it.remove(TokenKeys.EMAIL)
             it.remove(TokenKeys.NAME)
+            it.remove(TokenKeys.USER_PK)
         }
     }
 }
