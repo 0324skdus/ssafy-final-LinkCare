@@ -146,7 +146,7 @@ public class GroupController {
     }
 
     // 그룹 정보 수정
-    @Operation(summary = "그룹 정보 수정", description = "그룹 이름, 소개, 이미지를 수정합니다. 방장만 수정 가능합니다.")
+    @Operation(summary = "그룹 정보 수정", description = "그룹 이름, 소개, 이미지를 수정합니다. 케어 그룹인 경우 선택 권한 항목도 수정 가능합니다. 방장만 수정 가능합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "그룹 수정 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청"),
@@ -161,10 +161,21 @@ public class GroupController {
             @RequestParam("groupName") String groupName,
             @RequestParam("groupDescription") String groupDescription,
             @RequestParam(value = "imageAction", required = false, defaultValue = "keep") String imageAction,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "isSleepRequired", required = false) Boolean isSleepRequired,
+            @RequestParam(value = "isWaterIntakeRequired", required = false) Boolean isWaterIntakeRequired,
+            @RequestParam(value = "isBloodPressureRequired", required = false) Boolean isBloodPressureRequired,
+            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired) {
 
         Long userId = Long.parseLong(authentication.getName());
-        UpdateGroupRequest request = new UpdateGroupRequest(groupName, groupDescription);
+        UpdateGroupRequest request = new UpdateGroupRequest(
+                groupName,
+                groupDescription,
+                isSleepRequired,
+                isWaterIntakeRequired,
+                isBloodPressureRequired,
+                isBloodSugarRequired
+        );
         GroupResponse response = groupService.updateGroup(userId, groupSeq, request, imageAction, image);
 
         log.info("그룹 정보 수정 API 호출: userId={}, groupSeq={}, imageAction={}", userId, groupSeq, imageAction);
@@ -330,5 +341,47 @@ public class GroupController {
     public ResponseEntity<String> generateWeeklyStats() {
         weeklyStatsService.generateAllGroupWeeklyStats();
         return ResponseEntity.ok("주간 통계 생성 완료");
+    }
+
+    // ============== 그룹원 동의 관리 API ==============
+
+    @Operation(summary = "그룹원 권한 동의", description = "그룹원이 변경된 권한 설정에 동의합니다. 케어 그룹 전용 기능입니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "동의 처리 완료"),
+            @ApiResponse(responseCode = "400", description = "권한 동의 정보가 유효하지 않음"),
+            @ApiResponse(responseCode = "403", description = "그룹 멤버가 아님"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @PostMapping("/{groupSeq}/permissions/agree")
+    public ResponseEntity<Void> agreeToGroupPermissions(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestBody PermissionAgreementDto agreement) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.agreeToGroupPermissions(userId, groupSeq, agreement);
+
+        log.info("그룹원 권한 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "케어 그룹 권한 자동 동의",
+            description = "권한 변경 알림 받은 후 간편하게 동의합니다. 그룹이 요구하는 모든 권한에 자동으로 동의됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "자동 동의 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "그룹 멤버가 아님"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @PostMapping("/{groupSeq}/permissions/auto-agree")
+    public ResponseEntity<Void> autoAgreeToGroupPermissions(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.autoAgreeToGroupPermissions(userId, groupSeq);
+
+        log.info("그룹원 권한 자동 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok().build();
     }
 }
