@@ -38,6 +38,11 @@ class TokenStore(private val context: Context) {
         }
     }
     fun clear() = runBlocking {
-        context.dataStore.edit { it.clear() }
+        context.dataStore.edit {
+            it.remove(TokenKeys.ACCESS)
+            it.remove(TokenKeys.REFRESH)
+            it.remove(TokenKeys.EMAIL)
+            it.remove(TokenKeys.NAME)
+        }
     }
 }
