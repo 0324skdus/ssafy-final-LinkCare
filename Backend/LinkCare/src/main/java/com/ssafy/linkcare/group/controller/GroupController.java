@@ -1,6 +1,8 @@
 package com.ssafy.linkcare.group.controller;
 
+import com.ssafy.linkcare.ai.service.GoalGenerationService;
 import com.ssafy.linkcare.group.dto.*;
+import com.ssafy.linkcare.group.entity.WeeklyGroupGoals;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.service.GroupService;
 import com.ssafy.linkcare.group.service.WeeklyStatsService;
@@ -31,6 +33,7 @@ public class GroupController {
 
     private final GroupService groupService;
     private final WeeklyStatsService weeklyStatsService;
+    private final GoalGenerationService goalGenerationService;
 
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
@@ -331,4 +334,29 @@ public class GroupController {
         weeklyStatsService.generateAllGroupWeeklyStats();
         return ResponseEntity.ok("주간 통계 생성 완료");
     }
+
+    @Operation(summary = "AI 기반 그룹 목표 생성",
+            description = "저번 주부터 최대 3주 데이터를 기반으로 AI가 예측한 주간 목표를 생성합니다. " +
+                    "requestDate는 어떤 요일이든 가능하며, 해당 날짜가 속한 주(월~일)의 목표가 생성됩니다. " +
+                    "목표는 주간 전체 값으로 저장되며, 남은 일수 계산은 프론트엔드에서 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 생성 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "과거 통계 데이터가 존재하지 않음")
+    })
+    @PostMapping("/{groupSeq}/goals")
+    public ResponseEntity<WeeklyGroupGoalResponse> generateGroupGoal(
+            @PathVariable Long groupSeq,
+            @RequestParam LocalDate requestDate) {
+
+        log.info("그룹 목표 생성 API 호출: groupSeq={}, requestDate={}", groupSeq, requestDate);
+
+        WeeklyGroupGoals goal = goalGenerationService.generateNextWeekGoal(groupSeq, requestDate);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }
+
