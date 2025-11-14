@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,7 +31,10 @@ import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.TokenKeys
+import com.a307.linkcare.feature.auth.data.TokenStore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun SignupHeightScreen(
@@ -39,6 +43,9 @@ fun SignupHeightScreen(
     onSubmit: (Pair<Float, Float>) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val tokenStore = remember { TokenStore(context) }
+    val userName = remember { tokenStore.getName().orEmpty() }
 
     var heightText by rememberSaveable { mutableStateOf("") }
     var weightText by rememberSaveable { mutableStateOf("") }
@@ -86,7 +93,7 @@ fun SignupHeightScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "싸피님에 대해서",
+                    text = "${if (userName.isNotBlank()) userName + "님" else "당신"}에 대해서",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = black,
@@ -251,3 +258,7 @@ private fun sanitizeDecimalInput(
         s.take(maxIntDigits)
     }
 }
+
+//fun getName(): String? = runBlocking {
+//    context.dataStore.data.first()[TokenKeys.NAME] as String?
+//}

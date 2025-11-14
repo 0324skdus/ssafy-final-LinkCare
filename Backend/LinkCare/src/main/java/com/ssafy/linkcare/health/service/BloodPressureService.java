@@ -128,6 +128,20 @@ public class BloodPressureService {
                 .collect(Collectors.toList());
     }
 
+    public List<BloodPressureResponse> getBloodPressureByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        List<BloodPressure> bloodPressures = bloodPressureRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startTimeTs, endTimeTs);
+
+        return bloodPressures.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     private BloodPressureResponse convertToResponse(BloodPressure bloodPressure) {
         return BloodPressureResponse.builder()
                 .bloodPressureId(bloodPressure.getBloodPressureId())
@@ -148,20 +162,30 @@ public class BloodPressureService {
     public BloodPressureStaticsResponse getBloodPressureStatsByPeriod(int userSeq, LocalDate startDate, LocalDate endDate) {
         User user = validateUser(userSeq);
 
-        long startTimestamp = timeStampUtil.toTimestamp(startDate);
-        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+        long startTimestamp = timeStampUtil.getDateStartTimestamp(startDate);
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(endDate);
 
         Double avgSystolic = bloodPressureRepository.findAverageSystolicByPeriod(user, startTimestamp, endTimestamp);
         Double avgDiastolic = bloodPressureRepository.findAverageDiastolicByPeriod(user, startTimestamp, endTimestamp);
-//        Double maxSystolic = bloodPressureRepository.findMaxDiastolicByPeriod()
+
+        // 최고값
+        Double maxSystolic = bloodPressureRepository.findMaxSystolicByPeriod(user, startTimestamp, endTimestamp);
+        Double maxDiastolic = bloodPressureRepository.findMaxDiastolicByPeriod(user, startTimestamp, endTimestamp);
+
+        // 최저값
+        Double minSystolic = bloodPressureRepository.findMinSystolicByPeriod(user, startTimestamp, endTimestamp);
+        Double minDiastolic = bloodPressureRepository.findMinDiastolicByPeriod(user, startTimestamp, endTimestamp);
+
 
         return BloodPressureStaticsResponse.builder()
                 .startDate(startDate)
                 .endDate(endDate)
                 .avgSystolic(avgSystolic != null ? avgSystolic : 0.0)
                 .avgDiastolic(avgDiastolic != null ? avgDiastolic : 0.0)
-//                .maxDiastolic(0.0)
-//                .minDiastolic(0.0)
+                .maxSystolic(maxSystolic != null ? maxSystolic : 0.0)
+                .maxDiastolic(maxDiastolic != null ? maxDiastolic : 0.0)
+                .minSystolic(minSystolic != null ? minSystolic : 0.0)
+                .minDiastolic(minDiastolic != null ? minDiastolic : 0.0)
                 .build();
     }
 

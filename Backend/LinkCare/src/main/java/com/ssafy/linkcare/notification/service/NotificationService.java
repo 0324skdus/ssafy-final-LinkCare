@@ -66,7 +66,8 @@ public class NotificationService {
             List<NotificationType> groupTypes = List.of(
                     NotificationType.GROUP_JOIN_REQUEST,
                     NotificationType.GROUP_JOIN_APPROVED,
-                    NotificationType.GROUP_JOIN_REJECTED
+                    NotificationType.GROUP_JOIN_REJECTED,
+                    NotificationType.GROUP_PERMISSION_CHANGED
             );
             notifications = notificationRepository.findByUserAndTypeInOrderByCreatedAtDesc(user, groupTypes);
         } else {
@@ -95,7 +96,8 @@ public class NotificationService {
         List<NotificationType> groupTypes = List.of(
                 NotificationType.GROUP_JOIN_REQUEST,
                 NotificationType.GROUP_JOIN_APPROVED,
-                NotificationType.GROUP_JOIN_REJECTED
+                NotificationType.GROUP_JOIN_REJECTED,
+                NotificationType.GROUP_PERMISSION_CHANGED
         );
         Long groupCount = notificationRepository.countByUserAndIsReadFalseAndTypeIn(user, groupTypes);
 

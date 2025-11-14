@@ -179,6 +179,27 @@ public class WaterIntakeService {
     }
 
     /**
+     * 기간별 물 섭취 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return WaterIntakeGroupedResponse 리스트
+     */
+    public List<WaterIntakeResponse> getWaterIntakeByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        log.info("기간별 물 섭취 데이터 조회 - User: {}", userSeq);
+
+        List<WaterIntake> waterIntakes = waterIntakeRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startDateTs, endDateTs);
+
+        return waterIntakes.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 기간별 물 섭취 통계 조회
      * @param userSeq 사용자 시퀀스
      * @param startTime 시작 시간
