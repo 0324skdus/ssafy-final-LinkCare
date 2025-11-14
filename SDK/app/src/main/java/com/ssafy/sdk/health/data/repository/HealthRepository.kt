@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.data.repository
 
+import com.ssafy.sdk.health.data.model.ExerciseData
 import com.ssafy.sdk.health.data.remote.ApiResponse
 import com.ssafy.sdk.health.data.remote.HealthApiService
 import com.ssafy.sdk.health.domain.sync.AllHealthData
@@ -69,6 +70,21 @@ class HealthRepository @Inject constructor(
     ): Result<Unit> {
         return try {
             val response = apiService.uploadUserAllHealthData(userId, data)
+            handleResponse(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        } as Result<Unit>
+    }
+
+    /**
+     * 운동 데이터만 서버 전송
+     */
+    suspend fun uploadExerciseOnly(
+        userId: Int,
+        exercises: ExerciseData
+    ): Result<Unit> {
+        return try {
+            val response = apiService.uploadExerciseOnly(userId, exercises)
             handleResponse(response)
         } catch (e: Exception) {
             Result.failure(e)

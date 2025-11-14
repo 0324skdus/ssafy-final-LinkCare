@@ -1,12 +1,17 @@
 package com.ssafy.sdk.health.presentation
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ssafy.sdk.health.presentation.ui.PermissionScreen
 
 @Composable
 fun HealthSyncScreen(
@@ -14,6 +19,7 @@ fun HealthSyncScreen(
     viewModel: HealthSyncViewModel = hiltViewModel()
 ) {
     val syncProgress by viewModel.syncProgress.collectAsState()
+    val activity = LocalContext.current as Activity
 
     Column(
         modifier = Modifier
@@ -26,12 +32,17 @@ fun HealthSyncScreen(
             is SyncProgress.Idle -> {
                 IdleContent(
                     onSyncClick = { viewModel.syncHealthData(userId) },
-                    onForceFullSyncClick = { viewModel.forceFullSync(userId) }
+                    onForceFullSyncClick = { viewModel.forceFullSync(userId) },
+                    onExerciseSyncClick = { viewModel.syncExerciseOnly(userId) }
                 )
             }
 
             is SyncProgress.PermissionRequired -> {
-                PermissionRequiredContent()
+                // 새로운 권한 화면 사용
+                PermissionScreen(
+                    viewModel = viewModel,
+                    activity = activity
+                )
             }
 
             is SyncProgress.CollectingData -> {
@@ -72,7 +83,8 @@ fun HealthSyncScreen(
 @Composable
 private fun IdleContent(
     onSyncClick: () -> Unit,
-    onForceFullSyncClick: () -> Unit
+    onForceFullSyncClick: () -> Unit,
+    onExerciseSyncClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -96,28 +108,21 @@ private fun IdleContent(
         ) {
             Text("전체 재동기화")
         }
-    }
-}
 
-@Composable
-private fun PermissionRequiredContent() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "⚠️ 권한 필요",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.error
-        )
-
-        Text("삼성헬스 접근 권한이 필요합니다.")
-
-        Button(onClick = {
-            // TODO: 권한 요청 화면으로 이동
-            // 프론트 팀이 구현
-        }) {
-            Text("권한 설정하기")
+        OutlinedButton(
+            onClick = onExerciseSyncClick,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Face,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("오늘 운동 데이터만 동기화")
         }
     }
 }

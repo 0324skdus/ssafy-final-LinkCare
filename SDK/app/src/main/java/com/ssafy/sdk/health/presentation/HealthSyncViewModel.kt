@@ -10,7 +10,9 @@ import com.ssafy.sdk.health.domain.ArePermissionsGrantedUseCase
 import com.ssafy.sdk.health.domain.RequestPermissionsUseCase
 import com.ssafy.sdk.health.domain.sync.SyncAllHealthDataUseCase
 import com.ssafy.sdk.health.domain.sync.SyncDailyHealthDataUseCase
+import com.ssafy.sdk.health.domain.upload.SyncExerciseOnlyUseCase
 import com.ssafy.sdk.health.domain.upload.UploadDailyHealthDataUseCase
+import com.ssafy.sdk.health.domain.upload.UploadExerciseOnlyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +47,8 @@ class HealthSyncViewModel @Inject constructor(
     private val uploadAllHealthDataUseCase: UploadAllHealthDataUseCase,
     private val sharedPreferences: SharedPreferences,
     private val requestPermissionsUseCase: RequestPermissionsUseCase,
+    private val syncExerciseOnlyUseCase: SyncExerciseOnlyUseCase,
+    private val uploadExerciseOnlyUseCase: UploadExerciseOnlyUseCase,
 ) : ViewModel() {
 
     private val _syncProgress = MutableStateFlow<SyncProgress>(SyncProgress.Idle)
@@ -203,6 +207,42 @@ class HealthSyncViewModel @Inject constructor(
                 _syncProgress.value = SyncProgress.Error(error.message ?: "업로드 실패")
             }
         )
+    }
+
+    /**
+     * 운동 데이터만 동기화 & 업로드 (워치 병합용)
+     */
+    fun syncExerciseOnly(userId: Int) {
+        viewModelScope.launch {
+            try {
+                // 1단계: 권한 확인
+                if (!arePermissionsGrantedUseCase()) {
+                    _syncProgress.value = SyncProgress.PermissionRequired
+                    return@launch
+                }
+
+                _syncProgress.value = SyncProgress.CollectingData
+
+                // 2단계: 운동 데이터만 수집
+                val exercises = syncExerciseOnlyUseCase()
+
+                // 3단계: 서버 전송
+                _syncProgress.value = SyncProgress.Uploading("운동 데이터 전송 중...")
+
+                val result = uploadExerciseOnlyUseCase(userId, exercises)
+
+                result.fold(
+                    onSuccess = {
+                        _syncProgress.value = SyncProgress.Success("운동 데이터 동기화 완료!")
+                    },
+                    onFailure = { error ->
+                        _syncProgress.value = SyncProgress.Error(error.message ?: "업로드 실패")
+                    }
+                )
+            } catch (e: Exception) {
+                _syncProgress.value = SyncProgress.Error(e.message ?: "동기화 실패")
+            }
+        }
     }
 
     /**

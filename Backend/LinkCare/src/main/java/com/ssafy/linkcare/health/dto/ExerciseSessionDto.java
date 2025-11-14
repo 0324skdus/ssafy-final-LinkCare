@@ -13,8 +13,8 @@ public class ExerciseSessionDto {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String exerciseType;
-    private float calories;
-    private float distance;
+    private Float calories;
+    private Float distance;
     private Long duration;
 
 }
