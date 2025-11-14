@@ -12,12 +12,10 @@ import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -280,11 +278,11 @@ public class SleepService {
      * @param endTime 종료 시간
      * @return SleepResponse 리스트
      */
-    public List<SleepResponse> getSleepsByPeriod(int userSeq, LocalDate startTime, LocalDate endTime) {
+    public List<SleepResponse> getSleepsByDate(int userSeq, LocalDate startTime, LocalDate endTime) {
         User user = validateUser(userSeq);
 
-        Long startTimeTs = timeStampUtil.toTimestamp(startTime);
-        Long endTimeTs = timeStampUtil.toTimestamp(endTime);
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startTime);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endTime);
 
         List<Sleep> sleeps = sleepRepository
                 .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, startTimeTs, endTimeTs);
@@ -362,7 +360,7 @@ public class SleepService {
     }
 
     /**
-     * 기간별 수면 통계 조회
+     *  (LocalDate) 기간별 수면 통계 조회
      * @param userSeq 사용자 시퀀스
      * @param startDate 시작 시간
      * @param endDate 종료 시간
@@ -375,8 +373,8 @@ public class SleepService {
     ) {
         User user = validateUser(userSeq);
 
-        Long startDateTs = timeStampUtil.toTimestamp(startDate);
-        Long endDateTs = timeStampUtil.toTimestamp(endDate);
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
 
         log.info("수면 통계 조회 - User: {}, Start: {}, End: {}", userSeq, startDateTs, endDateTs);
 
@@ -422,6 +420,27 @@ public class SleepService {
         Long weekStart = timeStampUtil.getThisWeekStartTimestamp();
         Long now = timeStampUtil.getCurrentTimestamp();
         return getSleepStatistics(userSeq, weekStart, now);
+    }
+
+    /**
+     * 기간별 수면 시간 조회
+     * @param userSeq 사용자 시퀀스
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @return SleepResponse 리스트
+     */
+    public List<Long> getTotalSleepDurationByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        List<Sleep> sleeps = sleepRepository
+                .findByUserAndEndTimeBetweenOrderByEndTimeDesc(user, startTimeTs, endTimeTs);
+
+        return sleeps.stream()
+                .map(sleep -> sleep.getDuration() != 0 ? sleep.getDuration() : 0L)
+                .toList();
     }
 
     private SleepResponse convertToSleepResponse(Sleep sleep) {

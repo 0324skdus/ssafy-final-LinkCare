@@ -65,6 +65,9 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "last_sync_time")
+    private LocalDateTime lastSyncTime;
+
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
@@ -115,6 +118,10 @@ public class User {
     // FCM 토큰 업데이트
     public void updateFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
+    }
+
+    public void updateLastSyncTime() {
+        this.lastSyncTime = LocalDateTime.now();
     }
 
 }

@@ -154,8 +154,8 @@ public class ActivitySummaryService {
     public ActivitySummaryStaticsResponse getActivitySummaryStatsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
         User user = validateUser(userSeq);
 
-        long startTimestamp = timeStampUtil.toTimestamp(startDate);
-        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+        long startTimestamp = timeStampUtil.getDateStartTimestamp(startDate);
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(endDate);
 
         Double totalCalories = activitySummaryRepository.findTotalCaloriesByPeriod(user, startTimestamp, endTimestamp);
         Double totalDistance = activitySummaryRepository.findTotalDistanceByPeriod(user, startTimestamp, endTimestamp);
