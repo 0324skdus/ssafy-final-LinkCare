@@ -390,9 +390,14 @@ public class GroupService {
         group.updateGroupInfo(request.groupName(), request.groupDescription());
         group.updateImageUrl(newImageUrl);
 
+        // 5. 케어 그룹인 경우 권한 업데이트 및 알림 발송
+        if (group.getType() == GroupType.CARE) {
+            updateCareGroupPermissions(group, request);
+        }
+
         log.info("그룹 정보 수정 완료: groupSeq={}, userId={}", groupSeq, userId);
 
-        // 5. 응답 생성
+        // 6. 응답 생성
         int currentMembers = groupMemberRepository.countByGroup(group);
         return new GroupResponse(
                 group.getGroupSeq(),
@@ -958,6 +963,246 @@ public class GroupService {
     private Group validateGroup(Long groupSeq) {
         return groupRepository.findById(groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    /*
+        * 그룹원 권한 동의 처리
+            * - 그룹원이 알림을 받고 동의 버튼을 누르면 호출
+            * - GroupHealthPermission 업데이트
+    */
+    @Transactional
+    public void agreeToGroupPermissions(Long userId, Long groupSeq, PermissionAgreementDto agreement) {
+        // 1. 사용자 및 그룹 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 그룹 멤버 확인
+        GroupMember member = groupMemberRepository.findByGroupAndUser_UserPk(group, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 3. 케어 그룹인지 확인
+        if (group.getType() != GroupType.CARE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "케어 그룹만 권한 동의가 가능합니다");
+        }
+
+        // 4. 그룹 요구 권한 조회
+        GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 5. 권한 동의 검증: 그룹이 요구하는 권한을 모두 동의했는지 확인
+        if (required.getIsSleepRequired() && !agreement.isSleepAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 수면 데이터 공유가 필수입니다");
+        }
+        if (required.getIsWaterIntakeRequired() && !agreement.isWaterIntakeAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 물 섭취량 공유가 필수입니다");
+        }
+        if (required.getIsBloodPressureRequired() && !agreement.isBloodPressureAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 혈압 데이터 공유가 필수입니다");
+        }
+        if (required.getIsBloodSugarRequired() && !agreement.isBloodSugarAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 혈당 데이터 공유가 필수입니다");
+        }
+
+        // 6. 기존 권한 조회 및 업데이트
+        GroupHealthPermission permission = healthPermissionRepository.findByGroupMember(member)
+                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
+
+        // 7. 새로운 권한으로 업데이트 (Builder 패턴 사용)
+        GroupHealthPermission updatedPermission = GroupHealthPermission.builder()
+                .groupMember(member)
+                // 필수 권한 (항상 true)
+                .isDailyStepAllowed(true)
+                .isHeartRateAllowed(true)
+                .isExerciseAllowed(true)
+                // 선택 권한 (사용자가 동의한 값)
+                .isSleepAllowed(agreement.isSleepAllowed())
+                .isWaterIntakeAllowed(agreement.isWaterIntakeAllowed())
+                .isBloodPressureAllowed(agreement.isBloodPressureAllowed())
+                .isBloodSugarAllowed(agreement.isBloodSugarAllowed())
+                .build();
+
+        // 기존 엔티티 삭제 후 새로 저장 (OneToOne 관계 업데이트)
+        healthPermissionRepository.delete(permission);
+        healthPermissionRepository.save(updatedPermission);
+
+        log.info("그룹원 권한 동의 처리 완료: userId={}, groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                userId, groupSeq,
+                agreement.isSleepAllowed(), agreement.isWaterIntakeAllowed(),
+                agreement.isBloodPressureAllowed(), agreement.isBloodSugarAllowed());
+    }
+
+    /*
+        * 케어 그룹 권한 자동 동의 (그룹 요구사항에 맞춰 자동으로 동의)
+        * - 권한 변경 알림 받은 후 간편하게 "동의" 버튼만 누르면 호출되는 API
+        * - 그룹이 요구하는 모든 선택 권한을 자동으로 true로 설정
+    */
+    @Transactional
+    public void autoAgreeToGroupPermissions(Long userId, Long groupSeq) {
+        // 1. 사용자 및 그룹 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 그룹 멤버 확인
+        GroupMember member = groupMemberRepository.findByGroupAndUser_UserPk(group, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 3. 케어 그룹인지 확인
+        if (group.getType() != GroupType.CARE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "케어 그룹만 권한 동의가 가능합니다");
+        }
+
+        // 4. 그룹 요구 권한 조회
+        GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 5. 기존 권한 조회
+        GroupHealthPermission permission = healthPermissionRepository.findByGroupMember(member)
+                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
+
+        // 6. 기존 권한을 그대로 수정 (delete + save 대신 update 사용)
+        // - 필수 권한: 항상 true
+        // - 선택 권한: 그룹이 요구하면 true, 요구 안 하면 기존 값 유지
+        permission.updatePermissions(
+                true,  // isDailyStepAllowed
+                true,  // isHeartRateAllowed
+                true,  // isExerciseAllowed
+                required.getIsSleepRequired() ? true : permission.getIsSleepAllowed(),
+                required.getIsWaterIntakeRequired() ? true : permission.getIsWaterIntakeAllowed(),
+                required.getIsBloodPressureRequired() ? true : permission.getIsBloodPressureAllowed(),
+                required.getIsBloodSugarRequired() ? true : permission.getIsBloodSugarAllowed()
+        );
+
+        log.info("그룹원 권한 자동 동의 처리 완료: userId={}, groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                userId, groupSeq,
+                permission.getIsSleepAllowed(), permission.getIsWaterIntakeAllowed(),
+                permission.getIsBloodPressureAllowed(), permission.getIsBloodSugarAllowed());
+    }
+
+    /*
+        * 케어 그룹 권한 업데이트 및 알림 발송
+            * - GroupRequiredPermission 업데이트
+            * - 변경사항 감지 (true↔false 변경된 항목)
+            * - 모든 그룹원에게 알림 발송
+    */
+    private void updateCareGroupPermissions(Group group, UpdateGroupRequest request) {
+        // 1. 기존 권한 조회
+        GroupRequiredPermission requiredPermission = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 2. 변경사항 감지
+        boolean sleepChanged = false;
+        boolean waterIntakeChanged = false;
+        boolean bloodPressureChanged = false;
+        boolean bloodSugarChanged = false;
+
+        boolean sleepRequiredNow = false;
+        boolean waterIntakeRequiredNow = false;
+        boolean bloodPressureRequiredNow = false;
+        boolean bloodSugarRequiredNow = false;
+
+        // 수면
+        if (request.isSleepRequired() != null && !request.isSleepRequired().equals(requiredPermission.getIsSleepRequired())) {
+            sleepChanged = true;
+            sleepRequiredNow = request.isSleepRequired();
+        }
+
+        // 물 섭취량
+        if (request.isWaterIntakeRequired() != null && !request.isWaterIntakeRequired().equals(requiredPermission.getIsWaterIntakeRequired())) {
+            waterIntakeChanged = true;
+            waterIntakeRequiredNow = request.isWaterIntakeRequired();
+        }
+
+        // 혈압
+        if (request.isBloodPressureRequired() != null && !request.isBloodPressureRequired().equals(requiredPermission.getIsBloodPressureRequired())) {
+            bloodPressureChanged = true;
+            bloodPressureRequiredNow = request.isBloodPressureRequired();
+        }
+
+        // 혈당
+        if (request.isBloodSugarRequired() != null && !request.isBloodSugarRequired().equals(requiredPermission.getIsBloodSugarRequired())) {
+            bloodSugarChanged = true;
+            bloodSugarRequiredNow = request.isBloodSugarRequired();
+        }
+
+        // 3. 변경사항이 있으면 업데이트 및 알림 발송
+        if (sleepChanged || waterIntakeChanged || bloodPressureChanged || bloodSugarChanged) {
+            // 3-1. GroupRequiredPermission 업데이트 (Builder 사용)
+            GroupRequiredPermission updatedPermission = GroupRequiredPermission.builder()
+                    .group(group)
+                    .isSleepRequired(request.isSleepRequired() != null ? request.isSleepRequired() : requiredPermission.getIsSleepRequired())
+                    .isWaterIntakeRequired(request.isWaterIntakeRequired() != null ? request.isWaterIntakeRequired() : requiredPermission.getIsWaterIntakeRequired())
+                    .isBloodPressureRequired(request.isBloodPressureRequired() != null ? request.isBloodPressureRequired() : requiredPermission.getIsBloodPressureRequired())
+                    .isBloodSugarRequired(request.isBloodSugarRequired() != null ? request.isBloodSugarRequired() : requiredPermission.getIsBloodSugarRequired())
+                    .build();
+
+            // 기존 엔티티 삭제 후 새로 저장 (@MapsId 사용으로 인해)
+            requiredPermissionRepository.delete(requiredPermission);
+            requiredPermissionRepository.save(updatedPermission);
+
+            // 3-2. 알림 메시지 생성
+            StringBuilder notificationMessage = new StringBuilder("그룹 권한 설정이 변경되었습니다.\n");
+
+            if (sleepChanged) {
+                if (sleepRequiredNow) {
+                    notificationMessage.append("수면 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("수면 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (waterIntakeChanged) {
+                if (waterIntakeRequiredNow) {
+                    notificationMessage.append("물 섭취량 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("물 섭취량 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (bloodPressureChanged) {
+                if (bloodPressureRequiredNow) {
+                    notificationMessage.append("혈압 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("혈압 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (bloodSugarChanged) {
+                if (bloodSugarRequiredNow) {
+                    notificationMessage.append("혈당 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("혈당 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            // 3-3. 모든 그룹원에게 알림 발송 (방장 제외)
+            List<GroupMember> members = groupMemberRepository.findByGroupWithUser(group);
+
+            for (GroupMember member : members) {
+                if (!member.getIsLeader()) {  // 방장은 제외
+                    notificationService.createNotification(
+                            member.getUser(),
+                            NotificationType.GROUP_PERMISSION_CHANGED,
+                            group.getGroupName(),
+                            notificationMessage.toString(),
+                            group,
+                            null
+                    );
+                }
+            }
+
+            log.info("케어 그룹 권한 업데이트 완료 및 알림 발송: groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                    group.getGroupSeq(), sleepChanged, waterIntakeChanged, bloodPressureChanged, bloodSugarChanged);
+        }
     }
 
 }
