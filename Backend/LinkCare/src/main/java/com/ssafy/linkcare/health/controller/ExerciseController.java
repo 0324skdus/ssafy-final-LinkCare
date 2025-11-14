@@ -1,6 +1,7 @@
 package com.ssafy.linkcare.health.controller;
 
 
+import com.ssafy.linkcare.health.dto.ExerciseDto;
 import com.ssafy.linkcare.health.dto.ExerciseResponse;
 import com.ssafy.linkcare.health.dto.ExerciseStatisticsResponse;
 import com.ssafy.linkcare.health.dto.WatchExerciseData;
@@ -208,6 +209,30 @@ public class ExerciseController {
 
         exerciseService.saveWatchExercise(data, userId);
 
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 워치 병합 포함 동기화 엔드포인트
+     */
+    @PostMapping("/exercise/sync-with-merge")
+    public ResponseEntity<Void> syncExerciseWithMerge(
+            @RequestBody ExerciseDto exerciseDto,
+            @RequestHeader("userSeq") int userSeq) {
+
+        exerciseService.saveDailyExerciseDataWithWatchMerge(exerciseDto, userSeq);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 일반 동기화 엔드포인트
+     */
+    @PostMapping("/exercise/sync")
+    public ResponseEntity<Void> syncExercise(
+            @RequestBody ExerciseDto exerciseDto,
+            @RequestHeader("userSeq") int userSeq) {
+
+        exerciseService.saveDailyExerciseData(exerciseDto, userSeq);
         return ResponseEntity.ok().build();
     }
 }

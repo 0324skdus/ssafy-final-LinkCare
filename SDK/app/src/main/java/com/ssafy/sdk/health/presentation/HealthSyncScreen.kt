@@ -1,12 +1,15 @@
 package com.ssafy.sdk.health.presentation
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.material3.Icon
 
 @Composable
 fun HealthSyncScreen(
@@ -26,7 +29,8 @@ fun HealthSyncScreen(
             is SyncProgress.Idle -> {
                 IdleContent(
                     onSyncClick = { viewModel.syncHealthData(userId) },
-                    onForceFullSyncClick = { viewModel.forceFullSync(userId) }
+                    onForceFullSyncClick = { viewModel.forceFullSync(userId) },
+                    onExerciseSyncClick = { viewModel.syncExerciseOnly(userId) }  // 추가!
                 )
             }
 
@@ -72,7 +76,8 @@ fun HealthSyncScreen(
 @Composable
 private fun IdleContent(
     onSyncClick: () -> Unit,
-    onForceFullSyncClick: () -> Unit
+    onForceFullSyncClick: () -> Unit,
+    onExerciseSyncClick: () -> Unit  // 추가!
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,6 +100,23 @@ private fun IdleContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("전체 재동기화")
+        }
+
+        // 운동 데이터만 동기화 버튼 추가!
+        OutlinedButton(
+            onClick = onExerciseSyncClick,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Face,  // 운동 아이콘
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("오늘 운동 데이터만 동기화")
         }
     }
 }

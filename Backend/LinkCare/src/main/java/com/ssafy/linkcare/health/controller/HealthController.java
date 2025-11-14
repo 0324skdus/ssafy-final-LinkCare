@@ -47,6 +47,7 @@ public class HealthController {
         );
     }
 
+
     @GetMapping("/{userSeq}/today")
     public ResponseEntity<DailyHealthResponse> getUserTodayHealthData(
             @PathVariable int userSeq
