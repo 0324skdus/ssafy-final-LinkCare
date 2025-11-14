@@ -49,7 +49,8 @@ public class SecurityConfig {
                                 "/api/auth/kakao",
                                 "/actuator/health",
                                 "/api/health/**",
-                                "/api/groups/generate-weekly-stats"
+                                "/api/groups/generate-weekly-stats",
+                                "/api/groups/*/goals"
 
                 ).permitAll()
                         .anyRequest().authenticated()
