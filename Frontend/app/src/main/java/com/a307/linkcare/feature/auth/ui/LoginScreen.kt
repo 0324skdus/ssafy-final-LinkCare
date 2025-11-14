@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.auth.ui
 
 import android.app.Activity
+import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,7 +38,10 @@ import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.auth.domain.LoginRequest
 import com.a307.linkcare.feature.auth.domain.LoginResponse
+import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
@@ -94,6 +98,10 @@ fun LoginScreen(
                             if (res.isSuccessful && res.body() != null) {
                                 val auth: LoginResponse = res.body()!!
                                 TokenStore(context).save(auth)
+
+                                // FCM 토큰 발급 및 백엔드 전송
+                                sendFcmTokenToServer(context, auth.accessToken)
+
                                 // needsProfileCompletion == isFirstLogin
                                 onLoginSuccessState(auth.needsProfileCompletion)
                             } else {
@@ -162,6 +170,10 @@ fun LoginScreen(
                         if (res.isSuccessful && res.body() != null) {
                             val auth: LoginResponse = res.body()!!
                             TokenStore(context).save(auth)
+
+                            // FCM 토큰 발급 및 백엔드 전송
+                            sendFcmTokenToServer(context, auth.accessToken)
+
                             onLoginSuccessState(auth.needsProfileCompletion)
                         } else {
                             Log.e(TAG, "Backend Kakao login failed: code=${res.code()} body=${res.errorBody()?.string()}")
@@ -257,6 +269,10 @@ fun LoginScreen(
                                 if (res.isSuccessful && res.body() != null) {
                                     val auth: LoginResponse = res.body()!!
                                     TokenStore(context).save(auth)
+
+                                    // FCM 토큰 발급 및 백엔드 전송
+                                    sendFcmTokenToServer(context, auth.accessToken)
+
                                     onLoginSuccessState(auth.needsProfileCompletion) // == isFirstLogin
                                 } else {
                                     Log.e(TAG, "Login failed: code=${res.code()}, body=${res.errorBody()?.string()}")
@@ -377,4 +393,37 @@ private fun LoginForm(
         placeholder = "비밀번호",
         isPassword = true
     )
+}
+
+/**
+ * FCM 토큰을 발급받고 백엔드 서버에 전송하는 함수
+ */
+private fun sendFcmTokenToServer(context: Context, accessToken: String) {
+    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+        if (!task.isSuccessful) {
+            Log.w("LoginScreen", "FCM 토큰 가져오기 실패", task.exception)
+            return@addOnCompleteListener
+        }
+
+        // FCM 토큰 획득 성공
+        val fcmToken = task.result
+        Log.d("LoginScreen", "FCM 토큰 획득: $fcmToken")
+
+        // 백엔드에 FCM 토큰 전송
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val response = RetrofitClient.authApi.updateFcmToken(
+                    token = "Bearer $accessToken",
+                    request = UpdateFcmTokenRequest(fcmToken)
+                )
+                if (response.isSuccessful) {
+                    Log.d("LoginScreen", "FCM 토큰 백엔드 전송 성공")
+                } else {
+                    Log.e("LoginScreen", "FCM 토큰 백엔드 전송 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("LoginScreen", "FCM 토큰 백엔드 전송 중 에러", e)
+            }
+        }
+    }
 }

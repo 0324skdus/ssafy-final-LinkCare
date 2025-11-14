@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.auth
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.auth.data.ProfileRepository
 import com.a307.linkcare.feature.auth.domain.OnboardingForm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,11 +30,12 @@ class OnboardingViewModel @Inject constructor(
     fun setHeight(v: Float?) = update { it.copy(height = v) }
     fun setWeight(v: Float?) = update { it.copy(weight = v) }
     fun setExerciseStartYear(v: Int?) = update { it.copy(exerciseStartYear = v) }
-//    fun setCharacter(v: Int?) = update { it.copy(characterIndex = v) }
+    fun setCharacterId(v: Long) = update { it.copy(characterId = v) }
+    fun setCharacterName(v: String) = update { it.copy(petName = v) }
 
     fun isComplete() = with(_form.value) {
         gender.isNotBlank() && birth.isNotBlank() &&
-                height != null && weight != null // && characterIndex != null
+                height != null && weight != null
         // exerciseStartYear는 제외
     }
 
@@ -61,6 +63,12 @@ class OnboardingViewModel @Inject constructor(
                     weight = f.weight,
                     gender = f.gender,
                     exerciseStartYear = null
+                )
+
+                // 초기 캐릭터 선택 API
+                repo.selectInitial(
+                    characterId = f.characterId,
+                    petName = f.petName
                 )
                 SubmitState.Success
             } catch (t: Throwable) {
