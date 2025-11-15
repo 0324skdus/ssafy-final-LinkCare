@@ -27,7 +27,7 @@ import java.time.ZoneOffset
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://192.168.45.89:9090/"
+    private const val BASE_URL = "http://k13a307.p.ssafy.io:9090/"
 
     @Provides
     @Singleton
