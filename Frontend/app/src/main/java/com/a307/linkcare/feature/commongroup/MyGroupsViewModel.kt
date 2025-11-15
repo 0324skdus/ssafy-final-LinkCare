@@ -2,35 +2,33 @@ package com.a307.linkcare.feature.commongroup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
-import com.a307.linkcare.feature.commongroup.domain.MemberDto
 import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+
 
 @HiltViewModel
 class MyGroupsViewModel @Inject constructor(
-    private val repo: GroupRepository
+    private val repo: GroupRepository,
+    private val tokenStore: TokenStore
 ) : ViewModel() {
+
+    val myUserSeq: Long? = tokenStore.getUserPk()
 
     private val _careGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val careGroups: StateFlow<List<MyGroupResponse>> = _careGroups
 
     private val _healthGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val healthGroups: StateFlow<List<MyGroupResponse>> = _healthGroups
-
-    private val _detail = MutableStateFlow<GroupDetailResponse?>(null)
-    val detail: StateFlow<GroupDetailResponse?> = _detail
-
-    private val _members = MutableStateFlow<List<MemberDto>>(emptyList())
-    val members: StateFlow<List<MemberDto>> = _members
-
-    private val _groupName = MutableStateFlow("")
-    val groupName: StateFlow<String> = _groupName
 
     fun loadCare() {
         viewModelScope.launch {
@@ -44,19 +42,33 @@ class MyGroupsViewModel @Inject constructor(
         }
     }
 
+    private val _detail = MutableStateFlow<GroupDetailResponse?>(null)
+    val detail: StateFlow<GroupDetailResponse?> = _detail
+
     fun loadGroupDetail(groupSeq: Long) {
         viewModelScope.launch {
-            try {
-                val response = repo.getGroupDetail(groupSeq)
-                _detail.value = response
-                _members.value = response.members
-                _groupName.value = response.groupName
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _detail.value = null
-                _members.value = emptyList()
-                _groupName.value = ""
+            _detail.value = repo.getGroupDetail(groupSeq)
+        }
+    }
+
+    val members = detail
+        .map { it?.members ?: emptyList() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val groupName = detail
+        .map { it?.groupName ?: "" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    // 초대 링크 생성
+    suspend fun createInvitationLink(groupSeq: Long): Result<String> {
+        return try {
+            val result = repo.createInvitation(groupSeq)
+            result.map { invitation ->
+                // 커스텀 스킴 사용 (앱에서만 열림)
+                "linkcare://invite/${invitation.invitationToken}"
             }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

@@ -24,11 +24,11 @@ class TokenStore(private val context: Context) {
     fun getRefresh(): String? = runBlocking {
         context.dataStore.data.first()[TokenKeys.REFRESH]
     }
-    fun getName(): String? = runBlocking {
-        context.dataStore.data.first()[TokenKeys.NAME]
-    }
     fun getUserPk(): Long? = runBlocking {
         context.dataStore.data.first()[TokenKeys.USER_PK]
+    }
+    fun getName(): String? = runBlocking {
+        context.dataStore.data.first()[TokenKeys.NAME]
     }
     fun save(auth: LoginResponse) = runBlocking {
         context.dataStore.edit {

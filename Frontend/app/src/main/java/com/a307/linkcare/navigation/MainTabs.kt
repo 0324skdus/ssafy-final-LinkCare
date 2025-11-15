@@ -1,5 +1,6 @@
 package com.a307.linkcare.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Divider
@@ -10,14 +11,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
 import com.a307.linkcare.R
@@ -76,6 +84,10 @@ fun MainTabs(
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
 
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     // CARE / HEALTH 데이터
     val careGroups by groupvm.careGroups.collectAsState()
     val healthGroups by groupvm.healthGroups.collectAsState()
@@ -83,12 +95,14 @@ fun MainTabs(
     var selectedIndexCare by remember { mutableStateOf(0) }
     var selectedIndexHealth by remember { mutableStateOf(0) }
 
-    // 현재 선택된 그룹 이름 표시
-    val currentGroupCare =
+    // 현재 선택된 그룹 이름 표시 (memoized)
+    val currentGroupCare = remember(careGroups, selectedIndexCare) {
         careGroups.getOrNull(selectedIndexCare)?.groupName ?: "케어"
+    }
 
-    val currentGroupHealth =
+    val currentGroupHealth = remember(healthGroups, selectedIndexHealth) {
         healthGroups.getOrNull(selectedIndexHealth)?.groupName ?: "헬스"
+    }
 
     var selectedCareGroup by remember { mutableStateOf<Long?>(null) }
     var selectedHealthGroup by remember { mutableStateOf<Long?>(null) }
@@ -235,7 +249,7 @@ fun MainTabs(
                                 HeaderDropDown(
                                     title = currentGroupCare,
                                     menuItems = careGroups.map { it.groupName },
-                                    onMenuSelect = { idx, _ -> selectedIndexCare = idx },
+                                    onMenuSelect = { idx, _ -> selectedIndexCare = idx; selectedCareGroup = careGroups[idx].groupSeq; },
                                     onAddClick = { navController.navigate(Route.CreateCareGroup.route) },
                                     onSearchClick = { navController.navigate(Route.CareSearch) },
                                     moreMenu = { dismiss ->
@@ -249,6 +263,28 @@ fun MainTabs(
                                                 )
                                             }
                                         )
+                                        DropdownMenuItem(
+                                            text = { Text("초대 링크 복사") },
+                                            onClick = {
+                                                dismiss()
+                                                val groupSeq = careGroups[selectedIndexCare].groupSeq
+                                                scope.launch {
+                                                    try {
+                                                        withTimeout(10000L) {
+                                                            val result = groupvm.createInvitationLink(groupSeq)
+                                                            result.onSuccess { inviteLink ->
+                                                                clipboardManager.setText(AnnotatedString(inviteLink))
+                                                                Toast.makeText(context, "초대 링크가 복사되었습니다", Toast.LENGTH_SHORT).show()
+                                                            }.onFailure { error ->
+                                                                Toast.makeText(context, "초대 링크 생성 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    } catch (e: TimeoutCancellationException) {
+                                                        Toast.makeText(context, "요청 시간 초과. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                        )
                                     }
                                 )
                             }
@@ -258,7 +294,7 @@ fun MainTabs(
                                 HeaderDropDown(
                                     title = currentGroupHealth,
                                     menuItems = healthGroups.map { it.groupName },
-                                    onMenuSelect = { idx, _ -> selectedIndexHealth = idx },
+                                    onMenuSelect = { idx, _ -> selectedIndexHealth = idx; selectedHealthGroup = healthGroups[idx].groupSeq; },
                                     onAddClick = { navController.navigate(Route.CreateHealthGroup.route) },
                                     onSearchClick = { navController.navigate(Route.HealthSearch) },
                                     moreMenu = { dismiss ->
@@ -270,6 +306,28 @@ fun MainTabs(
                                                 navController.navigate(
                                                     Route.EditHealthGroup.withArgs(currentId.toString())
                                                 )
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("초대 링크 복사") },
+                                            onClick = {
+                                                dismiss()
+                                                val groupSeq = healthGroups[selectedIndexHealth].groupSeq
+                                                scope.launch {
+                                                    try {
+                                                        withTimeout(10000L) {
+                                                            val result = groupvm.createInvitationLink(groupSeq)
+                                                            result.onSuccess { inviteLink ->
+                                                                clipboardManager.setText(AnnotatedString(inviteLink))
+                                                                Toast.makeText(context, "초대 링크가 복사되었습니다", Toast.LENGTH_SHORT).show()
+                                                            }.onFailure { error ->
+                                                                Toast.makeText(context, "초대 링크 생성 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    } catch (e: TimeoutCancellationException) {
+                                                        Toast.makeText(context, "요청 시간 초과. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
                                             }
                                         )
                                     }
@@ -309,21 +367,40 @@ fun MainTabs(
                             currentTab = "care"
                         )
                     } else {
-                        selectedCareGroup?.let { groupSeq ->
-                            CareGroupHome(
-                                groupSeq = groupSeq
-                            )
-                        }
+                        CareGroupHome(
+                            groupSeq = selectedCareGroup!!,
+                            modifier = Modifier,
+//                            vm = groupvm
+                        )
                     }
                 }
 
                 composable(Route.CareSearch) {
+                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "care",
                         query = careSearchQuery,
                         onQueryChange = { careSearchQuery = it },
                         onBack = { navController.popBackStack() },
-                        onJoinClick = { /* TODO */ }
+                        onJoinClick = { group ->
+                            scope.launch {
+                                // 케어 그룹은 선택 권한 동의 필요
+                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                    isSleepAllowed = true,
+                                    isWaterIntakeAllowed = true,
+                                    isBloodPressureAllowed = true,
+                                    isBloodSugarAllowed = true
+                                )
+                                searchViewModel.joinGroup(group.groupSeq, permissions)
+                                    .onSuccess {
+                                        Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        groupvm.loadCare() // 케어 그룹 목록 새로고침
+                                    }
+                                    .onFailure { error ->
+                                        Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        }
                     )
                 }
 
@@ -336,10 +413,10 @@ fun MainTabs(
                     arguments = Route.EditCareGroup.arguments
                 ) { backStackEntry ->
                     val groupId = backStackEntry.arguments?.getString(Route.EditCareGroup.ARG_GROUP_ID)
+                    val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     CareGroupEdit(
                         navController = navController,
-                        initial = mockCareGroup(groupId ?: "307"),
-                        isLeader = false
+                        groupSeq = groupSeq
                     )
                 }
             }
@@ -355,29 +432,39 @@ fun MainTabs(
                         )
                     } else {
                         HealthGroupHome(
-                            membersAll = listOf(
-                                Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
-                                Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
-                                Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
-                                Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-                            ),
-                            isLeader = true,            // 현재 유저가 그룹장일 때만 true
-                            currentGoal = 20000,        // null이면 미설정
-                            onSaveGoal = { newGoal ->
-                                // TODO: API 요청으로 저장
-                                // ex) viewModel.saveGroupGoal(groupId, newGoal)
-                            }
+                            groupSeq = selectedHealthGroup!!,
+                            modifier = Modifier,
+                            vm = groupvm
                         )
                     }
                 }
 
                 composable(Route.HealthSearch) {
+                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "health",
                         query = healthSearchQuery,
                         onQueryChange = { healthSearchQuery = it },
                         onBack = { navController.popBackStack() },
-                        onJoinClick = { /* TODO */ }
+                        onJoinClick = { group ->
+                            scope.launch {
+                                // 헬스 그룹도 동일하게 모든 권한 동의로 처리
+                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                    isSleepAllowed = true,
+                                    isWaterIntakeAllowed = true,
+                                    isBloodPressureAllowed = true,
+                                    isBloodSugarAllowed = true
+                                )
+                                searchViewModel.joinGroup(group.groupSeq, permissions)
+                                    .onSuccess {
+                                        Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        groupvm.loadHealth() // 헬스 그룹 목록 새로고침
+                                    }
+                                    .onFailure { error ->
+                                        Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        }
                     )
                 }
 
@@ -390,10 +477,10 @@ fun MainTabs(
                     arguments = Route.EditHealthGroup.arguments
                 ) { backStackEntry ->
                     val groupId = backStackEntry.arguments?.getString(Route.EditHealthGroup.ARG_GROUP_ID)
+                    val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     HealthGroupEdit(
                         navController = navController,
-                        initial = mockHealthGroup(groupId ?: "만수무강"),
-                        isLeader = true
+                        groupSeq = groupSeq
                     )
                 }
             }

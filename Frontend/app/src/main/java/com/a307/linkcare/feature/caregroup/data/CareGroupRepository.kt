@@ -2,7 +2,9 @@ package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.HealthToday
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 class CareGroupRepository @Inject constructor(
@@ -25,14 +27,14 @@ class CareGroupRepository @Inject constructor(
 
             val res = api.createCareGroup(
                 token = "Bearer $token",
-                groupName = name,
-                description = description,
-                capacity = capacity,
+                groupName = name.toRequestBody("text/plain".toMediaTypeOrNull()),
+                description = description.toRequestBody("text/plain".toMediaTypeOrNull()),
+                capacity = capacity.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
                 image = imagePart,
-                isSleepAllowed = isSleepAllowed,
-                isWaterIntakeAllowed = isWaterIntakeAllowed,
-                isBloodPressureAllowed = isBloodPressureAllowed,
-                isBloodSugarAllowed = isBloodSugarAllowed
+                isSleepAllowed = isSleepAllowed?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                isWaterIntakeAllowed = isWaterIntakeAllowed?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                isBloodPressureAllowed = isBloodPressureAllowed?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                isBloodSugarAllowed = isBloodSugarAllowed?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
             )
 
             if (res.isSuccessful) Result.success(Unit)
@@ -43,7 +45,9 @@ class CareGroupRepository @Inject constructor(
         }
     }
 
-    suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
+
+
+suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
         return try {
             val response = api.getDailyHealthDetail(userSeq)
             if (response.isSuccessful) {
