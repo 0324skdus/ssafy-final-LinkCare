@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.caregroup
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,40 +54,122 @@ data class GroupMember(
 @Composable
 fun CareGroupEdit(
     navController: NavHostController,
-    initial: CareGroup,
-    isLeader: Boolean,
-    onUpdate: (updated: CareGroup) -> Unit = {},
+    groupSeq: Long,
+    viewModel: CareGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     onDelegate: (memberId: Long) -> Unit = {},
     onKick: (memberId: Long) -> Unit = {},
     onLeave: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
+    val context = LocalContext.current
+
+    // Load group detail when screen opens
+    LaunchedEffect(groupSeq) {
+        viewModel.loadGroupDetail(groupSeq)
+    }
+
+    // Handle update success
+    LaunchedEffect(updateState) {
+        when (updateState) {
+            is CareGroupEditViewModel.UpdateState.Success -> {
+                Toast.makeText(context, "그룹 정보가 수정되었습니다", Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdateState()
+                navController.popBackStack()
+            }
+            is CareGroupEditViewModel.UpdateState.Error -> {
+                Toast.makeText(
+                    context,
+                    "수정 실패: ${(updateState as CareGroupEditViewModel.UpdateState.Error).msg}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetUpdateState()
+            }
+            else -> {}
+        }
+    }
+
+    // Show loading or error states
+    when (val state = uiState) {
+        is CareGroupEditViewModel.UiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+        is CareGroupEditViewModel.UiState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("오류: ${state.msg}")
+                    Spacer(Modifier.height(16.dp))
+                    LcBtn(
+                        text = "돌아가기",
+                        onClick = onBack,
+                        modifier = Modifier.width(120.dp).height(44.dp)
+                    )
+                }
+            }
+            return
+        }
+        is CareGroupEditViewModel.UiState.Idle -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+        is CareGroupEditViewModel.UiState.Success -> {
+            // Continue with rendering the form - all UI code must be here
+            RenderCareGroupEditForm(
+                navController = navController,
+                groupDetail = state.groupDetail,
+                viewModel = viewModel,
+                updateState = updateState,
+                onDelegate = onDelegate,
+                onKick = onKick,
+                onLeave = onLeave,
+                onCopyInvite = onCopyInvite,
+                onBack = onBack
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenderCareGroupEditForm(
+    navController: NavHostController,
+    groupDetail: com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse,
+    viewModel: CareGroupEditViewModel,
+    updateState: CareGroupEditViewModel.UpdateState,
+    onDelegate: (memberId: Long) -> Unit,
+    onKick: (memberId: Long) -> Unit,
+    onLeave: () -> Unit,
+    onCopyInvite: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val groupSeq = groupDetail.groupSeq
+    val isLeader = groupDetail.members.find { it.isLeader }?.userSeq == groupDetail.members.firstOrNull()?.userSeq // TODO: check current user
+
     // ---- 내부 상태: 초기값 프리필 ----
-    var name by remember { mutableStateOf(initial.name) }
-    var desc by remember { mutableStateOf(initial.description) }
-    var maxMemberText by remember { mutableStateOf(initial.maxMember.toString()) }
+    var name by remember { mutableStateOf(groupDetail.groupName) }
+    var desc by remember { mutableStateOf(groupDetail.groupDescription) }
+    var maxMemberText by remember { mutableStateOf(groupDetail.capacity.toString()) }
 
-    var shareExercise by remember { mutableStateOf(initial.share.exercise) }
-    var shareHr by remember { mutableStateOf(initial.share.heartRate) }
-    var shareSteps by remember { mutableStateOf(initial.share.steps) }
-    var shareSleep by remember { mutableStateOf(initial.share.sleep) }
-    var shareWater by remember { mutableStateOf(initial.share.water) }
-    var shareBp by remember { mutableStateOf(initial.share.bloodPressure) }
-    var shareSugar by remember { mutableStateOf(initial.share.bloodSugar) }
+    var shareExercise by remember { mutableStateOf(true) }
+    var shareHr by remember { mutableStateOf(true) }
+    var shareSteps by remember { mutableStateOf(true) }
+    var shareSleep by remember { mutableStateOf(true) }
+    var shareWater by remember { mutableStateOf(true) }
+    var shareBp by remember { mutableStateOf(true) }
+    var shareSugar by remember { mutableStateOf(true) }
 
-    // 외부에서 initial이 바뀌면 동기화
-    LaunchedEffect(initial) {
-        name = initial.name
-        desc = initial.description
-        maxMemberText = initial.maxMember.toString()
-        shareExercise = initial.share.exercise
-        shareHr = initial.share.heartRate
-        shareSteps = initial.share.steps
-        shareSleep = initial.share.sleep
-        shareWater = initial.share.water
-        shareBp = initial.share.bloodPressure
-        shareSugar = initial.share.bloodSugar
+    // 외부에서 groupDetail이 바뀌면 동기화
+    LaunchedEffect(groupDetail) {
+        name = groupDetail.groupName
+        desc = groupDetail.groupDescription
+        maxMemberText = groupDetail.capacity.toString()
+        // TODO: load actual share settings from backend when available
     }
 
     val maxMember = maxMemberText.toIntOrNull()
@@ -116,7 +200,7 @@ fun CareGroupEdit(
                 ) {
 
                     GroupAvatarPicker(
-                        defaultRes = initial.avatarRes ?: R.drawable.main_duck,
+                        defaultRes = R.drawable.main_duck, // TODO: load from groupDetail.imageUrl
                         onImagePicked = { /* TODO: 이미지 변경 핸들러 필요시 연결 */ }
                     )
                     Spacer(Modifier.height(8.dp))
@@ -195,28 +279,22 @@ fun CareGroupEdit(
                 }
             }
 
-            // 초대 링크
-            item {
-                SectionTitle("초대 링크")
-                Spacer(Modifier.height(8.dp))
-                InviteLinkRow(
-                    link = initial.inviteLink,
-                    onCopy = {
-                        clipboard.setText(AnnotatedString(initial.inviteLink))
-                        onCopyInvite(initial.inviteLink)
-                        scope.launch {
-                            snackbarHostState.showSnackbar("초대 링크가 복사되었어요.")
-                        }
-                    }
-                )
-            }
-
             // 구성원
             item {
                 SectionTitle("구성원")
                 Spacer(Modifier.height(12.dp))
             }
-            itemsIndexed(initial.members, key = { index, m -> m.id ?: "idx_$index" }) { _, m ->
+            itemsIndexed(
+                groupDetail.members.map { member ->
+                    GroupMember(
+                        id = member.userSeq,
+                        name = member.userName,
+                        avatarRes = null, // TODO: load from URL
+                        isLeader = member.isLeader
+                    )
+                },
+                key = { index, m -> m.id }
+            ) { _, m ->
                 MemberRow(
                     member = m,
                     isLeader = isLeader,
@@ -244,11 +322,19 @@ fun CareGroupEdit(
                     Column(Modifier
                         .fillMaxWidth()
                         .padding(12.dp)) {
-                        ToggleRow("운동", shareExercise, { if (isLeader) shareExercise = it }, true, true)
-                        Divider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
-                        ToggleRow("심박수", shareHr, { if (isLeader) shareHr = it }, true, true)
-                        Divider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
-                        ToggleRow("걸음 수", shareSteps, { if (isLeader) shareSteps = it }, true, true)
+                        ToggleRow("운동", shareExercise, onChange = { if (isLeader) shareExercise = it }, enabled = true, isRequired = true)
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            thickness = 0.5.dp,
+                            color = Color(0xFFE5E5EA)
+                        )
+                        ToggleRow("심박수", shareHr, onChange = { if (isLeader) shareHr = it }, enabled = true, isRequired = true)
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(),
+                            thickness = 0.5.dp,
+                            color = Color(0xFFE5E5EA)
+                        )
+                        ToggleRow("걸음 수", shareSteps, onChange = { if (isLeader) shareSteps = it }, enabled = true, isRequired = true)
 
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -257,10 +343,10 @@ fun CareGroupEdit(
                             color = Color(0xFF8E8E93),
                             modifier = Modifier.padding(start = 2.dp, bottom = 4.dp)
                         )
-                        ToggleRow("수면", shareSleep, { if (isLeader) shareSleep = it }, true, false)
-                        ToggleRow("음수량", shareWater, { if (isLeader) shareWater = it }, true, false)
-                        ToggleRow("혈압", shareBp, { if (isLeader) shareBp = it }, true, false)
-                        ToggleRow("혈당", shareSugar, { if (isLeader) shareSugar = it }, true, false)
+                        ToggleRow("수면", shareSleep, onChange = { if (isLeader) shareSleep = it }, enabled = true, isRequired = false)
+                        ToggleRow("음수량", shareWater, onChange = { if (isLeader) shareWater = it }, enabled = true, isRequired = false)
+                        ToggleRow("혈압", shareBp, onChange = { if (isLeader) shareBp = it }, enabled = true, isRequired = false)
+                        ToggleRow("혈당", shareSugar, onChange = { if (isLeader) shareSugar = it }, enabled = true, isRequired = false)
                     }
                 }
 
@@ -285,24 +371,19 @@ fun CareGroupEdit(
                             .height(52.dp),
                         buttonColor = main,
                         buttonTextColor = white,
-                        isEnabled = canSubmit,
+                        isEnabled = canSubmit && updateState !is CareGroupEditViewModel.UpdateState.Loading,
                         onClick = {
-                            val updated = initial.copy(
-                                name = name.trim(),
-                                description = desc.trim(),
-                                maxMember = maxMember ?: initial.maxMember,
-                                share = ShareOptions(
-                                    exercise = shareExercise,
-                                    heartRate = shareHr,
-                                    steps = shareSteps,
-                                    sleep = shareSleep,
-                                    water = shareWater,
-                                    bloodPressure = shareBp,
-                                    bloodSugar = shareSugar
-                                )
+                            viewModel.updateGroup(
+                                groupSeq = groupSeq,
+                                groupName = name.trim(),
+                                groupDescription = desc.trim(),
+                                imageAction = "keep", // TODO: handle image changes
+                                imageFile = null,
+                                isSleepRequired = shareSleep,
+                                isWaterIntakeRequired = shareWater,
+                                isBloodPressureRequired = shareBp,
+                                isBloodSugarRequired = shareSugar
                             )
-                            onUpdate(updated)
-                            navController.popBackStack()
                         }
                     )
                 } else {

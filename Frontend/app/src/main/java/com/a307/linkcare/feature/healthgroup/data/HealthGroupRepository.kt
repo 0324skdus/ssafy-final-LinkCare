@@ -1,7 +1,9 @@
 package com.a307.linkcare.feature.healthgroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 class HealthGroupRepository @Inject constructor(
@@ -24,13 +26,13 @@ class HealthGroupRepository @Inject constructor(
 
             val res = api.createHealthGroup(
                 token = "Bearer $token",
-                groupName = name,
-                description = description,
-                capacity = capacity,
-                minCalorie = minCalorie,
-                minStep = minStep,
-                minDistance = minDistance,
-                minDuration = minDuration,
+                groupName = name.toRequestBody("text/plain".toMediaTypeOrNull()),
+                description = description.toRequestBody("text/plain".toMediaTypeOrNull()),
+                capacity = capacity.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                minCalorie = minCalorie?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                minStep = minStep?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                minDistance = minDistance?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
+                minDuration = minDuration?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull()),
                 image = imagePart
             )
 

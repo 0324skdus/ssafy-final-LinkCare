@@ -58,5 +58,18 @@ class MyGroupsViewModel @Inject constructor(
     val groupName = detail
         .map { it?.groupName ?: "" }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    // 초대 링크 생성
+    suspend fun createInvitationLink(groupSeq: Long): Result<String> {
+        return try {
+            val result = repo.createInvitation(groupSeq)
+            result.map { invitation ->
+                // 커스텀 스킴 사용 (앱에서만 열림)
+                "linkcare://invite/${invitation.invitationToken}"
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 

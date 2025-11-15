@@ -73,4 +73,12 @@ public class GroupGoalCriteria {
         this.minDistance = minDistance;
         this.minDuration = minDuration;
     }
+
+    // 비즈니스 로직: 목표 기준 업데이트
+    public void updateGoalCriteria(Float minCalorie, Integer minStep, Float minDistance, Integer minDuration) {
+        this.minCalorie = minCalorie;
+        this.minStep = minStep;
+        this.minDistance = minDistance;
+        this.minDuration = minDuration;
+    }
 }

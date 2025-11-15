@@ -395,6 +395,11 @@ public class GroupService {
             updateCareGroupPermissions(group, request);
         }
 
+        // 6. 헬스 그룹인 경우 목표 기준 업데이트
+        if (group.getType() == GroupType.HEALTH && request.goalCriteria() != null) {
+            updateHealthGroupGoalCriteria(group, request.goalCriteria());
+        }
+
         log.info("그룹 정보 수정 완료: groupSeq={}, userId={}", groupSeq, userId);
 
         // 6. 응답 생성
@@ -1202,6 +1207,38 @@ public class GroupService {
 
             log.info("케어 그룹 권한 업데이트 완료 및 알림 발송: groupSeq={}, sleep={}, water={}, bp={}, bs={}",
                     group.getGroupSeq(), sleepChanged, waterIntakeChanged, bloodPressureChanged, bloodSugarChanged);
+        }
+    }
+
+    /*
+        * 헬스 그룹 목표 기준 업데이트 (private 메서드)
+            * - 기존 목표 기준이 있으면 업데이트
+            * - 없으면 새로 생성
+    */
+    private void updateHealthGroupGoalCriteria(Group group, GoalCriteriaDto criteria) {
+        Optional<GroupGoalCriteria> existingCriteria = goalCriteriaRepository.findByGroup(group);
+
+        if (existingCriteria.isPresent()) {
+            // 기존 목표 기준 업데이트
+            GroupGoalCriteria goalCriteria = existingCriteria.get();
+            goalCriteria.updateGoalCriteria(
+                    criteria.minCalorie(),
+                    criteria.minStep(),
+                    criteria.minDistance(),
+                    criteria.minDuration()
+            );
+            log.info("헬스 그룹 목표 기준 업데이트 완료: groupSeq={}", group.getGroupSeq());
+        } else {
+            // 새로운 목표 기준 생성
+            GroupGoalCriteria newCriteria = GroupGoalCriteria.builder()
+                    .group(group)
+                    .minCalorie(criteria.minCalorie())
+                    .minStep(criteria.minStep())
+                    .minDistance(criteria.minDistance())
+                    .minDuration(criteria.minDuration())
+                    .build();
+            goalCriteriaRepository.save(newCriteria);
+            log.info("헬스 그룹 목표 기준 생성 완료: groupSeq={}", group.getGroupSeq());
         }
     }
 

@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.caregroup.data
 import com.a307.linkcare.feature.caregroup.domain.CareGroupResponse
 import retrofit2.Response
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.*
 
 
@@ -13,15 +14,15 @@ interface CareGroupApi {
     suspend fun createCareGroup(
         @Header("Authorization") token: String,
 
-        @Query("groupName") groupName: String,
-        @Query("groupDescription") description: String,
-        @Query("capacity") capacity: Int,
-        @Query("isSleepAllowed") isSleepAllowed: Boolean?,
-        @Query("isWaterIntakeAllowed") isWaterIntakeAllowed: Boolean?,
-        @Query("isBloodPressureAllowed") isBloodPressureAllowed: Boolean?,
-        @Query("isBloodSugarAllowed") isBloodSugarAllowed: Boolean?,
+        @Part("groupName") groupName: RequestBody,
+        @Part("groupDescription") description: RequestBody,
+        @Part("capacity") capacity: RequestBody,
+        @Part("isSleepAllowed") isSleepAllowed: RequestBody?,
+        @Part("isWaterIntakeAllowed") isWaterIntakeAllowed: RequestBody?,
+        @Part("isBloodPressureAllowed") isBloodPressureAllowed: RequestBody?,
+        @Part("isBloodSugarAllowed") isBloodSugarAllowed: RequestBody?,
 
-        // multipart
+        // multipart image (optional)
         @Part image: MultipartBody.Part?
     ): Response<CareGroupResponse>
 }

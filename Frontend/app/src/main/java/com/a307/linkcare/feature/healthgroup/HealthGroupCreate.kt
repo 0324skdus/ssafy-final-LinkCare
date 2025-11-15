@@ -24,6 +24,7 @@ import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -37,7 +38,8 @@ fun HealthGroupCreate(
         share: ShareOptions
     ) -> Unit = { _ -> },
     @DrawableRes avatarRes: Int? = null,
-    vm: HealthGroupCreateViewModel = hiltViewModel()
+    vm: HealthGroupCreateViewModel = hiltViewModel(),
+    groupvm: MyGroupsViewModel = hiltViewModel()
 ) {
     val state by vm.state
     val context = LocalContext.current
@@ -66,6 +68,9 @@ fun HealthGroupCreate(
         when (state) {
             is HealthGroupCreateViewModel.UiState.Success -> {
                 Toast.makeText(context, "생성 완료!", Toast.LENGTH_SHORT).show()
+
+                // 그룹 목록 새로고침
+                groupvm.loadHealth()
 
                 // 그룹 생성 성공했을 때만 ShareOptions 전달
                 onClickCreate(

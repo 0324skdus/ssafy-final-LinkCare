@@ -168,16 +168,28 @@ public class GroupController {
             @RequestParam(value = "isSleepRequired", required = false) Boolean isSleepRequired,
             @RequestParam(value = "isWaterIntakeRequired", required = false) Boolean isWaterIntakeRequired,
             @RequestParam(value = "isBloodPressureRequired", required = false) Boolean isBloodPressureRequired,
-            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired) {
+            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired,
+            @RequestParam(value = "minCalorie", required = false) Float minCalorie,
+            @RequestParam(value = "minStep", required = false) Integer minStep,
+            @RequestParam(value = "minDistance", required = false) Float minDistance,
+            @RequestParam(value = "minDuration", required = false) Integer minDuration) {
 
         Long userId = Long.parseLong(authentication.getName());
+
+        // 목표 기준 DTO 생성 (헬스 그룹 전용)
+        GoalCriteriaDto goalCriteria = null;
+        if (minCalorie != null || minStep != null || minDistance != null || minDuration != null) {
+            goalCriteria = new GoalCriteriaDto(minCalorie, minStep, minDistance, minDuration);
+        }
+
         UpdateGroupRequest request = new UpdateGroupRequest(
                 groupName,
                 groupDescription,
                 isSleepRequired,
                 isWaterIntakeRequired,
                 isBloodPressureRequired,
-                isBloodSugarRequired
+                isBloodSugarRequired,
+                goalCriteria
         );
         GroupResponse response = groupService.updateGroup(userId, groupSeq, request, imageAction, image);
 
