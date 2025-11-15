@@ -75,22 +75,6 @@ public class SleepService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if(sleepList == null || sleepList.isEmpty()) {
-            LocalDate today = LocalDate.now();
-            List<Sleep> existingSleep = sleepRepository.findByUserAndEndDate(user, today);
-            if(existingSleep.isEmpty() || existingSleep == null) {
-                sleepRepository.save(Sleep.builder()
-                        .deviceId("system")
-                        .deviceType("auto-generated")
-                        .uid("empty_" + System.currentTimeMillis())
-                        .duration(0)
-                        .zoneOffset(ZoneId.systemDefault().getId())
-                        .dataSource(null)
-                        .startTime(today.atStartOfDay(ZoneId.systemDefault()).toEpochSecond())
-                        .endTime(today.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toEpochSecond())
-                        .user(user)
-                        .sessions(null)
-                        .build());
-            }
             return;
         }
 

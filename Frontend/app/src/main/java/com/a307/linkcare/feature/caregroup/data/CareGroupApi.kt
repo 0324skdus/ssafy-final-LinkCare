@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.caregroup.domain.CareGroupResponse
+import com.a307.linkcare.feature.caregroup.domain.DailyHealthDetailResponse
 import retrofit2.Response
 import okhttp3.MultipartBody
 import retrofit2.http.*
@@ -24,4 +25,9 @@ interface CareGroupApi {
         // multipart
         @Part image: MultipartBody.Part?
     ): Response<CareGroupResponse>
+
+    @GET("/api/health/{userSeq}/today/detail")
+    suspend fun getDailyHealthDetail(
+        @Path("userSeq") userSeq: Int
+    ): Response<DailyHealthDetailResponse>
 }

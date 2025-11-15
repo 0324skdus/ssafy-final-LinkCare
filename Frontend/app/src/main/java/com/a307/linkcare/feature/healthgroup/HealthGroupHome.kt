@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.domain.*
@@ -79,6 +81,10 @@ fun HealthGroupHome(
     currentGoal: Int?,                       // null이면 미설정 상태
     onSaveGoal: (newGoal: Int) -> Unit = {}  // TODO API 저장
 ) {
+    val context = LocalContext.current
+    val currentUserName = remember {
+        TokenStore(context).getName() ?: "나"
+    }
     // 데모 데이터
     val members = remember {
         listOf(
@@ -257,7 +263,8 @@ fun HealthGroupHome(
                 HealthMemberDetail(
                     member = m,
                     today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    onDismiss = { selectedMember = null },
+                    currentUserName = currentUserName
                 )
             }
 

@@ -170,7 +170,7 @@ public class ExerciseService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
+        if (exerciseDto == null || exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
             return;
         }
 
@@ -680,6 +680,19 @@ public class ExerciseService {
                 .collect(Collectors.toList());
     }
 
+    public List<ExerciseSessionResponse> getExerciseSessionsByDate(
+            int userSeq,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<ExerciseResponse> exercises = getExercisesByDate(userSeq, startDate, endDate);
+
+        return exercises.stream()
+                .flatMap(exercise -> exercise.getSessions().stream()) // 각 운동의 세션들을 평탄화
+                .map(this::convertToExerciseSessionResponse)
+                .collect(Collectors.toList());
+    }
+
     private ExerciseResponse convertToExerciseTypeResponse(Exercise exercise) {
         // ExerciseSession을 ExerciseSessionDto로 변환
         List<ExerciseSessionDto> sessionDtos = exercise.getSessions().stream()
@@ -830,6 +843,16 @@ public class ExerciseService {
                 .startTime(timeStampUtil.toLocalDateTime(session.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(session.getEndTime()))
                 .exerciseType(session.getExerciseType())
+                .calories(session.getCalories())
+                .distance(session.getDistance())
+                .duration(session.getDuration())
+                .build();
+    }
+
+    private ExerciseSessionResponse convertToExerciseSessionResponse(ExerciseSessionDto session) {
+        return ExerciseSessionResponse.builder()
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
                 .calories(session.getCalories())
                 .distance(session.getDistance())
                 .duration(session.getDuration())
