@@ -211,17 +211,28 @@ private fun GroupResultCard(
 
                 Button(
                     onClick = onJoinClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = main),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = when (group.joinStatus) {
+                            "MEMBER" -> Color(0xFF8E8E93)
+                            "PENDING" -> Color(0xFFFFA500)
+                            else -> main
+                        }
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 0.dp,
                         pressedElevation = 4.dp
                     ),
-                    enabled = group.currentMembers < group.capacity
+                    enabled = group.currentMembers < group.capacity && group.joinStatus == "NONE"
                 ) {
                     Text(
-                        text = if (group.currentMembers >= group.capacity) "만원" else "신청",
+                        text = when {
+                            group.joinStatus == "MEMBER" -> "가입됨"
+                            group.joinStatus == "PENDING" -> "대기중"
+                            group.currentMembers >= group.capacity -> "만원"
+                            else -> "신청"
+                        },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )

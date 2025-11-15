@@ -125,7 +125,8 @@ public class GroupService {
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 생성자는 자동으로 멤버
         );
     }
 
@@ -205,7 +206,8 @@ public class GroupService {
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 생성자는 자동으로 멤버
         );
     }
 
@@ -298,14 +300,15 @@ public class GroupService {
                             group.getCapacity(),
                             currentMembers,
                             group.getImageUrl(),
-                            group.getCreatedAt()
+                            group.getCreatedAt(),
+                            "MEMBER"  // 내 그룹은 항상 MEMBER
                     );
                 })
                 .toList();
     }
 
     // 그룹 검색 (이름으로)
-    public List<GroupResponse> searchGroups(String keyword) {
+    public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "검색어를 입력해주세요");
         }
@@ -316,6 +319,25 @@ public class GroupService {
                 .map(group -> {
                     int currentMembers = groupMemberRepository.countByGroup(group);
 
+                    // 가입 상태 확인
+                    String joinStatus = "NONE";
+                    if (userId != null) {
+                        // 이미 멤버인지 확인
+                        boolean isMember = groupMemberRepository.existsByGroupAndUser_UserPk(group, userId);
+                        if (isMember) {
+                            joinStatus = "MEMBER";
+                        } else {
+                            // 대기 중인 신청이 있는지 확인
+                            boolean hasPendingRequest = groupJoinRequestRepository
+                                    .existsByGroup_GroupSeqAndUser_UserPkAndStatus(
+                                            group.getGroupSeq(), userId, RequestStatus.PENDING
+                                    );
+                            if (hasPendingRequest) {
+                                joinStatus = "PENDING";
+                            }
+                        }
+                    }
+
                     return new GroupResponse(
                             group.getGroupSeq(),
                             group.getGroupName(),
@@ -324,7 +346,8 @@ public class GroupService {
                             group.getCapacity(),
                             currentMembers,
                             group.getImageUrl(),
-                            group.getCreatedAt()
+                            group.getCreatedAt(),
+                            joinStatus
                     );
                 })
                 .toList();
@@ -412,7 +435,8 @@ public class GroupService {
                 group.getCapacity(),
                 currentMembers,
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 수정 권한이 있다는 것은 멤버라는 의미
         );
     }
 

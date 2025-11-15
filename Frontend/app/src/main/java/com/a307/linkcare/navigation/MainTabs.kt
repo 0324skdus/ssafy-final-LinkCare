@@ -376,12 +376,31 @@ fun MainTabs(
                 }
 
                 composable(Route.CareSearch) {
+                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "care",
                         query = careSearchQuery,
                         onQueryChange = { careSearchQuery = it },
                         onBack = { navController.popBackStack() },
-                        onJoinClick = { /* TODO */ }
+                        onJoinClick = { group ->
+                            scope.launch {
+                                // 케어 그룹은 선택 권한 동의 필요
+                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                    isSleepAllowed = true,
+                                    isWaterIntakeAllowed = true,
+                                    isBloodPressureAllowed = true,
+                                    isBloodSugarAllowed = true
+                                )
+                                searchViewModel.joinGroup(group.groupSeq, permissions)
+                                    .onSuccess {
+                                        Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        groupvm.loadCare() // 케어 그룹 목록 새로고침
+                                    }
+                                    .onFailure { error ->
+                                        Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        }
                     )
                 }
 
@@ -421,12 +440,31 @@ fun MainTabs(
                 }
 
                 composable(Route.HealthSearch) {
+                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "health",
                         query = healthSearchQuery,
                         onQueryChange = { healthSearchQuery = it },
                         onBack = { navController.popBackStack() },
-                        onJoinClick = { /* TODO */ }
+                        onJoinClick = { group ->
+                            scope.launch {
+                                // 헬스 그룹도 동일하게 모든 권한 동의로 처리
+                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                    isSleepAllowed = true,
+                                    isWaterIntakeAllowed = true,
+                                    isBloodPressureAllowed = true,
+                                    isBloodSugarAllowed = true
+                                )
+                                searchViewModel.joinGroup(group.groupSeq, permissions)
+                                    .onSuccess {
+                                        Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        groupvm.loadHealth() // 헬스 그룹 목록 새로고침
+                                    }
+                                    .onFailure { error ->
+                                        Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        }
                     )
                 }
 
