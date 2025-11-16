@@ -425,12 +425,6 @@ private fun getActivityStatus(sessions: List<ActivitySession>): String? {
 }
 
 /* ---------- 유틸 함수 ---------- */
-private fun formatDuration(seconds: Int): String {
-    val min = seconds / 60
-    val sec = seconds % 60
-    return "${min}분 ${sec}초"
-}
-
 private fun formatTotalDuration(seconds: Int): String {
     val hours = seconds / 3600
     val min = (seconds % 3600) / 60

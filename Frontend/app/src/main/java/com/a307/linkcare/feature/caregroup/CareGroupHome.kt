@@ -531,7 +531,6 @@ private fun MetricTypeTabs(
 ) {
     val tabs = listOf(
         MetricType.ACTIVITY to "운동",
-        MetricType.BLOOD_PRESSURE to "혈압",
         MetricType.SLEEP to "수면"
     )
     TabRow(

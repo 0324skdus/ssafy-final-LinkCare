@@ -84,6 +84,7 @@ fun HealthGroupHome(
 
     val detail by vm.detail.collectAsState()   // 전체 그룹 상세 정보
     val membersResponse = detail?.members ?: emptyList()
+    val totalStats by vm.totalActivityStats.collectAsState()
 
     val members = remember(membersResponse) {
         membersResponse.map { m ->
@@ -152,6 +153,14 @@ fun HealthGroupHome(
 
     LaunchedEffect(selectedDate, weekMembers) {
         todayMembers = weekMembers
+    }
+
+    LaunchedEffect(groupSeq, selectedDate) {
+        vm.loadTotalActivityStats(
+            groupSeq = groupSeq,
+            startDate = selectedDate.startOfWeek(),
+            endDate = selectedDate.endOfWeek()
+        )
     }
 
     val dpState = rememberDatePickerState(
@@ -286,12 +295,21 @@ fun HealthGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
-                    SummaryChipList(
-                        items = listOf(
-                            "🔥 10043 kcal 태웠어요",
-                            "👣 10043 걸음 걸었어요",
-                            "⏱️ 10043 시간 운동했어요"
+                    val summaryChips = remember(totalStats) {
+                        val calories = totalStats?.totalCalories ?: 0.0
+                        val steps = totalStats?.totalSteps ?: 0
+                        val durationSec = totalStats?.totalDuration ?: 0
+                        val formattedDuration = formatDuration(durationSec)
+
+                        listOf(
+                            "🔥 ${calories.toInt()} kcal 태웠어요",
+                            "👣 ${steps} 걸음 걸었어요",
+                            "⏱️ ${formattedDuration} 운동했어요"
                         )
+                    }
+
+                    SummaryChipList(
+                        items = summaryChips
                     )
                 }
             }
@@ -503,3 +521,18 @@ private fun clampDate(
     else -> date
 }
 
+fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return "0 초"
+
+    val h = seconds / 3600                  // 시간
+    val m = (seconds % 3600) / 60           // 분
+    val s = seconds % 60                    // 초
+
+    return when {
+        h > 0 && m > 0 -> "${h} 시간 ${m} 분"
+        h > 0 && m == 0 -> "${h} 시간"
+        m > 0 && s > 0 -> "${m} 분 ${s} 초"
+        m > 0 && s == 0 -> "${m} 분"
+        else -> "${s} 초"
+    }
+}
