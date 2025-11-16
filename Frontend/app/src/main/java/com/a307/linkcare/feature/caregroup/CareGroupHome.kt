@@ -374,7 +374,8 @@ fun CareGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
-                        onClick = { selectedMember = m }
+                        onClick = { selectedMember = m },
+                        isSelf = (m.name == currentUserName)
                     )
 
                     if (index < todayMembers.lastIndex) {

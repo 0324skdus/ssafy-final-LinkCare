@@ -28,7 +28,8 @@ fun MemberRowCare(
     m: Member,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isSelf: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -113,11 +114,18 @@ fun MemberRowCare(
                 )
             }
         }
-        Spacer(Modifier.width(8.dp))
-        Image(
-            painter = painterResource(R.drawable.tap),
-            contentDescription = null,
-            modifier = Modifier.size(30.dp)
-        )
+        if (!isSelf) {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp)
+            )
+        } else {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.size(30.dp)
+            )
+        }
     }
 }
