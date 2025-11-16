@@ -115,12 +115,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        // 알림 메시지가 있는 경우
+        // 알림 메시지가 있는 경우 (포그라운드/백그라운드 모두 알림 표시)
         message.notification?.let {
             Log.d(TAG, "알림 제목: ${it.title}")
             Log.d(TAG, "알림 내용: ${it.body}")
 
-            // 알림 표시
+            // 앱이 포그라운드든 백그라운드든 항상 알림 표시
             showNotification(it.title, it.body)
         }
     }

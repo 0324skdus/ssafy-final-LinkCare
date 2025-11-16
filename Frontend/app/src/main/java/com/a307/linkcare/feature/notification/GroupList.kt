@@ -1,7 +1,6 @@
 package com.a307.linkcare.feature.notification
 
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -26,7 +25,6 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
-import com.a307.linkcare.common.util.painterResourceCropped
 import com.a307.linkcare.feature.notification.domain.NotificationType
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -35,19 +33,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val ReadGray = Color(0xFF9E9E9E)
-enum class JoinAlertKind { JOIN_REQUEST, JOIN_ACCEPTED, JOIN_REJECTED }
-
-data class GroupJoinAlert(
-    val id: String,
-    val groupName: String,
-    val groupType: GroupType,
-    val kind: JoinAlertKind,
-    val sentAtMillis: Long,
-    val senderName: String,
-    @DrawableRes val senderAvatarRes: Int?,
-    @DrawableRes val groupImageRes: Int,
-    val isRead: Boolean = false
-)
 
 @Composable
 fun GroupList(
@@ -189,7 +174,7 @@ fun GroupList(
                                                     }
                                             }
                                         },
-                                        border = BorderStroke(1.dp, Color(0x33FF6B35)),
+                                        border = BorderStroke(1.dp, Color(0xFFFF6B35)),
                                         shape = RoundedCornerShape(10.dp)
                                     ) { Text("거절", color = Color(0xFFFF6B35)) }
 
@@ -208,7 +193,7 @@ fun GroupList(
                                                     }
                                             }
                                         },
-                                        border = BorderStroke(1.dp, Color(0x338ECFA9)),
+                                        border = BorderStroke(1.dp, Color(0xFF8ECFA9)),
                                         shape = RoundedCornerShape(10.dp)
                                     ) { Text("수락", color = Color(0xFF8ECFA9)) }
                                 }
