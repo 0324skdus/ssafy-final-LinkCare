@@ -17,7 +17,14 @@ class GroupRepository @Inject constructor(
     private val api: GroupApi
 ) {
     suspend fun getMyGroups(type: String?): List<MyGroupResponse> {
-        return api.getMyGroups(type)
+        return try {
+            val result = api.getMyGroups(type)
+            android.util.Log.d("GroupRepository", "내 그룹 목록 조회 성공: type=$type, count=${result.size}")
+            result
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "내 그룹 목록 조회 실패: type=$type, error=${e.message}", e)
+            emptyList()
+        }
     }
 
     suspend fun getGroupDetail(groupSeq: Long) =

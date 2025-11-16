@@ -47,8 +47,9 @@ public class NotificationService {
 
         log.info("알림 생성 완료: userId={}, type={}, title={}", user.getUserPk(), type, title);
 
-        // FCM 푸시 알림 전송
-        fcmService.sendPushNotification(user, title, content);
+        // FCM 푸시 알림 전송 (그룹 타입 정보 포함)
+        String groupType = relatedGroup != null ? relatedGroup.getType().name() : null;
+        fcmService.sendPushNotificationWithData(user, title, content, type, groupType);
     }
 
     /*

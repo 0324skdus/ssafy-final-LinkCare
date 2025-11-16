@@ -32,13 +32,19 @@ class MyGroupsViewModel @Inject constructor(
 
     fun loadCare() {
         viewModelScope.launch {
-            _careGroups.value = repo.getMyGroups("CARE")
+            android.util.Log.d("MyGroupsViewModel", "케어 그룹 목록 로드 시작")
+            val groups = repo.getMyGroups("CARE")
+            _careGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "케어 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 
     fun loadHealth() {
         viewModelScope.launch {
-            _healthGroups.value = repo.getMyGroups("HEALTH")
+            android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 시작")
+            val groups = repo.getMyGroups("HEALTH")
+            _healthGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 
