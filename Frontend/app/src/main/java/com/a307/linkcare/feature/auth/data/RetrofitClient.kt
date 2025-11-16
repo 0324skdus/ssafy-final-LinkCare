@@ -11,7 +11,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "k13a307.p.ssafy.io:9090/"
+    private const val BASE_URL = "http://k13a307.p.ssafy.io:9090/"
 
     fun createOkHttpClient(context: Context): OkHttpClient {
         val tokenStore = TokenStore(context)
