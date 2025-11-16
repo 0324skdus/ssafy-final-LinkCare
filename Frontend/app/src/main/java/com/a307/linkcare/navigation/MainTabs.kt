@@ -419,7 +419,7 @@ fun MainTabs(
                         CareGroupHome(
                             groupSeq = selectedCareGroup!!,
                             modifier = Modifier,
-                            vm = groupvm
+//                            vm = groupvm
                         )
                     }
                 }

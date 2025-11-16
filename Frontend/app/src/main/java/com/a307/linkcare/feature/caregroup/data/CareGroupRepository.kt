@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.caregroup.HealthToday
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -41,6 +42,22 @@ class CareGroupRepository @Inject constructor(
 
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+
+
+suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
+        return try {
+            val response = api.getDailyHealthDetail(userSeq)
+            if (response.isSuccessful) {
+                response.body()?.toHealthToday()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

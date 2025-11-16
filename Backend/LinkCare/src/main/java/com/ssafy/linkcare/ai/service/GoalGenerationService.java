@@ -62,8 +62,11 @@ public class GoalGenerationService {
         log.info("이번 주 시작일(월요일): {}", weekStart);
 
         // 3. 중복 체크 - 이미 해당 주차 목표가 있으면 반환 (멱등성)
-        return weeklyGroupGoalsRepository.findByGroup_GroupSeqAndWeekStart(groupSeq, weekStart)
-                .orElseGet(() -> generateNewGoal(group, weekStart));
+        return generateNewGoal(group, weekStart);
+
+//        // 3. 중복 체크 - 이미 해당 주차 목표가 있으면 반환 (멱등성)
+//        return weeklyGroupGoalsRepository.findByGroup_GroupSeqAndWeekStart(groupSeq, weekStart)
+//                .orElseGet(() -> generateNewGoal(group, weekStart));
     }
 
     /**

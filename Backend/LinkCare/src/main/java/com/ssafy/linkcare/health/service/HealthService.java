@@ -137,6 +137,40 @@ public class HealthService {
                 .build();
     }
 
+    public DailyHealthDetailResponse getDailyHealthDetail(int userSeq) {
+        LocalDate today = LocalDate.now();
+
+        List<BloodPressureResponse> bloodPressureResponses = bloodPressureService.getBloodPressureByDate(userSeq, today, today);
+        List<SleepResponse> sleepResponse = sleepService.getSleepsByDate(userSeq, today, today);
+        List<WaterIntakeResponse> waterIntakeResponses = waterIntakeService.getWaterIntakeByDate(userSeq, today, today);
+        List<HeartRateResponse> heartRateResponses = heartRateService.getHeartRatesByPeriod(userSeq, today, today);
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
+
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+
+        return DailyHealthDetailResponse.builder()
+                .bloodPressures(bloodPressureResponses)
+                .sleeps(sleepResponse)
+                .waterIntakes(waterIntakeResponses)
+                .heartRates(heartRateResponses)
+                .dailyActivitySummary(dailyActivitySummaryResponse)
+                .build();
+    }
+
+    public DailyActivitySummaryResponse getDailyActivitySummary(int userSeq) {
+        LocalDate today = LocalDate.now();
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
+
+        return DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+    }
+
 
     public TodayStatisticsResponse getTodayStatisticsForDialogs(int userSeq) {
         LocalDate today = LocalDate.now();

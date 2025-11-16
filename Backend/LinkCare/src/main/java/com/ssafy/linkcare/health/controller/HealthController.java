@@ -25,7 +25,7 @@ public class HealthController {
     public ResponseEntity<ApiResponse<DailyHealthData>> uploadUserDailyHealthData(
             @PathVariable int userId, @RequestBody DailyHealthData data) {
 
-        System.out.println("받은 데이터: " + data);
+        System.out.println("받은 데이터: " + data.toString());
 
         healthService.syncDailyHealthData(data, userId);
 
@@ -57,6 +57,28 @@ public class HealthController {
         DailyHealthResponse dailyHealthResponse = healthService.getTodayHealthData(userSeq);
 
         return ResponseEntity.ok(dailyHealthResponse);
+    }
+
+    @GetMapping("/{userSeq}/today/detail")
+    public ResponseEntity<DailyHealthDetailResponse> getUserDailyHealthDetailData(
+            @PathVariable int userSeq
+    ) {
+        log.info("API 호출 - 당일 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetail(userSeq);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
+    }
+
+    @GetMapping("/{userSeq}/today-activity/detail")
+    public ResponseEntity<DailyActivitySummaryResponse> getUserDailyActivitySummaryDetailData(
+            @PathVariable int userSeq
+    ) {
+        log.info("API 호출 - 당일 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyActivitySummaryResponse dailyHealthDetailResponse = healthService.getDailyActivitySummary(userSeq);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
     }
 
     // 기간 별 칼로리, 걸음, 운동 시간
