@@ -24,7 +24,7 @@ import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
 
 @Composable
-fun MemberRow(
+fun MemberRowCare(
     m: Member,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
@@ -79,8 +79,8 @@ fun MemberRow(
         }
         Spacer(Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text("${m.progresses} 달성", fontWeight = FontWeight.Bold, color = if (m.goal > m.progresses) main else point)
-            Text("목표 ${m.goal}", fontSize = 12.sp, color = Color(0xFF888888))
+            Text("현재 ${m.progresses} 걸음", fontWeight = FontWeight.Bold, color = if (m.goal > m.progresses) main else point)
+            Text("총 ${m.goal} 걸음", fontSize = 12.sp, color = Color(0xFF888888))
         }
         Spacer(Modifier.width(8.dp))
         Image(

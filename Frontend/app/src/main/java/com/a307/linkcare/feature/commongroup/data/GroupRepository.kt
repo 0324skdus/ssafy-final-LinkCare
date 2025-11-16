@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.commongroup.data
 
 import android.net.Uri
+import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.InvitationPreviewResponse
 import com.a307.linkcare.feature.commongroup.domain.InvitationResponse
 import com.a307.linkcare.feature.commongroup.domain.JoinRequestResponse
@@ -11,6 +12,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import java.time.LocalDate
 import javax.inject.Inject
 
 class GroupRepository @Inject constructor(
@@ -229,5 +231,18 @@ class GroupRepository @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // 그룹 이번주 운동 통계
+    suspend fun getTotalActivityStats(
+        groupSeq: Long,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ): GroupTotalActivityStats {
+        return api.getTotalActivityStats(
+            groupSeq = groupSeq,
+            startDate = startDate.toString(),
+            endDate = endDate.toString()
+        )
     }
 }
