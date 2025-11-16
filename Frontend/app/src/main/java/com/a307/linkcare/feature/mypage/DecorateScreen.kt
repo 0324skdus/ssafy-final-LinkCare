@@ -2,19 +2,10 @@
 
 package com.a307.linkcare.feature.mypage
 
-import androidx.annotation.DrawableRes
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -22,48 +13,59 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.loadCroppedPainterIO
 import androidx.compose.runtime.mutableStateMapOf
 
+/* ---------- 추가: 논리 ID → drawable ID 매핑 함수 ---------- */
 
+fun toCharDrawable(id: Int): Int = when (id) {
+    1 -> R.drawable.char_duck_1
+    2 -> R.drawable.char_bear_1
+    else -> R.drawable.char_duck_1
+}
+
+fun toBgDrawable(id: Int): Int = when (id) {
+    1 -> R.drawable.background_1
+    2 -> R.drawable.background_2
+    else -> R.drawable.background_1
+}
+/* ---------- 여기서부터 기존 DecorateScreen 수정 ---------- */
 @Composable
 fun DecorateScreen(
-    ownedCharacters: List<Int>,
-    ownedBackgrounds: List<Int>,
-    @DrawableRes equippedCharacter: Int,
-    @DrawableRes equippedBackground: Int,
+    ownedCharacters: List<Int>,     // 논리 ID 리스트
+    ownedBackgrounds: List<Int>,    // 논리 ID 리스트
+    equippedCharacter: Int,         // 논리 ID
+    equippedBackground: Int,        // 논리 ID
     modifier: Modifier = Modifier,
-    onApply: (selectedCharRes: Int, selectedBgRes: Int) -> Unit = { _, _ -> }
+    onApply: (selectedCharId: Int, selectedBgId: Int) -> Unit = { _, _ -> }
 ) {
     var tab by rememberSaveable { mutableStateOf(StoreTab.CHARACTER) }
+
+    // selChar / selBg 를 논리 ID 로 유지
     var selChar by rememberSaveable { mutableStateOf(equippedCharacter) }
     var selBg by rememberSaveable { mutableStateOf(equippedBackground) }
 
     val context = LocalContext.current
 
+    /* ---------- 캐릭터 Painter 로딩: 논리 ID를 drawable로 변환 ---------- */
     val charPainters: MutableMap<Int, Painter> = remember { mutableStateMapOf() }
+
     LaunchedEffect(ownedCharacters) {
-        ownedCharacters.forEach { res ->
-            if (charPainters[res] == null) charPainters[res] = loadCroppedPainterIO(context, res)
+        ownedCharacters.forEach { id ->
+            if (charPainters[id] == null) {
+                charPainters[id] = loadCroppedPainterIO(context, toCharDrawable(id))
+            }
         }
         if (charPainters[equippedCharacter] == null) {
-            charPainters[equippedCharacter] = loadCroppedPainterIO(context, equippedCharacter)
+            charPainters[equippedCharacter] =
+                loadCroppedPainterIO(context, toCharDrawable(equippedCharacter))
         }
     }
 
@@ -75,6 +77,7 @@ fun DecorateScreen(
     ) {
         Column(Modifier.fillMaxSize()) {
 
+            // 탭
             TabRow(
                 selectedTabIndex = tab.ordinal,
                 containerColor = white,
@@ -99,46 +102,52 @@ fun DecorateScreen(
             CarouselBox(
                 onPrev = {
                     when (tab) {
-                        StoreTab.CHARACTER -> if (ownedCharacters.isNotEmpty()) {
+                        StoreTab.CHARACTER -> {
                             val idx = ownedCharacters.indexOf(selChar).coerceAtLeast(0)
-                            selChar = ownedCharacters[if (idx - 1 < 0) ownedCharacters.lastIndex else idx - 1]
+                            selChar = ownedCharacters[(idx - 1).takeIf { it >= 0 }
+                                ?: ownedCharacters.lastIndex]
                         }
-                        StoreTab.BACKGROUND -> if (ownedBackgrounds.isNotEmpty()) {
+                        StoreTab.BACKGROUND -> {
                             val idx = ownedBackgrounds.indexOf(selBg).coerceAtLeast(0)
-                            selBg = ownedBackgrounds[if (idx - 1 < 0) ownedBackgrounds.lastIndex else idx - 1]
+                            selBg = ownedBackgrounds[(idx - 1).takeIf { it >= 0 }
+                                ?: ownedBackgrounds.lastIndex]
                         }
                     }
                 },
+
                 onNext = {
                     when (tab) {
-                        StoreTab.CHARACTER -> if (ownedCharacters.isNotEmpty()) {
+                        StoreTab.CHARACTER -> {
                             val idx = ownedCharacters.indexOf(selChar).coerceAtLeast(0)
                             selChar = ownedCharacters[(idx + 1) % ownedCharacters.size]
                         }
-                        StoreTab.BACKGROUND -> if (ownedBackgrounds.isNotEmpty()) {
+                        StoreTab.BACKGROUND -> {
                             val idx = ownedBackgrounds.indexOf(selBg).coerceAtLeast(0)
                             selBg = ownedBackgrounds[(idx + 1) % ownedBackgrounds.size]
                         }
                     }
                 }
             ) {
-                val selPainter: Painter? = charPainters[selChar] ?: rememberCroppedPainter(selChar)
+                // Painter도 논리 ID → drawable로 변환해서 사용
+                val selPainter = charPainters[selChar]
+                    ?: rememberCroppedPainter(toCharDrawable(selChar))
 
                 CirclePreview(
-                    backgroundRes = selBg,
+                    backgroundRes = toBgDrawable(selBg),
                     characterPainter = selPainter,
                 )
             }
 
             Spacer(Modifier.height(12.dp))
 
+            /* ---------- Apply 버튼: 논리 ID 그대로 전달 ---------- */
             LcBtn(
                 text = "적용",
                 modifier = Modifier.fillMaxWidth(),
                 buttonColor = main,
                 buttonTextColor = white,
                 isEnabled = true,
-                onClick = { onApply(selChar, selBg) }
+                onClick = { onApply(selChar, selBg) } // 논리 ID 전달
             )
         }
     }
