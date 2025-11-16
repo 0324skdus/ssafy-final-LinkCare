@@ -45,16 +45,14 @@ public class CharacterService {
             boolean isUnlocked = unlockedCharacterIds.contains(character.getCharacterId());
             boolean isMain = character.getCharacterId().equals(mainCharacterId);
             String baseImageUrl = s3Service.generatePresignedGetUrl(character.getBaseImageS3Key());
-            List<String> imageUrls = character.getImageS3Keys().stream()
-                    .map(s3Service::generatePresignedGetUrl)
-                    .collect(Collectors.toList());
+            String animatedImageUrl = s3Service.generatePresignedGetUrl(character.getAnimatedImageS3Key());
 
             return CharacterStatusDto.builder()
                     .characterId(character.getCharacterId())
                     .name(character.getName())
                     .description(character.getDescription())
                     .baseImageUrl(baseImageUrl)
-                    .imageUrls(imageUrls)
+                    .animatedImageUrl(animatedImageUrl)
                     .isUnlocked(isUnlocked)
                     .isMain(isMain)
                     .build();
@@ -72,16 +70,14 @@ public class CharacterService {
 
         Character mainCharacter = mainUserCharacter.getCharacter();
         String baseImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getBaseImageS3Key());
-        List<String> imageUrls = mainCharacter.getImageS3Keys().stream()
-                .map(s3Service::generatePresignedGetUrl)
-                .collect(Collectors.toList());
+        String animatedImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getAnimatedImageS3Key());
 
         return CharacterStatusDto.builder()
                 .characterId(mainCharacter.getCharacterId())
                 .name(mainCharacter.getName())
                 .description(mainCharacter.getDescription())
                 .baseImageUrl(baseImageUrl)
-                .imageUrls(imageUrls)
+                .animatedImageUrl(animatedImageUrl)
                 .isUnlocked(true)
                 .isMain(true)
                 .build();
