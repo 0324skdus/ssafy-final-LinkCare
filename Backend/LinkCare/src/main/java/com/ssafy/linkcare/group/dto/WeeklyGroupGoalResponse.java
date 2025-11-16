@@ -1,6 +1,7 @@
 package com.ssafy.linkcare.group.dto;
 
 import com.ssafy.linkcare.group.entity.WeeklyGroupGoals;
+import com.ssafy.linkcare.group.enums.MetricType;
 
 import java.time.LocalDate;
 
@@ -18,7 +19,8 @@ public record WeeklyGroupGoalResponse(
         Double predictedGrowthRateSteps,
         Double predictedGrowthRateKcal,
         Double predictedGrowthRateDuration,
-        Double predictedGrowthRateDistance
+        Double predictedGrowthRateDistance,
+        MetricType selectedMetricType
 ) {
     public static WeeklyGroupGoalResponse from(WeeklyGroupGoals goal) {
         return new WeeklyGroupGoalResponse(
@@ -32,7 +34,8 @@ public record WeeklyGroupGoalResponse(
                 goal.getPredictedGrowthRateSteps(),
                 goal.getPredictedGrowthRateKcal(),
                 goal.getPredictedGrowthRateDuration(),
-                goal.getPredictedGrowthRateDistance()
+                goal.getPredictedGrowthRateDistance(),
+                goal.getSelectedMetricType()
         );
     }
 }
