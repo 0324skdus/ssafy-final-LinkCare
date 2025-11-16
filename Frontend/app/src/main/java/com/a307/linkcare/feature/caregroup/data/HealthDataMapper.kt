@@ -38,7 +38,9 @@ private fun SleepResponse.toSleep() = Sleep(
 )
 
 private fun DailyActivitySummaryResponse.toDailyActivitySummary() = DailyActivitySummary(
-    exercises = this.exercises.map { it.toExerciseSession() },
+    exercises = this.exercises
+        .distinctBy { it.startTime to it.endTime }  // startTime + endTime 조합으로 중복 제거
+        .map { it.toExerciseSession() },
     steps = this.steps
 )
 

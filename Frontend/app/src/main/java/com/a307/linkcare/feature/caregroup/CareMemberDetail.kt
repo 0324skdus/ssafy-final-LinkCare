@@ -479,7 +479,10 @@ private fun ActivitySessionCard(session: ExerciseSession, index: Int) {
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     MetricItem("칼로리", "${session.calories.toInt()} kcal")
-                    MetricItem("평균 심박수", "${session.meanPulseRate.toInt()} bpm")
+                    MetricItem(
+                        "평균 심박수",
+                        if (session.meanPulseRate > 0) "${session.meanPulseRate.toInt()} bpm" else "-"
+                    )
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     MetricItem("거리", "${(session.distance / 1000f).round1()} km")
@@ -647,7 +650,7 @@ private fun getSleepStatus(sleeps: List<Sleep>): String? {
 private fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): String {
     if (exercises.isEmpty() && steps == 0) return "오늘 운동 기록이 없습니다"
     val totalCalories = exercises.sumOf { it.calories.toInt() }
-    val totalMin = exercises.sumOf { it.duration } / 60
+    val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
     return if (exercises.isNotEmpty()) {
         "${totalCalories} kcal 소모 (${totalMin}분)"
     } else {
@@ -657,7 +660,7 @@ private fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): St
 
 private fun getActivityStatus(exercises: List<ExerciseSession>): String? {
     if (exercises.isEmpty()) return null
-    val totalMin = exercises.sumOf { it.duration } / 60
+    val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
     return when {
         totalMin >= 30 -> "양호"
         totalMin >= 15 -> "보통"
@@ -668,21 +671,24 @@ private fun getActivityStatus(exercises: List<ExerciseSession>): String? {
 /* ---------- 유틸 함수 ---------- */
 
 private fun getTotalSleepHours(sleeps: List<Sleep>): String {
-    val totalMin = sleeps.sumOf { it.duration }
-    val hours = totalMin / 60
-    val mins = totalMin % 60
+    val totalSeconds = sleeps.sumOf { it.duration } / 1000  // 밀리초 → 초
+    val totalMinutes = totalSeconds / 60  // 초 → 분
+    val hours = totalMinutes / 60
+    val mins = totalMinutes % 60
     return "${hours}시간 ${mins}분"
 }
 
-private fun formatDuration(seconds: Long): String {
-    val min = seconds / 60
-    val sec = seconds % 60
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val min = totalSeconds / 60
+    val sec = totalSeconds % 60
     return "${min}분 ${sec}초"
 }
 
-private fun formatTotalDuration(seconds: Long): String {
-    val hours = seconds / 3600
-    val min = (seconds % 3600) / 60
+private fun formatTotalDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val min = (totalSeconds % 3600) / 60
     return if (hours > 0) "${hours}시간 ${min}분" else "${min}분"
 }
 

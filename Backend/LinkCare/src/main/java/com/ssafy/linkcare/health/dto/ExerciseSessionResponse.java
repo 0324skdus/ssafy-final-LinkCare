@@ -17,6 +17,6 @@ public class ExerciseSessionResponse {
     private LocalDateTime endTime;
     private Float distance;
     private Float calories;
-    private Float meanPulseRate;
+    private Integer meanPulseRate;
     private Long duration;
 }
