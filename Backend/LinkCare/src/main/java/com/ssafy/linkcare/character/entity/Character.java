@@ -6,9 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
 @Table(name = "characters")
 @Getter
@@ -33,8 +30,6 @@ public class Character {
     @Column(name = "base_image_s3_key")
     private String baseImageS3Key;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "character_images", joinColumns = @JoinColumn(name = "character_id"))
-    @Column(name = "image_s3_key", nullable = false)
-    private List<String> imageS3Keys = new ArrayList<>();
+    @Column(name = "animated_image_s3_key")
+    private String animatedImageS3Key;
 }

@@ -63,7 +63,7 @@ public class WeeklyGroupGoals {
     private Group group;
 
     /**
-     * 선택된 메트릭 타입에 따라 목표값 업데이트
+     * 선택된 메트릭 타입에 따라 목표값 업데이트 (사용자가 선택)
      */
     public void updateGoal(MetricType metricType, Number goalValue) {
         this.selectedMetricType = metricType;
@@ -74,5 +74,25 @@ public class WeeklyGroupGoals {
             case DURATION -> this.goalDuration = goalValue.intValue();
             case DISTANCE -> this.goalDistance = goalValue.floatValue();
         }
+    }
+
+    /**
+     * AI 예측 기반으로 목표 전체 업데이트
+     * selectedMetricType은 null로 리셋 (새로 선택해야 함)
+     */
+    public void updateFromAiPrediction(
+            Long goalSteps, Float goalKcal, Integer goalDuration, Float goalDistance,
+            Double predictedGrowthRateSteps, Double predictedGrowthRateKcal,
+            Double predictedGrowthRateDuration, Double predictedGrowthRateDistance) {
+
+        this.goalSteps = goalSteps;
+        this.goalKcal = goalKcal;
+        this.goalDuration = goalDuration;
+        this.goalDistance = goalDistance;
+        this.predictedGrowthRateSteps = predictedGrowthRateSteps;
+        this.predictedGrowthRateKcal = predictedGrowthRateKcal;
+        this.predictedGrowthRateDuration = predictedGrowthRateDuration;
+        this.predictedGrowthRateDistance = predictedGrowthRateDistance;
+        this.selectedMetricType = null;  // AI 재생성 시 선택 초기화
     }
 }
