@@ -54,6 +54,20 @@ class NotificationRepository @Inject constructor(
         }
     }
 
+    // 알림 삭제
+    suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        return try {
+            val response = notificationApi.deleteNotification(notificationId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete notification: HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // 가입 요청 승인
     suspend fun approveJoinRequest(requestSeq: Long): Result<Unit> {
         return try {
