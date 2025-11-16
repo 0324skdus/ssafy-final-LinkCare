@@ -140,8 +140,21 @@ fun CareGroupHome(
     var totalGroupGoal by remember { mutableStateOf(20000) }      // TODO
 
     // 날짜 이동
-    val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
-    val onNextDay = { selectedDate = selectedDate.plusDays(1) }
+    val onPrevDay = {
+        selectedDate = clampDate(
+            selectedDate.minusDays(1),
+            minDate,
+            today
+        )
+    }
+
+    val onNextDay = {
+        selectedDate = clampDate(
+            selectedDate.plusDays(1),
+            minDate,
+            today
+        )
+    }
 
     // 주차 변경 시 → 해당 주의 멤버 데이터
     val year = selectedDate.year
@@ -258,8 +271,20 @@ fun CareGroupHome(
                     Spacer(Modifier.height(12.dp))
                     DatePagerRow(
                         label = "${selectedDate.year}년 ${selectedDate.monthValue}월 ${selectedDate.weekOfMonth()}주차",
-                        onPrev = { selectedDate = selectedDate.minusWeeks(1) },
-                        onNext = { selectedDate = selectedDate.plusWeeks(1) }
+                        onPrev = {
+                            selectedDate = clampDate(
+                                selectedDate.minusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        },
+                        onNext = {
+                            selectedDate = clampDate(
+                                selectedDate.plusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        }
                     )
                 }
 
@@ -522,4 +547,15 @@ private fun MetricTypeTabs(
             )
         }
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+private fun clampDate(
+    date: LocalDate,
+    min: LocalDate,
+    max: LocalDate
+): LocalDate = when {
+    date.isBefore(min) -> min
+    date.isAfter(max) -> max
+    else -> date
 }
