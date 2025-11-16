@@ -4,8 +4,11 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.ssafy.linkcare.background.service.BackgroundService;
+import com.ssafy.linkcare.character.service.CharacterService;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +25,12 @@ import java.util.Collections;
 public class OAuth2Service {
 
     private final UserRepository userRepository;
+    private final CharacterService characterService;
+    private final PointService pointService;
+    private final BackgroundService backgroundService;
 
     @Value("${google.client-id}")
     private String googleClientId;
-
-    @Value("${app.default-profile-image-url}")
-    private String defaultProfileImageUrl;
 
     /*
         * Google ID Token을 검증하고 사용자 정보를 반환
@@ -35,7 +38,7 @@ public class OAuth2Service {
         * @return User 엔티티 (신규 가입 or 기존 회원)
         * @throws CustomException ID Token이 유효하지 않거나 검증 실패 시
     */
-    @Transactional(readOnly = false)
+    @Transactional
     public User verifyGoogleTokenAndGetUser(String idToken) {
         try {
             // Google ID Token 검증기 생성
@@ -59,7 +62,6 @@ public class OAuth2Service {
             String providerId = payload.getSubject();        // Google 고유 ID
             String email = payload.getEmail();               // 이메일
             String name = (String) payload.get("name");      // 이름
-            String picture = (String) payload.get("picture"); // 프로필 이미지
 
             log.info("Google 로그인 시도 - email: {}, providerId: {}", email, providerId);
 
@@ -69,18 +71,18 @@ public class OAuth2Service {
                         // 신규 회원 자동 가입
                         log.info("신규 Google 회원 자동 가입 - email: {}", email);
 
-                        String profileImage = (picture != null && !picture.isEmpty()) ? picture : defaultProfileImageUrl;
-
                         User newUser = User.builder()
                                 .email(email)
                                 .password(null) // 소셜 로그인은 비밀번호 없음
                                 .name(name)
-                                .imageUrl(profileImage)
                                 .provider("GOOGLE")
                                 .providerId(providerId)
                                 .build();
 
-                        return userRepository.save(newUser);
+                        userRepository.save(newUser);
+                        pointService.createPointForNewUser(newUser);
+                        backgroundService.assignDefaultBackground(newUser);
+                        return newUser;
                     });
 
         } catch (CustomException e) {

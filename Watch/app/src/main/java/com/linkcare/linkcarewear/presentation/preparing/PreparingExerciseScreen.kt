@@ -1,6 +1,8 @@
 package com.linkcare.linkcarewear.presentation.preparing
 
 import android.content.ContentValues.TAG
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -26,26 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.health.services.client.data.LocationAvailability
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.CurvedLayout
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.curvedText
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.linkcare.linkcarewear.R
@@ -56,8 +51,6 @@ import com.linkcare.linkcarewear.presentation.theme.ThemePreview
 import com.linkcare.linkcarewear.service.ExerciseServiceState
 import com.google.android.horologist.compose.ambient.AmbientAware
 import com.google.android.horologist.compose.ambient.AmbientState
-import com.google.android.horologist.compose.layout.ColumnItemType
-import com.google.android.horologist.compose.layout.rememberResponsiveColumnPadding
 import com.linkcare.linkcarewear.data.ThemePreferences
 
 @Composable
@@ -126,51 +119,71 @@ fun PreparingExerciseScreen(
     ambientState: AmbientState,
     onStart: () -> Unit = {}
 ) {
-    val location = (uiState as? PreparingScreenState.Preparing)?.locationAvailability
     val context = LocalContext.current
-    val characterId = remember { ThemePreferences.getCharacterId(context) }
-    val backgroundId = remember { ThemePreferences.getBackgroundId(context) }
 
+    // 1) 화면에서 사용할 상태
+    var characterId by remember { mutableStateOf(ThemePreferences.getCharacterId(context)) }
+    var backgroundId by remember { mutableStateOf(ThemePreferences.getBackgroundId(context)) }
+
+    // 2) SharedPreferences 변경 감지 리스너 등록
+    DisposableEffect(Unit) {
+        val prefs = context.getSharedPreferences("customize_prefs", Context.MODE_PRIVATE)
+
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "characterId" -> {
+                    characterId = prefs.getInt("characterId", 1)
+                }
+                "backgroundId" -> {
+                    backgroundId = prefs.getInt("backgroundId", 1)
+                }
+            }
+        }
+
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+        // 🔥 화면이 사라질 때 자동으로 해제
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+    // 3) 화면 UI 구성부
     ScreenScaffold(
         timeText = {
             LocationStatusText(
                 updatePrepareLocationStatus(
-                    locationAvailability = location ?: LocationAvailability.UNAVAILABLE
+                    locationAvailability = (uiState as? PreparingScreenState.Preparing)
+                        ?.locationAvailability ?: LocationAvailability.UNAVAILABLE
                 )
             )
-//            CurvedLayout(
-//                anchor = 0f, // 오른쪽
-//                anchorType = AnchorType.Center
-//            ) {
-//                curvedText(
-//                    text = "1234 Steps",  // 🔹실제 값 연결
-//                    fontSize = 12.sp,
-//                    color = Color.DarkGray
-//                )
-//            }
         },
         modifier = Modifier.ambientGray(ambientState)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+
+            // 🔥 4) 배경 리소스 매핑 (Int 기반)
             val backgroundRes = when (backgroundId) {
-                2001L -> R.drawable.background_default
-                2002L -> R.drawable.background_rock
+                1 -> R.drawable.background_default
+                2 -> R.drawable.background_2
                 else -> R.drawable.background_default
             }
-            // 배경 이미지
+
             Image(
                 painter = painterResource(id = backgroundRes),
                 contentDescription = "배경",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize()
             )
-            val charracterRes = when (characterId) {
-                1001L -> R.drawable.duck_walk1
-                1002L -> R.drawable.bear_walk1
+
+            // 🔥 5) 캐릭터 리소스 매핑 (Int 기반)
+            val characterRes = when (characterId) {
+                1 -> R.drawable.duck_walk1
+                2 -> R.drawable.bear_walk1
                 else -> R.drawable.duck_walk1
             }
+
             Image(
-                painter = painterResource(id = charracterRes),
+                painter = painterResource(id = characterRes),
                 contentDescription = "캐릭터",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -180,7 +193,7 @@ fun PreparingExerciseScreen(
                     .offset(x = 10.dp, y = 8.dp)
             )
 
-            // 내용 (텍스트 + 버튼)
+            // Start 버튼 등 나머지 UI
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -188,14 +201,13 @@ fun PreparingExerciseScreen(
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 하단 시작 버튼
                 FilledIconButton(
                     onClick = onStart,
                     enabled = uiState is PreparingScreenState.Preparing
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
-                        contentDescription = stringResource(id = R.string.start)
+                        contentDescription = "Start"
                     )
                 }
             }

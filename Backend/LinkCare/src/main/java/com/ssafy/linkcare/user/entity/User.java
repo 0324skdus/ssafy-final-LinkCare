@@ -1,20 +1,21 @@
 package com.ssafy.linkcare.user.entity;
 
+import com.ssafy.linkcare.background.entity.UserBackground;
+import com.ssafy.linkcare.character.entity.UserCharacter;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
-@Getter
+@Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class User {
@@ -33,14 +34,17 @@ public class User {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "image_url", length = 255)
-    private String imageUrl;
+    @Column(length = 50)
+    private String petName;
 
     private Float height;
 
     private Float weight;
 
     private LocalDate birth;
+
+    @Column(length = 10)
+    private String gender;
 
     // 소셜 로그인 필드
     @Column(length = 20)
@@ -53,6 +57,10 @@ public class User {
     @Column(name = "exercise_start_year")
     private Integer exerciseStartYear;  // 예: 2020
 
+    // FCM 토큰 (푸시 알림용)
+    @Column(name = "fcm_token", length = 255)
+    private String fcmToken;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,15 +69,29 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_character_id")
+    private UserCharacter mainCharacter;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserCharacter> characters = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_background_id")
+    private UserBackground mainBackground;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserBackground> backgrounds = new ArrayList<>();
+
     @Builder
-    public User(String email, String password, String name, String imageUrl, Float height, Float weight, LocalDate birth, String provider, String providerId, Integer exerciseStartYear) {
+    public User(String email, String password, String name, Float height, Float weight, LocalDate birth, String gender, String provider, String providerId, Integer exerciseStartYear) {
         this.email = email;
         this.password = password;
         this.name = name;
-        this.imageUrl = imageUrl;
         this.height = height;
         this.weight = weight;
         this.birth = birth;
+        this.gender = gender;
         this.provider = provider;
         this.providerId = providerId;
         this.exerciseStartYear = exerciseStartYear;
@@ -81,13 +103,18 @@ public class User {
     }
 
     // 프로필 정보 수정 (운동 시작 년도 포함!)
-    public void updateProfile(String name, String imageUrl, Float height, Float weight, LocalDate birth, Integer exerciseStartYear) {
+    public void updateProfile(String name, Float height, Float weight, LocalDate birth, String gender, Integer exerciseStartYear) {
         this.name = name;
-        this.imageUrl = imageUrl;
         this.height = height;
         this.weight = weight;
         this.birth = birth;
+        this.gender = gender;
         this.exerciseStartYear = exerciseStartYear;
+    }
+
+    // FCM 토큰 업데이트
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 
 }

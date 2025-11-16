@@ -62,7 +62,7 @@ fun PhoneAppTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+//        typography = Typography,
         content = content
     )
 }

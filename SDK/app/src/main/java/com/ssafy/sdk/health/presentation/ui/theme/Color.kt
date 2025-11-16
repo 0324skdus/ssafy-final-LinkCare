@@ -24,5 +24,3 @@ val Grey97 = Color(0xFF97979c)
 val AppleGreen = Color(0xFF0fcf6e)
 val AlmostWhite = Color(0xFFfdfdff)
 val MiddleGrey3a = Color(0xCC3a3a3d)
-
-
