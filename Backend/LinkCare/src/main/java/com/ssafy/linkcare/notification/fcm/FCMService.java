@@ -36,6 +36,9 @@ public class FCMService {
             * @param groupType 그룹 타입 (CARE 또는 HEALTH)
     */
     public void sendPushNotificationWithData(User user, String title, String body, NotificationType notificationType, String groupType) {
+        log.info("FCM 푸시 알림 전송 시도: userId={}, title={}, fcmToken={}",
+                user.getUserPk(), title, user.getFcmToken() != null ? "있음" : "없음");
+
         // FCM 토큰이 없으면 전송하지 않음
         if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
             log.warn("FCM 토큰이 없어 푸시 알림 전송 불가: userId={}", user.getUserPk());

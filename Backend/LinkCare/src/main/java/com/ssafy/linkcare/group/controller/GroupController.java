@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -354,10 +355,45 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "(LocalDate) 기간별 그룹원 수면 시간, 총 수면시간, 평균 수면시간 조회",
+            description = "지정된 기간의 그룹원의 총 칼로리, 총 걸음 수, 총 운동 시간 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/sleep-statistics")
+    public ResponseEntity<GroupSleepStatisticsResponse> getGroupSleepStatistics(
+            @PathVariable Long groupSeq,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        GroupSleepStatisticsResponse response = groupService.getGroupSleepStatistics(groupSeq, startDate, endDate);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/generate-weekly-stats")
     public ResponseEntity<String> generateWeeklyStats() {
         weeklyStatsService.generateAllGroupWeeklyStats();
         return ResponseEntity.ok("주간 통계 생성 완료");
+    }
+
+    @Operation(summary = "현재 주차 목표 조회",
+            description = "이번 주(월요일 기준) 목표를 조회합니다. " +
+                    "목표가 없으면 404를 반환하며, 프론트엔드에서 POST 목표 생성 API를 호출해야 합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "목표를 찾을 수 없음 또는 그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/goals/current")
+    public ResponseEntity<WeeklyGroupGoalResponse> getCurrentGoal(
+            @PathVariable Long groupSeq) {
+
+        log.info("현재 주차 목표 조회 API 호출: groupSeq={}", groupSeq);
+
+        WeeklyGroupGoals goal = goalGenerationService.getCurrentWeekGoal(groupSeq);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "AI 기반 그룹 목표 생성",
@@ -381,7 +417,29 @@ public class GroupController {
 
         return ResponseEntity.ok(response);
     }
-    
+
+    @Operation(summary = "현재 주차 목표 수정",
+            description = "사용자가 선택한 메트릭 타입과 목표값을 저장합니다. " +
+                    "최소 기준보다 작은 값은 자동으로 최소값으로 조정됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 수정 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효하지 않은 metricType 또는 goalValue)"),
+            @ApiResponse(responseCode = "404", description = "목표를 찾을 수 없음 또는 그룹을 찾을 수 없음")
+    })
+    @PutMapping("/{groupSeq}/goals")
+    public ResponseEntity<WeeklyGroupGoalResponse> updateGroupGoal(
+            @PathVariable Long groupSeq,
+            @RequestBody UpdateWeeklyGroupGoalRequest request) {
+
+        log.info("그룹 목표 수정 API 호출: groupSeq={}, metricType={}, goalValue={}",
+                groupSeq, request.selectedMetricType(), request.goalValue());
+
+        WeeklyGroupGoals goal = goalGenerationService.updateCurrentWeekGoal(groupSeq, request);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
+    }
+
     // ============== 그룹원 동의 관리 API ==============
 
     @Operation(summary = "그룹원 권한 동의", description = "그룹원이 변경된 권한 설정에 동의합니다. 케어 그룹 전용 기능입니다.")

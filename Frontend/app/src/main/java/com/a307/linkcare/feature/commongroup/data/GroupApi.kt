@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.commongroup.data
 
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
+import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.InvitationPreviewResponse
 import com.a307.linkcare.feature.commongroup.domain.InvitationResponse
 import com.a307.linkcare.feature.commongroup.domain.JoinRequestResponse
@@ -109,4 +110,12 @@ interface GroupApi {
     suspend fun autoAgreeToGroupPermissions(
         @Path("groupSeq") groupSeq: Long
     ): Response<Unit>
+
+    // 그룹 이번주 통계
+    @GET("/api/groups/{groupSeq}/total-acitivty/stats")
+    suspend fun getTotalActivityStats(
+        @Path("groupSeq") groupSeq: Long,
+        @Query("startDate") startDate: String, // yyyy-MM-dd
+        @Query("endDate") endDate: String      // yyyy-MM-dd
+    ): GroupTotalActivityStats
 }

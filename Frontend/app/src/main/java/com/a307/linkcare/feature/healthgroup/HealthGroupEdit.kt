@@ -1,6 +1,8 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -28,6 +30,29 @@ import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.caregroup.GroupMember
 import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+
+/**
+ * URI를 임시 File로 변환하는 유틸 함수
+ */
+private fun uriToFile(context: Context, uri: Uri): File? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val fileName = "group_image_${System.currentTimeMillis()}.jpg"
+        val tempFile = File(context.cacheDir, fileName)
+
+        FileOutputStream(tempFile).use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        inputStream.close()
+
+        tempFile
+    } catch (e: Exception) {
+        android.util.Log.e("HealthGroupEdit", "URI to File 변환 실패: ${e.message}", e)
+        null
+    }
+}
 
 // ====== 헬스 그룹 도메인 ======
 data class HealthGroup(
@@ -156,6 +181,7 @@ private fun RenderHealthGroupEditForm(
     onCopyInvite: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val groupSeq = groupDetail.groupSeq
     val isLeader = groupDetail.members.find { it.isLeader }?.userSeq == groupDetail.members.firstOrNull()?.userSeq // TODO: check current user
 
@@ -163,6 +189,9 @@ private fun RenderHealthGroupEditForm(
     var name by remember { mutableStateOf(groupDetail.groupName) }
     var desc by remember { mutableStateOf(groupDetail.groupDescription) }
     var maxMemberText by remember { mutableStateOf(groupDetail.capacity.toString()) }
+
+    // 이미지 관련 상태
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     var shareExercise by remember { mutableStateOf(true) }
     var shareHr by remember { mutableStateOf(true) }
@@ -213,7 +242,11 @@ private fun RenderHealthGroupEditForm(
 
                     GroupAvatarPicker(
                         defaultRes = R.drawable.main_duck, // TODO: load from groupDetail.imageUrl
-                        onImagePicked = { /* TODO: 이미지 변경 핸들러 필요시 연결 */ }
+                        onImagePicked = { uri ->
+                            if (isLeader) {
+                                selectedImageUri = uri
+                            }
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -391,12 +424,17 @@ private fun RenderHealthGroupEditForm(
                         buttonTextColor = white,
                         isEnabled = canSubmit && updateState !is HealthGroupEditViewModel.UpdateState.Loading,
                         onClick = {
+                            val imageAction = if (selectedImageUri != null) "update" else "keep"
+                            val imageFile = selectedImageUri?.let { uri ->
+                                uriToFile(context, uri)
+                            }
+
                             viewModel.updateGroup(
                                 groupSeq = groupSeq,
                                 groupName = name.trim(),
                                 groupDescription = desc.trim(),
-                                imageAction = "keep", // TODO: handle image changes
-                                imageFile = null,
+                                imageAction = imageAction,
+                                imageFile = imageFile,
                                 minCalorie = kcalText.toFloatOrNull(),
                                 minStep = stepsText.toIntOrNull(),
                                 minDistance = kmText.toFloatOrNull(),

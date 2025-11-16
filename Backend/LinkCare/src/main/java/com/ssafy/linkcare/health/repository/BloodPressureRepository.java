@@ -74,4 +74,9 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, In
     Double findMinDiastolicByPeriod(@Param("user") User user,
                                     @Param("startTimestamp") long startTimestamp,
                                     @Param("endTimestamp") long endTimestamp);
+
+    Optional<BloodPressure> findFirstByUserAndStartTimeBetweenOrderByStartTimeDesc(
+            User user,
+            Long startTime,
+            Long endTime);
 }

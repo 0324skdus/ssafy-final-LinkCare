@@ -89,7 +89,8 @@ public enum ErrorCode {
     AI_PROVIDER_CALL_FAILED(HttpStatus.BAD_GATEWAY, "AI 호출 실패"),
 
     // AI 목표 생성 관련 에러
-    INSUFFICIENT_DATA(HttpStatus.CONFLICT, "데이터가 부족합니다. 최근 3주 데이터가 필요합니다");
+    INSUFFICIENT_DATA(HttpStatus.CONFLICT, "데이터가 부족합니다. 최근 3주 데이터가 필요합니다"),
+    GOAL_NOT_FOUND(HttpStatus.NOT_FOUND, "이번 주 목표를 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String message;
