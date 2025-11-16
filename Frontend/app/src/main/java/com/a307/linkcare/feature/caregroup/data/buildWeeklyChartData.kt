@@ -53,16 +53,16 @@ fun buildWeeklyChartData(
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-val KOR_WEEK = WeekFields.of(DayOfWeek.SUNDAY, 1)
+val KOR_WEEK = WeekFields.of(DayOfWeek.MONDAY, 1)
 @RequiresApi(Build.VERSION_CODES.O)
 val DATE_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREA)
 
 @RequiresApi(Build.VERSION_CODES.O)
  fun LocalDate.weekOfMonth(): Int = this.get(KOR_WEEK.weekOfMonth())
 @RequiresApi(Build.VERSION_CODES.O)
- fun LocalDate.startOfWeek(): LocalDate = this.with(KOR_WEEK.dayOfWeek(), 1) // 일요일
+ fun LocalDate.startOfWeek(): LocalDate = this.with(KOR_WEEK.dayOfWeek(), 1) // 월요일
 @RequiresApi(Build.VERSION_CODES.O)
- fun LocalDate.endOfWeek(): LocalDate = this.with(KOR_WEEK.dayOfWeek(), 7)  // 토요일
+ fun LocalDate.endOfWeek(): LocalDate = this.with(KOR_WEEK.dayOfWeek(), 7)  // 일요일
 
 @RequiresApi(Build.VERSION_CODES.O)
  fun LocalDate.korLabel(today: LocalDate = LocalDate.now()): String {

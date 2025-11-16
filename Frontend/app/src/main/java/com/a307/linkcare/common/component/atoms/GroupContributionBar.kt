@@ -21,31 +21,55 @@ fun GroupContributionBar(
     members: List<Member>,
     modifier: Modifier = Modifier
 ) {
-    val summaries = toSummaries(members)
-    val totalProgress = summaries.sumOf { it.progress.toDouble() }.toFloat().coerceAtMost(1f)
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        // --- 상단 전체 합산 Progress Bar ---
+    // 목표(goal)는 모든 멤버에게 동일하게 '그룹 전체 목표'로 설정되어 있다고 가정
+    val totalGoal = members.firstOrNull()?.goal?.toFloat() ?: 1f
+    if (totalGoal <= 0f) {
+        // 목표가 0이거나 설정되지 않은 경우, 빈 막대만 표시
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .height(18.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0xFFE5E9F0))
+        )
+        return
+    }
+
+    // 모든 멤버가 달성한 총량
+    val totalAchieved = members.sumOf { it.progresses }.toFloat()
+    // 목표까지 남은 양 (음수 방지)
+    val emptyProgress = (totalGoal - totalAchieved).coerceAtLeast(0f)
+
+    val summaries = toSummaries(members) // 범례 표시에 필요
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // --- 상단 전체 합산 Progress Bar ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(18.dp)
+                .clip(RoundedCornerShape(8.dp))
         ) {
-            // 각 멤버 기여 구간 나누어 색 표시
-            var startFraction = 0f
-            summaries.forEach { s ->
-                val widthFraction = s.progress / totalProgress
+            // 각 멤버의 기여도를 weight로 그림
+            summaries.forEachIndexed { index, summary ->
+                val member = members[index]
+                if (member.progresses > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(member.progresses.toFloat())
+                            .background(summary.color)
+                    )
+                }
+            }
+            // 목표까지 남은 빈 공간을 그림
+            if (emptyProgress > 0) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .fillMaxWidth(widthFraction)
-                        .align(Alignment.CenterStart)
-                        .offset(x = (startFraction * 100).dp / 100)
-                        .background(s.color)
+                        .weight(emptyProgress)
+                        .background(Color(0xFFE5E9F0))
                 )
-                startFraction += widthFraction
             }
         }
 

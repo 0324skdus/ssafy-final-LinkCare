@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.healthgroup.data
 
+import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
 import com.a307.linkcare.feature.healthgroup.domain.HealthGroupResponse
 import com.a307.linkcare.feature.healthgroup.domain.UpdateGoalRequest
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
@@ -58,4 +59,12 @@ interface HealthGroupApi {
         @Path("groupSeq") groupSeq: Long,
         @Body request: UpdateGoalRequest
     ): Response<WeeklyGroupGoalResponse>
+
+    @GET("/api/health/{userSeq}/actual-activity")
+    suspend fun getActualActivity(
+        @Header("Authorization") token: String,
+        @Path("userSeq") userSeq: Int,
+        @Query("startDate") startDate: String,
+        @Query("endDate") endDate: String
+    ): Response<ActualActivity>
 }

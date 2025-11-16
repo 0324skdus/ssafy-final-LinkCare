@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.healthgroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
 import com.a307.linkcare.feature.healthgroup.domain.UpdateGoalRequest
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -121,7 +122,8 @@ class HealthGroupRepository @Inject constructor(
                 android.util.Log.e("HealthGroupRepository", "❌ 목표 조회 실패: ${response.code()}")
                 Result.failure(Exception("HTTP ${response.code()}"))
             }
-        } catch (e: Exception) {
+        } catch (e: Exception)
+        {
             android.util.Log.e("HealthGroupRepository", "❌ 예외 발생: ${e.message}", e)
             Result.failure(e)
         }
@@ -160,6 +162,57 @@ class HealthGroupRepository @Inject constructor(
             }
         } catch (e: Exception) {
             android.util.Log.e("HealthGroupRepository", "❌ 예외 발생: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getActualActivityForUser(
+        userSeq: Int,
+        date: String
+    ): Result<ActualActivity> {
+        return try {
+            val token = tokenStore.getAccess() ?: return Result.failure(Exception("No token"))
+            val response = api.getActualActivity(
+                token = "Bearer $token",
+                userSeq = userSeq,
+                startDate = date,
+                endDate = date
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("API Error: ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getActualActivityForUserRange(
+        userSeq: Int,
+        startDate: String,
+        endDate: String
+    ): Result<ActualActivity> {
+        return try {
+            val token = tokenStore.getAccess() ?: return Result.failure(Exception("No token"))
+            val response = api.getActualActivity(
+                token = "Bearer $token",
+                userSeq = userSeq,
+                startDate = startDate,
+                endDate = endDate
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else if (response.code() == 404) {
+                // 데이터가 없는 경우, 0으로 채운 성공으로 처리
+                Result.success(ActualActivity(0, 0.0, 0.0, 0))
+            }
+            else {
+                Result.failure(Exception("API Error: ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }

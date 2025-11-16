@@ -393,9 +393,8 @@ fun CareGroupHome(
                     item {
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
+                            title = "활동 요약",
                             members = todayMembers,
-                            totalSteps = todayGroupProgress,
-                            totalGoal = totalGroupGoal,
                             modifier = Modifier
                         )
                     }

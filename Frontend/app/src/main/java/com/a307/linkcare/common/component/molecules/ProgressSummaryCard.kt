@@ -46,9 +46,8 @@ fun toSummaries(members: List<Member>): List<ProgressSummary> =
 
 @Composable
 fun ProgressSummaryCard(
+    title: String,
     members: List<Member>,
-    totalSteps: Int? = null,
-    totalGoal: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val summaries = toSummaries(members)
@@ -71,7 +70,7 @@ fun ProgressSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.padding(2.dp)) {
-                    Text("운동량", fontWeight = FontWeight.SemiBold, color = black)
+                    Text(title, fontWeight = FontWeight.SemiBold, color = black)
                 }
                 // 달성 뱃지 (필요 시 주석해제)
 //                Row(verticalAlignment = Alignment.CenterVertically) {

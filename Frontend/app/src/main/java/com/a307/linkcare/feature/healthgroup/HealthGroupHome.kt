@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
@@ -37,10 +38,12 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
+import com.a307.linkcare.feature.caregroup.data.endOfWeek
+import com.a307.linkcare.feature.caregroup.data.startOfWeek
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
-val KOR_WEEK = WeekFields.of(DayOfWeek.SUNDAY, 1)
+val KOR_WEEK = WeekFields.of(DayOfWeek.MONDAY, 1)
 
 @RequiresApi(Build.VERSION_CODES.O)
 val DATE_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREA)
@@ -78,10 +81,16 @@ fun HealthGroupHome(
 ) {
     val today = remember { LocalDate.now() }
 
-    val detail by vm.detail.collectAsState()
+    val detail by vm.detail.collectAsStateWithLifecycle()
     val membersResponse = detail?.members ?: emptyList()
     val goalCriteria = detail?.goalCriteria
-    val totalStats by vm.totalActivityStats.collectAsState()
+
+    // --- ViewModel 상태 구독 ---
+    val totalStats by goalVm.totalStats.collectAsStateWithLifecycle()
+    val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
+    val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
+    val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+    // -------------------------
 
     val members = remember(membersResponse) {
         membersResponse.map { m ->
@@ -89,9 +98,10 @@ fun HealthGroupHome(
                 name = m.userName,
                 avatarRes = R.drawable.char_bear_1, // TODO: 이미지 적용
                 isLeader = m.isLeader,
-                progresses = 0,
+                progresses = 0, // 이 값은 이제 membersWithActivity에서 가져옴
                 goal = detail?.goalCriteria?.minStep ?: 30000,
-                bubbleText = "AI 추천 메시지 준비중..."
+                bubbleText = "AI 추천 메시지 준비중...",
+                userPk = m.userSeq // userPk 할당
             )
         }
     }
@@ -110,8 +120,8 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
-    // 그룹 오늘 진행도 / 목표
-    var todayGroupProgress by remember { mutableStateOf(10234) } // TODO: 실제 값으로 교체
+    // --- 실제 데이터로 교체 ---
+    val todayGroupProgress = totalStats?.totalSteps ?: 0
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     val todayGroupPercent by remember(totalGroupGoal, todayGroupProgress) {
@@ -126,12 +136,29 @@ fun HealthGroupHome(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // 그룹 상세 + 현재 목표 로드
+    // 날짜 관련 상태
+    val minDate = remember { today.minusYears(1) }
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {
         vm.loadGroupDetail(groupSeq)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         goalVm.loadCurrentGoals(groupSeq, today.format(formatter))
     }
+
+    LaunchedEffect(selectedDate, members) {
+        goalVm.fetchGroupHealthData(members, selectedDate)
+    }
+
+    // 주차가 변경될 때마다 주간 데이터 로드
+    LaunchedEffect(selectedDate.get(KOR_WEEK.weekOfWeekBasedYear()), members) {
+        if (members.isNotEmpty()) {
+            goalVm.fetchWeeklyMembersHealthData(members, selectedDate)
+        }
+    }
+    // -------------------------
 
     // GoalState 변화 감지
     LaunchedEffect(goalState) {
@@ -179,69 +206,26 @@ fun HealthGroupHome(
         ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
 
-    // 날짜 관련 상태
-    val minDate = remember { today.minusYears(1) }
-    var selectedDate by rememberSaveable { mutableStateOf(today) }
-    var showCalendar by rememberSaveable { mutableStateOf(false) }
-
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
-    var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
-    var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
-
-//    var todayGroupProgress by remember { mutableStateOf(10234) }
-//    var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
-//
-//    val todayGroupPercent by remember(totalGroupGoal, todayGroupProgress) {
-//        mutableStateOf(if (totalGroupGoal > 0) (todayGroupProgress / totalGroupGoal.toFloat()) else 0f)
-//    }
-//    val percentText = ((todayGroupPercent * 100).toInt()).coerceIn(0, 100)
-
-    val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
-    val onNextDay = { selectedDate = selectedDate.plusDays(1) }
-
-
-    val year = selectedDate.year
-    val month = selectedDate.monthValue
-    val wom = selectedDate.weekOfMonth()
-
-    LaunchedEffect(year, month, wom, members) {
-        weekMembers = members
-    }
-    LaunchedEffect(selectedDate, weekMembers) {
-        todayMembers = weekMembers
-    }
-
-    LaunchedEffect(groupSeq, selectedDate) {
-        vm.loadTotalActivityStats(
-            groupSeq = groupSeq,
-            startDate = selectedDate.startOfWeek(),
-            endDate = selectedDate.endOfWeek()
-        )
-    }
 
     val dpState = rememberDatePickerState(
         initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                 val date = epochMilliToLocalDate(utcTimeMillis)
-                // minDate ~ today 사이만 선택 가능
                 return !date.isBefore(minDate) && !date.isAfter(today)
             }
 
             override fun isSelectableYear(year: Int): Boolean {
-                // 연도도 같이 제한
                 return year in minDate.year..today.year
             }
         }
     )
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
-    val todayHealthByName = remember(selectedDate, todayMembers) {
-        todayMembers.associate { m -> m.name to sampleHealthToday(m) }
+    val todayHealthByName = remember(selectedDate, membersWithActivity) {
+        membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
     }
-
-//    val snackbar = remember { SnackbarHostState() }
-//    val scope = rememberCoroutineScope()
 
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
     var goalInput by rememberSaveable { mutableStateOf(initialGoal.toString()) }
@@ -291,24 +275,54 @@ fun HealthGroupHome(
                 item {
                     HeaderCard(
                         progress = todayGroupPercent,
-                        onPrev = onPrevDay,
-                        onNext = onNextDay,
+                        onPrev = { selectedDate = selectedDate.minusDays(1) },
+                        onNext = { selectedDate = selectedDate.plusDays(1) },
                         label = selectedDate.korLabel(),
                         onClick = { showCalendar = true }
                     )
                 }
 
-                itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                itemsIndexed(membersWithActivity, key = { _, item -> item.memberInfo.userPk }) { index, item ->
+                    val member = item.memberInfo
+                    val activity = item.activity
+
+                    val currentMetricType = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals?.selectedMetricType ?: "STEPS"
+                    val goals = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals
+
+                    val progress = when (currentMetricType) {
+                        "STEPS" -> activity.totalSteps
+                        "KCAL" -> activity.totalCalories.toInt()
+                        "DURATION" -> activity.totalDuration
+                        "DISTANCE" -> activity.totalDistances.toInt()
+                        else -> 0 // 기본값
+                    }
+
+                    val numberOfMembers = membersWithActivity.size.coerceAtLeast(1) // 0으로 나누는 것을 방지
+
+                    val weeklyGroupGoal = when (currentMetricType) {
+                        "STEPS" -> goals?.goalSteps?.toDouble()
+                        "KCAL" -> goals?.goalKcal?.toDouble()
+                        "DURATION" -> goals?.goalDuration?.toDouble()
+                        "DISTANCE" -> goals?.goalDistance?.toDouble()
+                        else -> null
+                    }
+
+                    val goal = if (weeklyGroupGoal != null) {
+                        (weeklyGroupGoal / numberOfMembers / 7).toInt()
+                    } else {
+                        member.goal // 주간 목표가 설정되지 않은 경우 기존 목표 사용
+                    }
+
                     MemberRowHealth(
-                        m = m,
-                        bubbleVisible = expandedMemberName == m.name,
+                        m = member.copy(progresses = progress, goal = goal), // 실제 진행률과 목표로 업데이트
+                        bubbleVisible = expandedMemberName == member.name,
                         onAvatarToggle = {
                             expandedMemberName =
-                                if (expandedMemberName == m.name) null else m.name
+                                if (expandedMemberName == member.name) null else member.name
                         },
-                        onClick = { selectedMember = m }
+                        onClick = { selectedMember = member }
                     )
-                    if (index < todayMembers.lastIndex) {
+                    if (index < membersWithActivity.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
                 }
@@ -351,10 +365,49 @@ fun HealthGroupHome(
 
                 item {
                     Spacer(Modifier.height(6.dp))
+
+                    val currentMetricType = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals?.selectedMetricType ?: "STEPS"
+                    val goals = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals
+
+                    val totalWeeklyGroupGoal = when (currentMetricType) {
+                        "STEPS" -> goals?.goalSteps?.toInt()
+                        "KCAL" -> goals?.goalKcal?.toInt()
+                        "DURATION" -> goals?.goalDuration
+                        "DISTANCE" -> goals?.goalDistance?.toInt()
+                        else -> 0
+                    } ?: 0
+
+                    val weeklyMembersForCard = remember(weeklyMembersWithActivity, goalState) {
+                        weeklyMembersWithActivity.map { memberWithActivity ->
+                            val memberInfo = memberWithActivity.memberInfo
+                            val weeklyActivity = memberWithActivity.activity
+
+                            val weeklyProgress = when (currentMetricType) {
+                                "STEPS" -> weeklyActivity.totalSteps
+                                "KCAL" -> weeklyActivity.totalCalories.toInt()
+                                "DURATION" -> weeklyActivity.totalDuration
+                                "DISTANCE" -> weeklyActivity.totalDistances.toInt()
+                                else -> 0
+                            }
+
+                            memberInfo.copy(
+                                progresses = weeklyProgress,
+                                goal = totalWeeklyGroupGoal
+                            )
+                        }
+                    }
+
+                    val cardTitle = when (currentMetricType) {
+                        "STEPS" -> "주간 걸음수 기여도"
+                        "KCAL" -> "주간 칼로리 기여도"
+                        "DURATION" -> "주간 운동시간 기여도"
+                        "DISTANCE" -> "주간 이동거리 기여도"
+                        else -> "주간 활동 기여도"
+                    }
+
                     ProgressSummaryCard(
-                        members = members,
-                        totalSteps = todayGroupProgress,
-                        totalGoal = totalGroupGoal
+                        title = cardTitle,
+                        members = weeklyMembersForCard
                     )
                 }
 
@@ -377,6 +430,10 @@ fun HealthGroupHome(
                         items = summaryChips
                     )
                 }
+            }
+
+            if (isLoadingActivities) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
             selectedMember?.let { m ->
@@ -424,7 +481,6 @@ fun HealthGroupHome(
                     onMetricChange = { metric ->
                         selectedMetricForSave = metric
 
-                        // AI 목표 세트에서 해당 metric 값만 가져와서 input 업데이트
                         val newValue = when (metric) {
                             GoalMetricType.STEPS -> aiGoals?.goalSteps?.toString()
                             GoalMetricType.KCAL -> aiGoals?.goalKcal?.toInt()?.toString()
@@ -433,7 +489,7 @@ fun HealthGroupHome(
                         }
 
                         if (newValue != null) {
-                            goalInput = newValue     // ← ⭐ 여기서 실제 입력값 변경됨
+                            goalInput = newValue
                             goalError = null
                         }
                     },
@@ -444,7 +500,6 @@ fun HealthGroupHome(
                     onSave = { metricType ->
                         val parsed = goalInput.toLongOrNull()
 
-                        // 최소 기준 검증 (전부 Long 으로 맞추기)
                         val minValue: Long = when (metricType) {
                             GoalMetricType.STEPS -> goalCriteria?.minStep?.toLong() ?: 0L
                             GoalMetricType.KCAL -> goalCriteria?.minCalorie?.toLong() ?: 0L
