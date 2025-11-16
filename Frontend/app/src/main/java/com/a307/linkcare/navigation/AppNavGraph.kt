@@ -41,8 +41,12 @@ import kotlinx.coroutines.CancellationException
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Route.Login.route
+    startDestination: String = Route.Login.route,
+    initialDeepLinkToken: String? = null
 ) {
+    // 딥링크 토큰을 remember로 저장
+    val deepLinkToken = remember { mutableStateOf(initialDeepLinkToken) }
+
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -52,7 +56,15 @@ fun AppNavGraph(
             LoginScreen(
                 navController = navController,
                 onLoginSuccess = { isFirstLogin ->
-                    if (isFirstLogin) {
+                    // 딥링크가 있으면 초대 화면으로, 아니면 일반 플로우
+                    val token = deepLinkToken.value
+                    if (!token.isNullOrEmpty()) {
+                        navController.navigate(Route.InvitationPreview.withArgs(token)) {
+                            popUpTo(Route.Login.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                        deepLinkToken.value = null // 사용 후 초기화
+                    } else if (isFirstLogin) {
                         // 첫 로그인 시: Intro로 이동
                         navController.navigate(Route.Intro.route) {
                             popUpTo(Route.Login.route) { inclusive = true }
@@ -184,7 +196,7 @@ fun AppNavGraph(
             SignupPager(
                 navController = navController,
                 onFinished = {
-                    navController.navigate(Route.Main.route) {
+                    navController.navigate(Route.IntroTour.route) {
                         popUpTo(Route.Onboarding.route) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -205,9 +217,23 @@ fun AppNavGraph(
 
         // 메인 화면
         composable(Route.Main.route) {
-            MainTabs(
-            )
+            MainTabs(rootNavController = navController)
         }
+
+        // 초대 링크 미리보기
+        composable(
+            route = Route.InvitationPreview.route,
+            arguments = Route.InvitationPreview.arguments
+        ) { backStackEntry ->
+            val token = backStackEntry.arguments?.getString(Route.InvitationPreview.ARG_TOKEN)
+            if (token != null) {
+                com.a307.linkcare.feature.commongroup.ui.InvitationPreviewScreen(
+                    invitationToken = token,
+                    navController = navController
+                )
+            }
+        }
+
     }
 }
 
@@ -257,7 +283,9 @@ fun SignupPager(
                 pageCount = pageCount,
                 onStart = { idx, name ->
                     // 캐릭터 선택 후 프로필 제출
-                   vm.submitProfile()
+//                    vm.setCharacterId(idx);
+//                    vm.setCharacterName(name);
+//                   vm.submitProfile();
                 },
                 onNavigateToIntro = onFinished
             )

@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +30,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.TokenStore
 import kotlinx.coroutines.launch
 
 private enum class Gender { MALE, FEMALE }
@@ -42,6 +44,9 @@ fun SignupGenderScreen(
     val scope = rememberCoroutineScope()
     var selectedGender by rememberSaveable { mutableStateOf<Gender?>(null) }
     val canSubmit = selectedGender != null
+    val context = LocalContext.current
+    val tokenStore = remember { TokenStore(context) }
+    val userName = remember { tokenStore.getName().orEmpty() }
 
     val duckAspect = 462f / 281f
 
@@ -82,7 +87,7 @@ fun SignupGenderScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "싸피님의",
+                        text = "${if (userName.isNotBlank()) userName + "님" else "당신"}의",
                         fontSize = 25.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = black

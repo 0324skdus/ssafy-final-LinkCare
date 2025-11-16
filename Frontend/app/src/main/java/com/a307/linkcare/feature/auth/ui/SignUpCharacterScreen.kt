@@ -36,14 +36,26 @@ import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.R
+import dagger.hilt.android.EntryPointAccessors
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.loadCroppedPainterIO
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.auth.OnboardingViewModel
 import com.a307.linkcare.feature.auth.data.HealthPermissions
+import com.a307.linkcare.sdk.health.domain.permission.HealthPermissionManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.launch
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SignupCharacterScreenEntryPoint {
+    fun healthPermissionManager(): HealthPermissionManager
+}
 
 @Composable
 fun SignupCharacterScreen(
@@ -56,11 +68,14 @@ fun SignupCharacterScreen(
         R.drawable.char_duck_1,
         R.drawable.char_duck_2
     ),
-    onStart: (selectedIndex: Int, name: String) -> Unit = { _, _ -> },
+    characterIds: List<Long> = listOf(1L, 2L, 3L, 4L, 5L),
+    onStart: (selectedIndex: Long, name: String) -> Unit = { _, _ -> },
     onNavigateToIntro: () -> Unit = {},
     healthVm: HealthPermissionViewModel = hiltViewModel(),
+    onBoardingVm: OnboardingViewModel = hiltViewModel()
 ) {
     require(characterImages.isNotEmpty()) { "characterImages must not be empty" }
+    require(characterImages.size == characterIds.size) { "characterImages와 characterIds의 크기가 같아야 합니다." }
 
     val scope = rememberCoroutineScope()
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
@@ -72,6 +87,15 @@ fun SignupCharacterScreen(
     // --- 권한 처리 준비 ---
     val context = LocalContext.current
     val healthState by healthVm.state.collectAsState()
+
+    // Samsung Health 권한 매니저 가져오기
+    val samsungHealthPermissionManager = remember {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            SignupCharacterScreenEntryPoint::class.java
+        )
+        entryPoint.healthPermissionManager()
+    }
 
     // Health Connect 권한 요청 런처
     val permissionLauncher =
@@ -94,8 +118,6 @@ fun SignupCharacterScreen(
                     permissionLauncher.launch(HealthPermissions.permissions)
                 }
                 HealthPermissionViewModel.State.Granted -> {
-                    // 권한이 있으면 바로 프로필 제출
-                    onStart(selectedIndex, name) // 선택한 캐릭터 인덱스와 이름
                     shouldSubmitProfile = false
                 }
                 else -> Unit
@@ -258,7 +280,6 @@ fun SignupCharacterScreen(
                 buttonTextColor = if (canStart) white else unActiveField,
                 isEnabled = canStart,
                 onClick = {
-                    onStart(0, "duck")
                     showPermissionDialog = true
                 }
             )
@@ -270,9 +291,28 @@ fun SignupCharacterScreen(
                 onDismiss = { showPermissionDialog = false },
                 onConnectClick = {
                     showPermissionDialog = false
-                    shouldSubmitProfile = true
-                    // 권한 체크 시작
-                    healthVm.checkPermissions()
+                    scope.launch {
+                        // 1. Samsung Health 권한 요청
+                        val activity = context as? Activity
+                        if (activity != null) {
+                            val samsungHealthGranted = samsungHealthPermissionManager.requestPermissions(activity)
+                            Log.d("SignupCharacterScreen", "Samsung Health 권한: $samsungHealthGranted")
+                        } else {
+                            Log.e("SignupCharacterScreen", "Activity를 찾을 수 없습니다")
+                        }
+
+                        // 2. Google Health Connect 권한 요청 트리거
+                        shouldSubmitProfile = true
+                        healthVm.checkPermissions()
+
+                        // 3. 캐릭터 정보 설정 및 프로필 제출
+                        onBoardingVm.setCharacterId(characterIds[selectedIndex])
+                        onBoardingVm.setCharacterName(name)
+                        onBoardingVm.submitProfile()
+
+                        // 4. IntroTour로 이동
+                        onNavigateToIntro()
+                    }
                 }
             )
         }

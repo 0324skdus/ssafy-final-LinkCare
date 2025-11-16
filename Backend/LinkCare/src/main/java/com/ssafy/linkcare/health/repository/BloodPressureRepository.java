@@ -22,8 +22,7 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, In
     @Query("SELECT bp FROM BloodPressure bp WHERE bp.user = :user " +
             "AND FUNCTION('DATE', FUNCTION('FROM_UNIXTIME', bp.startTime)) = :startDate")
     List<BloodPressure> findByUserAndStartDate(@Param("user") User user,
-                                     @Param("startDate") LocalDate startDate);
-
+                                               @Param("startDate") LocalDate startDate);
 
     @Modifying
     @Query("DELETE FROM BloodPressure bp WHERE bp.user = :user AND bp.uid IN :uids")
@@ -51,15 +50,33 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, In
     @Query("SELECT AVG(b.pulseRate) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
     Double findAveragePulseRateByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
 
-    /**
-     * 기간별 최고 이완기 혈압 조회
-     */
-    @Query("SELECT MAX(b.diastolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
-    Double findMaxDiastolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+    // 최대/최소 혈압 조회 메서드들
+    @Query("SELECT MAX(b.systolic) FROM BloodPressure b " +
+            "WHERE b.user = :user AND b.startTime >= :startTimestamp AND b.startTime < :endTimestamp")
+    Double findMaxSystolicByPeriod(@Param("user") User user,
+                                   @Param("startTimestamp") long startTimestamp,
+                                   @Param("endTimestamp") long endTimestamp);
 
-    /**
-     * 기간별 최저 이완기 혈압 조회
-     */
-    @Query("SELECT MIN(b.diastolic) FROM BloodPressure b WHERE b.user = :user AND b.startTime BETWEEN :startTime AND :endTime")
-    Double findMinDiastolicByPeriod(@Param("user") User user, @Param("startTime") long startTime, @Param("endTime") long endTime);
+    @Query("SELECT MIN(b.systolic) FROM BloodPressure b " +
+            "WHERE b.user = :user AND b.startTime >= :startTimestamp AND b.startTime < :endTimestamp")
+    Double findMinSystolicByPeriod(@Param("user") User user,
+                                   @Param("startTimestamp") long startTimestamp,
+                                   @Param("endTimestamp") long endTimestamp);
+
+    @Query("SELECT MAX(b.diastolic) FROM BloodPressure b " +
+            "WHERE b.user = :user AND b.startTime >= :startTimestamp AND b.startTime < :endTimestamp")
+    Double findMaxDiastolicByPeriod(@Param("user") User user,
+                                    @Param("startTimestamp") long startTimestamp,
+                                    @Param("endTimestamp") long endTimestamp);
+
+    @Query("SELECT MIN(b.diastolic) FROM BloodPressure b " +
+            "WHERE b.user = :user AND b.startTime >= :startTimestamp AND b.startTime < :endTimestamp")
+    Double findMinDiastolicByPeriod(@Param("user") User user,
+                                    @Param("startTimestamp") long startTimestamp,
+                                    @Param("endTimestamp") long endTimestamp);
+
+    Optional<BloodPressure> findFirstByUserAndStartTimeBetweenOrderByStartTimeDesc(
+            User user,
+            Long startTime,
+            Long endTime);
 }

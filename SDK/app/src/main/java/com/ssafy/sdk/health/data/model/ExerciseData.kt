@@ -33,3 +33,8 @@ data class ExerciseData (
     val totalDuration: Long,
     val totalCalories: Float
 )
+
+data class ExerciseOnlyData(
+    val userSeq: Int,
+    val exercises: List<ExerciseData>
+)

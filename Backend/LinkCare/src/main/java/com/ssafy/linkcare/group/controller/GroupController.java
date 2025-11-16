@@ -1,9 +1,15 @@
 package com.ssafy.linkcare.group.controller;
 
+import com.ssafy.linkcare.ai.service.GoalGenerationService;
 import com.ssafy.linkcare.group.dto.*;
+import com.ssafy.linkcare.group.entity.WeeklyGroupGoals;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.service.GroupService;
+import com.ssafy.linkcare.group.service.WeeklyStatsService;
+import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
+import com.ssafy.linkcare.health.dto.WaterIntakeStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +32,8 @@ import java.util.List;
 public class GroupController {
 
     private final GroupService groupService;
+    private final WeeklyStatsService weeklyStatsService;
+    private final GoalGenerationService goalGenerationService;
 
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
@@ -121,10 +130,12 @@ public class GroupController {
     @GetMapping("/search")
     @Operation(summary = "그룹 검색", description = "그룹 이름으로 검색합니다")
     public ResponseEntity<List<GroupResponse>> searchGroups(
+            Authentication authentication,
             @RequestParam String keyword) {
 
-        log.info("그룹 검색 요청: keyword={}", keyword);
-        List<GroupResponse> response = groupService.searchGroups(keyword);
+        Long userId = authentication != null ? Long.parseLong(authentication.getName()) : null;
+        log.info("그룹 검색 요청: keyword={}, userId={}", keyword, userId);
+        List<GroupResponse> response = groupService.searchGroups(keyword, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -140,7 +151,7 @@ public class GroupController {
     }
 
     // 그룹 정보 수정
-    @Operation(summary = "그룹 정보 수정", description = "그룹 이름, 소개, 이미지를 수정합니다. 방장만 수정 가능합니다.")
+    @Operation(summary = "그룹 정보 수정", description = "그룹 이름, 소개, 이미지를 수정합니다. 케어 그룹인 경우 선택 권한 항목도 수정 가능합니다. 방장만 수정 가능합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "그룹 수정 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청"),
@@ -155,10 +166,33 @@ public class GroupController {
             @RequestParam("groupName") String groupName,
             @RequestParam("groupDescription") String groupDescription,
             @RequestParam(value = "imageAction", required = false, defaultValue = "keep") String imageAction,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "isSleepRequired", required = false) Boolean isSleepRequired,
+            @RequestParam(value = "isWaterIntakeRequired", required = false) Boolean isWaterIntakeRequired,
+            @RequestParam(value = "isBloodPressureRequired", required = false) Boolean isBloodPressureRequired,
+            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired,
+            @RequestParam(value = "minCalorie", required = false) Float minCalorie,
+            @RequestParam(value = "minStep", required = false) Integer minStep,
+            @RequestParam(value = "minDistance", required = false) Float minDistance,
+            @RequestParam(value = "minDuration", required = false) Integer minDuration) {
 
         Long userId = Long.parseLong(authentication.getName());
-        UpdateGroupRequest request = new UpdateGroupRequest(groupName, groupDescription);
+
+        // 목표 기준 DTO 생성 (헬스 그룹 전용)
+        GoalCriteriaDto goalCriteria = null;
+        if (minCalorie != null || minStep != null || minDistance != null || minDuration != null) {
+            goalCriteria = new GoalCriteriaDto(minCalorie, minStep, minDistance, minDuration);
+        }
+
+        UpdateGroupRequest request = new UpdateGroupRequest(
+                groupName,
+                groupDescription,
+                isSleepRequired,
+                isWaterIntakeRequired,
+                isBloodPressureRequired,
+                isBloodSugarRequired,
+                goalCriteria
+        );
         GroupResponse response = groupService.updateGroup(userId, groupSeq, request, imageAction, image);
 
         log.info("그룹 정보 수정 API 호출: userId={}, groupSeq={}, imageAction={}", userId, groupSeq, imageAction);
@@ -296,4 +330,139 @@ public class GroupController {
         log.info("참가 신청 거절 API 호출: userId={}, requestSeq={}", userId, requestSeq);
         return ResponseEntity.ok().build();
     }
+
+
+    // ============== 그룹 건강 데이터 API ==============
+
+    @Operation(summary = "(LocalDate) 기간별 그룹원 총 칼로리, 총 걸음 수, 총 운동 시간 조회",
+            description = "지정된 기간의 그룹원의 총 칼로리, 총 걸음 수, 총 운동 시간 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/total-acitivty/stats")
+    public ResponseEntity<TotalActivityStatisticsResponse> getGroupTotalActivityStatistics(
+            @Parameter(description = "그룹 시퀀스", required = true) @PathVariable Long groupSeq,
+            @Parameter(description = "시작 날짜 (LocalDate)") @RequestParam(required = false) LocalDate startDate,
+            @Parameter(description = "종료 날짜 (LocalDate)") @RequestParam(required = false) LocalDate endDate
+    ) {
+        log.info("API 호출 - (LocalDate) 기간별 그룹원 총 칼로리, 걸음 수, 운동 시간 조회: groupSeq={}, startDate={}, endDate={}",
+                groupSeq, startDate, endDate);
+
+        TotalActivityStatisticsResponse response = groupService.getGroupTotalActivityStatistics(groupSeq, startDate, endDate);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/generate-weekly-stats")
+    public ResponseEntity<String> generateWeeklyStats() {
+        weeklyStatsService.generateAllGroupWeeklyStats();
+        return ResponseEntity.ok("주간 통계 생성 완료");
+    }
+
+    @Operation(summary = "현재 주차 목표 조회",
+            description = "이번 주(월요일 기준) 목표를 조회합니다. " +
+                    "목표가 없으면 404를 반환하며, 프론트엔드에서 POST 목표 생성 API를 호출해야 합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "목표를 찾을 수 없음 또는 그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/goals/current")
+    public ResponseEntity<WeeklyGroupGoalResponse> getCurrentGoal(
+            @PathVariable Long groupSeq) {
+
+        log.info("현재 주차 목표 조회 API 호출: groupSeq={}", groupSeq);
+
+        WeeklyGroupGoals goal = goalGenerationService.getCurrentWeekGoal(groupSeq);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "AI 기반 그룹 목표 생성",
+            description = "저번 주부터 최대 3주 데이터를 기반으로 AI가 예측한 주간 목표를 생성합니다. " +
+                    "requestDate는 어떤 요일이든 가능하며, 해당 날짜가 속한 주(월~일)의 목표가 생성됩니다. " +
+                    "목표는 주간 전체 값으로 저장되며, 남은 일수 계산은 프론트엔드에서 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 생성 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음"),
+            @ApiResponse(responseCode = "409", description = "과거 통계 데이터가 존재하지 않음")
+    })
+    @PostMapping("/{groupSeq}/goals")
+    public ResponseEntity<WeeklyGroupGoalResponse> generateGroupGoal(
+            @PathVariable Long groupSeq,
+            @RequestParam LocalDate requestDate) {
+
+        log.info("그룹 목표 생성 API 호출: groupSeq={}, requestDate={}", groupSeq, requestDate);
+
+        WeeklyGroupGoals goal = goalGenerationService.generateNextWeekGoal(groupSeq, requestDate);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "현재 주차 목표 수정",
+            description = "사용자가 선택한 메트릭 타입과 목표값을 저장합니다. " +
+                    "최소 기준보다 작은 값은 자동으로 최소값으로 조정됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "목표 수정 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효하지 않은 metricType 또는 goalValue)"),
+            @ApiResponse(responseCode = "404", description = "목표를 찾을 수 없음 또는 그룹을 찾을 수 없음")
+    })
+    @PutMapping("/{groupSeq}/goals")
+    public ResponseEntity<WeeklyGroupGoalResponse> updateGroupGoal(
+            @PathVariable Long groupSeq,
+            @RequestBody UpdateWeeklyGroupGoalRequest request) {
+
+        log.info("그룹 목표 수정 API 호출: groupSeq={}, metricType={}, goalValue={}",
+                groupSeq, request.selectedMetricType(), request.goalValue());
+
+        WeeklyGroupGoals goal = goalGenerationService.updateCurrentWeekGoal(groupSeq, request);
+        WeeklyGroupGoalResponse response = WeeklyGroupGoalResponse.from(goal);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ============== 그룹원 동의 관리 API ==============
+
+    @Operation(summary = "그룹원 권한 동의", description = "그룹원이 변경된 권한 설정에 동의합니다. 케어 그룹 전용 기능입니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "동의 처리 완료"),
+            @ApiResponse(responseCode = "400", description = "권한 동의 정보가 유효하지 않음"),
+            @ApiResponse(responseCode = "403", description = "그룹 멤버가 아님"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @PostMapping("/{groupSeq}/permissions/agree")
+    public ResponseEntity<Void> agreeToGroupPermissions(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestBody PermissionAgreementDto agreement) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.agreeToGroupPermissions(userId, groupSeq, agreement);
+
+        log.info("그룹원 권한 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "케어 그룹 권한 자동 동의",
+            description = "권한 변경 알림 받은 후 간편하게 동의합니다. 그룹이 요구하는 모든 권한에 자동으로 동의됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "자동 동의 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "그룹 멤버가 아님"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @PostMapping("/{groupSeq}/permissions/auto-agree")
+    public ResponseEntity<Void> autoAgreeToGroupPermissions(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        groupService.autoAgreeToGroupPermissions(userId, groupSeq);
+
+        log.info("그룹원 권한 자동 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
+        return ResponseEntity.ok().build();
+    }
 }
+

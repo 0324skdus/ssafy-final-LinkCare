@@ -1,6 +1,7 @@
-package com.a307.linkcare.feature.commongroup
+package com.a307.linkcare.feature.commongroup.ui
 
 import com.a307.linkcare.feature.commongroup.domain.GroupItem
+import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 import com.a307.linkcare.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -9,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,9 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.a307.linkcare.feature.commongroup.GroupSearchViewModel
+import coil.compose.AsyncImage
 
 
 private val dummyGroups = listOf(
@@ -59,39 +61,52 @@ fun GroupSearch(
     query: String,
     onQueryChange: (String) -> Unit,
     onBack: () -> Unit,
-    onJoinClick: (GroupItem) -> Unit
+    onJoinClick: (MyGroupResponse) -> Unit,
+    viewModel: GroupSearchViewModel = hiltViewModel()
 ) {
-    // 더미 데이터
-    val careDummy = remember {
-        listOf(
-            GroupItem(1, "케어-식단관리", "식단 기록하고 리뷰하는 그룹", "200kcal | 20min | 3000steps | 2km", "3/6"),
-            GroupItem(2, "케어-수면개선", "취침/기상 루틴 만들기", "200kcal | 20min | 3000steps | 2km", "4/6")
-        )
-    }
-    val healthDummy = remember {
-        listOf(
-            GroupItem(10, "헬스-만수무강", "주 3회 러닝", "300kcal | 30min | 4000steps | 3km", "3/6"),
-            GroupItem(11, "헬스-걷기먼저", "매일 가볍게 걷기", "200kcal | 20min | 3000steps | 2km", "5/8")
-        )
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    // 검색어가 변경될 때마다 검색 실행
+    LaunchedEffect(query) {
+        if (query.isNotBlank()) {
+            viewModel.searchGroups(query)
+        }
     }
 
-    val source = if (kind == "health") healthDummy else careDummy
+    // 에러 메시지 스낵바 표시
+    errorMessage?.let { error ->
+        LaunchedEffect(error) {
+            // TODO: 스낵바로 에러 표시
+            viewModel.clearError()
+        }
+    }
 
-    val results = remember(query, source) {
-        if (query.isBlank()) emptyList()
-        else source.filter {
-            it.title.contains(query, ignoreCase = true) ||
-                    it.summary.contains(query, ignoreCase = true)
+    // 타입별로 필터링
+    val filteredResults = remember(searchResults, kind) {
+        searchResults.filter {
+            it.type.equals(kind, ignoreCase = true)
         }
     }
 
     Scaffold { padding ->
         when {
-            // 입력 없을 때 (아무것도 안보여줌)
+            // 입력 없을 때
             query.isBlank() -> {}
 
+            // 로딩 중
+            isLoading -> Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = main)
+            }
+
             // 결과 없음
-            results.isEmpty() -> EmptyState(
+            filteredResults.isEmpty() -> EmptyState(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize(),
@@ -106,8 +121,8 @@ fun GroupSearch(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(results, key = { it.id }) { item ->
-                    GroupResultCard(item = item, onJoinClick = { onJoinClick(item) })
+                items(filteredResults, key = { it.groupSeq }) { group ->
+                    GroupResultCard(group = group, onJoinClick = { onJoinClick(group) })
                 }
             }
         }
@@ -118,7 +133,7 @@ fun GroupSearch(
 // --------- 카드 UI ----------
 @Composable
 private fun GroupResultCard(
-    item: GroupItem,
+    group: MyGroupResponse,
     onJoinClick: () -> Unit
 ) {
     ElevatedCard(
@@ -137,9 +152,9 @@ private fun GroupResultCard(
             ) {
                 // 썸네일
                 Box(modifier = Modifier.size(44.dp)) {
-                    if (item.thumbnailRes != null) {
-                        Image(
-                            painter = painterResource(item.thumbnailRes),
+                    if (group.imageUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = group.imageUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -157,7 +172,7 @@ private fun GroupResultCard(
                 // 제목 + 멤버칩
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.title,
+                        text = group.groupName,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color(0xFF111827),
@@ -183,7 +198,7 @@ private fun GroupResultCard(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                text = item.members,
+                                text = "${group.currentMembers}/${group.capacity}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = main
@@ -196,39 +211,39 @@ private fun GroupResultCard(
 
                 Button(
                     onClick = onJoinClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = main),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = when (group.joinStatus) {
+                            "MEMBER" -> Color(0xFF8E8E93)
+                            "PENDING" -> Color(0xFFFFA500)
+                            else -> main
+                        }
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 0.dp,
                         pressedElevation = 4.dp
-                    )
+                    ),
+                    enabled = group.currentMembers < group.capacity && group.joinStatus == "NONE"
                 ) {
-                    Text("신청", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = when {
+                            group.joinStatus == "MEMBER" -> "가입됨"
+                            group.joinStatus == "PENDING" -> "대기중"
+                            group.currentMembers >= group.capacity -> "만원"
+                            else -> "신청"
+                        },
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
-            // ── 하단: 그룹 페이스 & 설명 (카드의 맨 아래 영역) ─────────────────────
+            // ── 하단: 그룹 설명 ─────────────────────
             Spacer(Modifier.height(12.dp))
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFF9FAFB)
-            ) {
-                Text(
-                    text = item.pace,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF6B7280),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
             Text(
-                text = item.summary,
+                text = group.groupDescription,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF4B5563),
                 lineHeight = 20.sp,

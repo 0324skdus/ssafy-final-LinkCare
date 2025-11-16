@@ -11,7 +11,10 @@ class SyncAndUploadHealthDataUseCase @Inject constructor(
     private val syncDailyHealthDataUseCase: SyncDailyHealthDataUseCase,
     private val syncAllHealthDataUseCase: SyncAllHealthDataUseCase,
     private val uploadDailyHealthDataUseCase: UploadDailyHealthDataUseCase,
-    private val uploadAllHealthDataUseCase: UploadAllHealthDataUseCase
+    private val uploadAllHealthDataUseCase: UploadAllHealthDataUseCase,
+    // 운동 데이터 전용
+    private val syncExerciseOnlyUseCase: SyncExerciseOnlyUseCase,
+    private val uploadExerciseOnlyUseCase: UploadExerciseOnlyUseCase
 ) {
     /**
      * 하루치 데이터 동기화 & 업로드
@@ -49,6 +52,21 @@ class SyncAndUploadHealthDataUseCase @Inject constructor(
             } else {
                 uploadAllHealthDataUseCase(data)
             }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 운동 데이터만 동기화 & 업로드
+     */
+    suspend fun syncAndUploadExerciseOnly(userId: Int): Result<Unit> {
+        return try {
+            // 1. 오늘의 운동 데이터 수집
+            val exerciseData = syncExerciseOnlyUseCase()
+
+            // 2. 서버 전송
+            uploadExerciseOnlyUseCase(userId, exerciseData)
         } catch (e: Exception) {
             Result.failure(e)
         }

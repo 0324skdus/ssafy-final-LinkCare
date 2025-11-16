@@ -1,22 +1,31 @@
 package com.a307.linkcare.feature.caregroup
 
 import android.annotation.SuppressLint
+import android.net.Uri
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.caregroup.domain.CareGroupCreateViewModel
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.healthgroup.toMultipart
+
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,13 +33,17 @@ import com.a307.linkcare.R
 fun CareGroupCreate(
     navController: NavHostController,
     onClickCreate: (
-        name: String,
-        description: String,
-        maxMember: Int,
         share: ShareOptions
-    ) -> Unit = { _, _, _, _ -> },
-    @DrawableRes avatarRes: Int? = null
+    ) -> Unit = { _ -> },
+    @DrawableRes avatarRes: Int? = null,
+    vm: CareGroupCreateViewModel = hiltViewModel(),
+    groupvm: MyGroupsViewModel = hiltViewModel()
 ) {
+    val state by vm.state
+    val context = LocalContext.current
+
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
     // 입력 상태
     var name by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
@@ -50,6 +63,42 @@ fun CareGroupCreate(
     val requiredAllChecked = shareExercise && shareHr && shareSteps
     val canSubmit = name.isNotBlank() && maxValid && requiredAllChecked
 
+    LaunchedEffect(state) {
+        when (state) {
+            is CareGroupCreateViewModel.UiState.Success -> {
+                Toast.makeText(context, "생성 완료!", Toast.LENGTH_SHORT).show()
+
+                // 그룹 목록 새로고침
+                groupvm.loadCare()
+
+                // 그룹 생성 성공했을 때만 ShareOptions 전달
+                onClickCreate(
+                    ShareOptions(
+                        exercise = shareExercise,
+                        heartRate = shareHr,
+                        steps = shareSteps,
+                        sleep = shareSleep,
+                        water = shareWater,
+                        bloodPressure = shareBp,
+                        bloodSugar = shareSugar
+                    )
+                )
+
+                navController.popBackStack()
+            }
+
+            is CareGroupCreateViewModel.UiState.Error -> {
+                Toast.makeText(
+                    context,
+                    "에러: ${(state as CareGroupCreateViewModel.UiState.Error).msg}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            else -> Unit
+        }
+    }
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier
@@ -64,7 +113,9 @@ fun CareGroupCreate(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    GroupAvatarPicker(defaultRes = avatarRes ?: R.drawable.main_duck) {}
+                    GroupAvatarPicker(defaultRes = avatarRes ?: R.drawable.main_duck) { uri ->
+                        selectedImageUri = uri
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "그룹 사진 선택",
@@ -193,24 +244,22 @@ fun CareGroupCreate(
                     buttonTextColor = white,
                     isEnabled = canSubmit,
                     onClick = {
-                        val max = maxMember ?: 6
-                        onClickCreate(
-                            name.trim(),
-                            desc.trim(),
-                            max,
-                            ShareOptions(
-                                exercise = shareExercise,
-                                heartRate = shareHr,
-                                steps = shareSteps,
-                                sleep = shareSleep,
-                                water = shareWater,
-                                bloodPressure = shareBp,
-                                bloodSugar = shareSugar
-                            )
+                        val imagePart = selectedImageUri?.toMultipart(context)
+                        vm.createGroup(
+                            name = name,
+                            description = desc,
+                            capacity = maxMember ?: 6,
+                            isSleepAllowed = shareSleep,
+                            isWaterIntakeAllowed = shareWater,
+                            isBloodPressureAllowed = shareBp,
+                            isBloodSugarAllowed = shareSugar,
+                            imagePart = imagePart
                         )
-                        navController.popBackStack()
                     }
                 )
+                if (state is CareGroupCreateViewModel.UiState.Loading) {
+                    LoadingOverlay()
+                }
             }
         }
     }

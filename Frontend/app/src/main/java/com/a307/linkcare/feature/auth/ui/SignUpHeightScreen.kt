@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,7 +31,10 @@ import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.component.molecules.PagerDots
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.data.TokenKeys
+import com.a307.linkcare.feature.auth.data.TokenStore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @Composable
 fun SignupHeightScreen(
@@ -39,6 +43,9 @@ fun SignupHeightScreen(
     onSubmit: (Pair<Float, Float>) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val tokenStore = remember { TokenStore(context) }
+    val userName = remember { tokenStore.getName().orEmpty() }
 
     var heightText by rememberSaveable { mutableStateOf("") }
     var weightText by rememberSaveable { mutableStateOf("") }
@@ -48,8 +55,8 @@ fun SignupHeightScreen(
     val height = parseFloatSafe(heightText)
     val weight = parseFloatSafe(weightText)
 
-    val isHeightValid = height != null && height in 100.0..250.0
-    val isWeightValid = weight != null && weight in 30.0..250.0
+    val isHeightValid = height != null && height in 100f..250f
+    val isWeightValid = weight != null && weight in 30f..250f
     val canSubmit = isHeightValid && isWeightValid
 
     val duckAspect = 462f / 281f
@@ -86,7 +93,7 @@ fun SignupHeightScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "싸피님에 대해서",
+                    text = "${if (userName.isNotBlank()) userName + "님" else "당신"}에 대해서",
                     fontSize = 25.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = black,
@@ -113,21 +120,18 @@ fun SignupHeightScreen(
                 // 키(cm)
                 UnitInputField(
                     value = heightText,
-                    onValueChange = { s ->
-                        heightText = s.filter { it.isDigit() }.take(3)
-                    },
+                    onValueChange = { s -> heightText = sanitizeDecimalInput(s, maxIntDigits = 3, maxFracDigits = 1) },
                     placeholder = "키를 입력하세요",
                     unit = "cm"
                 )
+
 
                 Spacer(Modifier.height(12.dp))
 
                 // 몸무게(kg)
                 UnitInputField(
                     value = weightText,
-                    onValueChange = { s ->
-                        weightText = s.filter { it.isDigit() }.take(3)
-                    },
+                    onValueChange = { s -> weightText = sanitizeDecimalInput(s, maxIntDigits = 3, maxFracDigits = 1) },
                     placeholder = "몸무게를 입력하세요",
                     unit = "kg"
                 )
@@ -223,3 +227,38 @@ private fun BottomBlueArc(
             .background(color)
     )
 }
+
+// 소수점 1개까지 허용, 정수/소수 자릿수 제한
+private fun sanitizeDecimalInput(
+    raw: String,
+    maxIntDigits: Int = 3,
+    maxFracDigits: Int = 1
+): String {
+    // 숫자/점만 남기기
+    var s = raw.filter { it.isDigit() || it == '.' }
+
+    // 점 2개 이상이면 첫 점만 남김
+    val firstDot = s.indexOf('.')
+    if (firstDot != -1) {
+        val before = s.substring(0, firstDot + 1)
+        val after = s.substring(firstDot + 1).replace(".", "")
+        s = before + after
+    }
+
+    // 앞이 점이면 "0."로 보정
+    if (s.startsWith(".")) s = "0$s"
+
+    // 정/소수부 자릿수 제한
+    return if (s.contains('.')) {
+        val parts = s.split('.', limit = 2)
+        val intPart = parts[0].take(maxIntDigits)
+        val fracPart = parts.getOrElse(1) { "" }.take(maxFracDigits)
+        if (fracPart.isEmpty()) "$intPart." else "$intPart.$fracPart"
+    } else {
+        s.take(maxIntDigits)
+    }
+}
+
+//fun getName(): String? = runBlocking {
+//    context.dataStore.data.first()[TokenKeys.NAME] as String?
+//}

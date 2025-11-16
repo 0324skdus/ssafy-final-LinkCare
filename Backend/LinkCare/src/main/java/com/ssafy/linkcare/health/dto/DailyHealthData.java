@@ -16,4 +16,17 @@ public class DailyHealthData {
     private List<BloodPressureDto> bloodPressure;
     private ExerciseDto exercise;
     private StepDto step;
+
+    @Override
+    public String toString() {
+        return "DailyHealthData{" +
+                "activitySummary=" + activitySummary +
+                ", heartRate=" + heartRate +
+                ", sleep=" + sleep +
+                ", waterIntake=" + waterIntake +
+                ", bloodPressure=" + bloodPressure +
+                ", exercise=" + exercise +
+                ", step=" + step +
+                '}';
+    }
 }
