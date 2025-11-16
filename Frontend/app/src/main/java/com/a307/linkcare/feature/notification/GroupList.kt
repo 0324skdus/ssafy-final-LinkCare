@@ -1,19 +1,17 @@
 package com.a307.linkcare.feature.notification
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,11 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.DisposableEffect
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.a307.linkcare.R
-import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
@@ -53,43 +48,11 @@ fun GroupList(
     val notifications by viewModel.notifications.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val processedNotifications by viewModel.processedNotifications.collectAsState()
 
     // 알림 로드
     LaunchedEffect(Unit) {
         viewModel.loadNotifications("GROUP")
-    }
-
-    // FCM 알림 수신 시 실시간 새로고침
-    DisposableEffect(Unit) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                // 새로운 알림이 왔을 때 목록 새로고침
-                viewModel.loadNotifications("GROUP")
-            }
-        }
-
-        val filter = IntentFilter().apply {
-            addAction(MyFirebaseMessagingService.ACTION_GROUP_JOINED)
-            addAction(MyFirebaseMessagingService.ACTION_NEW_NOTIFICATION)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
-        }
-
-        onDispose {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    context.unregisterReceiver(receiver)
-                } else {
-                    LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
-                }
-            } catch (e: Exception) {
-                // 이미 등록 해제된 경우 무시
-            }
-        }
     }
 
     // 에러 메시지 표시
@@ -107,12 +70,22 @@ fun GroupList(
     ) {
         when {
             isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = main)
                 }
             }
             notifications.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("알림이 없습니다", color = Color.Gray)
                 }
             }
@@ -123,12 +96,62 @@ fun GroupList(
                         .fillMaxWidth()
                 ) {
                     items(items = notifications, key = { it.notificationId }) { notification ->
+                        // 로컬 상태로 처리 여부 관리
+                        var isProcessed by remember(notification.notificationId) {
+                            mutableStateOf(processedNotifications[notification.notificationId] != null)
+                        }
+                        var processedMessage by remember(notification.notificationId) {
+                            mutableStateOf(processedNotifications[notification.notificationId] ?: "")
+                        }
+
                         val textColor = if (notification.isRead) ReadGray else black
 
-                        // 알림 타입에 따른 메시지
-                        val message = notification.content
+                        // 알림 타입에 따른 메시지 - 처리되었으면 처리 메시지, 아니면 원본
+                        val message = if (isProcessed && processedMessage.isNotEmpty()) {
+                            processedMessage
+                        } else {
+                            notification.content
+                        }
 
-                        Card(
+                        // 스와이프로 삭제
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.deleteNotification(notification.notificationId)
+                                    Toast.makeText(context, "알림을 삭제했습니다", Toast.LENGTH_SHORT).show()
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF6B6B)
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "삭제",
+                                            tint = Color.White
+                                        )
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = false
+                        ) {
+                            Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -195,9 +218,10 @@ fun GroupList(
                                 )
                             }
 
-                            // 요청일 때만 하단 버튼
+                            // 요청일 때만 하단 버튼 (처리되지 않았을 때만 표시)
                             if (notification.type == NotificationType.GROUP_JOIN_REQUEST
-                                && notification.relatedRequestSeq != null) {
+                                && notification.relatedRequestSeq != null
+                                && !isProcessed) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -211,11 +235,19 @@ fun GroupList(
                                                 if (!notification.isRead) {
                                                     viewModel.markAsRead(notification.notificationId)
                                                 }
+                                                // 신청자 이름 추출
+                                                val userName = notification.content.substringBefore("님이")
                                                 // 거절 처리
-                                                viewModel.rejectJoinRequest(notification.relatedRequestSeq)
+                                                viewModel.rejectJoinRequest(
+                                                    notification.relatedRequestSeq,
+                                                    notification.notificationId,
+                                                    userName
+                                                )
                                                     .onSuccess {
+                                                        // 로컬 상태 업데이트
+                                                        processedMessage = "${userName}님 신청을 거절하였습니다"
+                                                        isProcessed = true
                                                         Toast.makeText(context, "가입 신청을 거절했습니다", Toast.LENGTH_SHORT).show()
-                                                        viewModel.loadNotifications("GROUP")
                                                     }
                                                     .onFailure { error ->
                                                         Toast.makeText(context, "거절 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -235,11 +267,19 @@ fun GroupList(
                                                 if (!notification.isRead) {
                                                     viewModel.markAsRead(notification.notificationId)
                                                 }
+                                                // 신청자 이름 추출
+                                                val userName = notification.content.substringBefore("님이")
                                                 // 승인 처리
-                                                viewModel.approveJoinRequest(notification.relatedRequestSeq)
+                                                viewModel.approveJoinRequest(
+                                                    notification.relatedRequestSeq,
+                                                    notification.notificationId,
+                                                    userName
+                                                )
                                                     .onSuccess {
+                                                        // 로컬 상태 업데이트
+                                                        processedMessage = "${userName}님 신청을 수락하였습니다"
+                                                        isProcessed = true
                                                         Toast.makeText(context, "가입 신청을 승인했습니다", Toast.LENGTH_SHORT).show()
-                                                        viewModel.loadNotifications("GROUP")
                                                     }
                                                     .onFailure { error ->
                                                         Toast.makeText(context, "승인 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -253,14 +293,15 @@ fun GroupList(
                             }
 
                             Divider(color = Color.LightGray.copy(alpha = 0.4f))
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 모두 읽음 버튼 (모든 when 블록 밖)
-        if (notifications.any { !it.isRead }) {
+        // 모두 읽음 버튼 (알림이 있으면 항상 표시)
+        if (notifications.isNotEmpty()) {
             Button(
                 onClick = {
                     viewModel.markAllAsRead()
