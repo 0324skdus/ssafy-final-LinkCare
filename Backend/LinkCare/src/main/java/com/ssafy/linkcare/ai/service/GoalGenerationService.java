@@ -204,21 +204,37 @@ public class GoalGenerationService {
         log.info("주간 목표 계산 완료 - steps={}, kcal={}, duration={}분, distance={}km",
                 weeklyGoalSteps, weeklyGoalKcal, weeklyGoalDuration, weeklyGoalDistance);
 
-        // 10. DB 저장 (주간 전체 목표, week_start 기준 월-일)
-        WeeklyGroupGoals goal = WeeklyGroupGoals.builder()
-                .group(group)
-                .weekStart(weekStart)
-                .goalSteps(weeklyGoalSteps)
-                .goalKcal(weeklyGoalKcal)
-                .goalDuration(weeklyGoalDuration)
-                .goalDistance(weeklyGoalDistance)
-                .predictedGrowthRateSteps(stepsRes.getPredicted_growth_rate())
-                .predictedGrowthRateKcal(kcalRes.getPredicted_growth_rate())
-                .predictedGrowthRateDuration(durationRes.getPredicted_growth_rate())
-                .predictedGrowthRateDistance(distanceRes.getPredicted_growth_rate())
-                .selectedMetricType(null)  // 초기 생성 시 선택 안 함
-                .createdAt(System.currentTimeMillis())
-                .build();
+        // 10. 기존 목표 확인 및 저장/업데이트
+        WeeklyGroupGoals goal = weeklyGroupGoalsRepository
+                .findByGroup_GroupSeqAndWeekStart(groupSeq, weekStart)
+                .orElse(null);
+
+        if (goal != null) {
+            // 기존 목표가 있으면 업데이트
+            log.info("기존 목표 발견 - 업데이트 수행: weeklyGroupGoalsSeq={}", goal.getWeeklyGroupGoalsSeq());
+            goal.updateFromAiPrediction(
+                    weeklyGoalSteps, weeklyGoalKcal, weeklyGoalDuration, weeklyGoalDistance,
+                    stepsRes.getPredicted_growth_rate(), kcalRes.getPredicted_growth_rate(),
+                    durationRes.getPredicted_growth_rate(), distanceRes.getPredicted_growth_rate()
+            );
+        } else {
+            // 새로운 목표 생성
+            log.info("기존 목표 없음 - 새로운 목표 생성");
+            goal = WeeklyGroupGoals.builder()
+                    .group(group)
+                    .weekStart(weekStart)
+                    .goalSteps(weeklyGoalSteps)
+                    .goalKcal(weeklyGoalKcal)
+                    .goalDuration(weeklyGoalDuration)
+                    .goalDistance(weeklyGoalDistance)
+                    .predictedGrowthRateSteps(stepsRes.getPredicted_growth_rate())
+                    .predictedGrowthRateKcal(kcalRes.getPredicted_growth_rate())
+                    .predictedGrowthRateDuration(durationRes.getPredicted_growth_rate())
+                    .predictedGrowthRateDistance(distanceRes.getPredicted_growth_rate())
+                    .selectedMetricType(null)  // 초기 생성 시 선택 안 함
+                    .createdAt(System.currentTimeMillis())
+                    .build();
+        }
 
         WeeklyGroupGoals saved = weeklyGroupGoalsRepository.save(goal);
 
