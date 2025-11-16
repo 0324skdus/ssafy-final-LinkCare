@@ -107,6 +107,7 @@ fun CareGroupHome(
     val activity = context as Activity
 
     val permissionState by healthPermissionViewModel.state.collectAsState()
+    val stepUiState by healthViewModel.stepUiState.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -116,6 +117,7 @@ fun CareGroupHome(
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
         groupViewModel.loadGroupDetail(groupSeq)
+        healthViewModel.loadGroupStepStatistics(groupSeq)
     }
 
 //    val context = LocalContext.current
@@ -146,22 +148,42 @@ fun CareGroupHome(
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
 
-    // API에서 가져온 멤버를 Member 객체로 변환
-    val members = remember(membersResponse) {
+    val members = remember(membersResponse, stepUiState) {
         Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
+
+        // 🔹 /step-statistics에서 가져온 값들
+        val totalSteps = stepUiState.goal                // = totalSteps
+        val stepsByUserSeq = stepUiState.members.associateBy(
+            keySelector = { it.userSeq },               // DTO: userSeq
+            valueTransform = { it.steps }               // DTO: steps
+        )
+
+        // step 통계가 아직 없을 때는 기존 더미값 유지할지 여부
+        val hasStats = totalSteps > 0 && stepsByUserSeq.isNotEmpty()
+
         membersResponse.map { m ->
             Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+
+            val steps = if (hasStats) {
+                stepsByUserSeq[m.userSeq] ?: 0
+            } else {
+                0
+            }
+
+            val goal = if (hasStats) totalSteps else 0
+
             Member(
                 name = m.userName,
-                progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
-                goal = 30000,                        // TODO: 그룹 총 걸음수 값으로 교체
-                avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
+                progresses = steps,
+                goal = goal,
+                avatarRes = R.drawable.char_bear_1,   // TODO: m.mainCharacterBaseImageUrl 매핑
                 bubbleText = "",
                 isLeader = m.isLeader,
                 userPk = m.userSeq
             )
         }
     }
+
 
     // 날짜/리스트 상태
     val today = remember { LocalDate.now() }
@@ -411,8 +433,8 @@ fun CareGroupHome(
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
                             members = todayMembers,
-                            totalSteps = todayGroupProgress,
-                            totalGoal = totalGroupGoal,
+                            totalSteps = stepUiState.goal,
+                            totalGoal = stepUiState.goal,
                             modifier = Modifier
                         )
                     }
