@@ -3,6 +3,7 @@ package com.a307.linkcare.common.di
 import android.content.Context
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
+import com.a307.linkcare.feature.notification.data.NotificationApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
 import com.a307.linkcare.sdk.health.data.serializer.*
 import com.google.gson.Gson
@@ -92,6 +93,11 @@ object NetworkModule {
     @Singleton
     fun provideCharacterApi(retrofit: Retrofit): CharacterApi =
         retrofit.create(CharacterApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotificationApi(retrofit: Retrofit): NotificationApi =
+        retrofit.create(NotificationApi::class.java)
 
     @Provides
     @Singleton

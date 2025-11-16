@@ -1,5 +1,10 @@
 package com.a307.linkcare.navigation
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -7,6 +12,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +25,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -56,6 +63,7 @@ import com.a307.linkcare.feature.mypage.StoreItem
 import com.a307.linkcare.feature.mypage.StoreScreen
 import com.a307.linkcare.feature.mypage.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
+import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
@@ -111,6 +119,47 @@ fun MainTabs(
     LaunchedEffect(Unit) {
         groupvm.loadCare()
         groupvm.loadHealth()
+    }
+
+    // FCM 승인 알림 수신 시 자동 새로고침
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val groupType = intent?.getStringExtra(MyFirebaseMessagingService.EXTRA_GROUP_TYPE)
+                Log.d("MainTabs", "그룹 가입 승인 브로드캐스트 수신: $groupType")
+
+                // 그룹 타입에 따라 해당 그룹 목록 새로고침
+                when (groupType?.uppercase()) {
+                    "CARE" -> {
+                        scope.launch {
+                            groupvm.loadCare()
+                            Toast.makeText(context, "케어 그룹 가입이 승인되었습니다", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    "HEALTH" -> {
+                        scope.launch {
+                            groupvm.loadHealth()
+                            Toast.makeText(context, "헬스 그룹 가입이 승인되었습니다", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    else -> {
+                        // 타입 모를 경우 둘 다 새로고침
+                        scope.launch {
+                            groupvm.loadCare()
+                            groupvm.loadHealth()
+                            Toast.makeText(context, "그룹 가입이 승인되었습니다", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        val filter = IntentFilter(MyFirebaseMessagingService.ACTION_GROUP_JOINED)
+        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
+
+        onDispose {
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
+        }
     }
 
     LaunchedEffect(careGroups) {
@@ -394,6 +443,10 @@ fun MainTabs(
                                 searchViewModel.joinGroup(group.groupSeq, permissions)
                                     .onSuccess {
                                         Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        // 검색 결과 새로고침 (상태 업데이트)
+                                        if (careSearchQuery.isNotBlank()) {
+                                            searchViewModel.searchGroups(careSearchQuery)
+                                        }
                                         groupvm.loadCare() // 케어 그룹 목록 새로고침
                                     }
                                     .onFailure { error ->
@@ -458,6 +511,10 @@ fun MainTabs(
                                 searchViewModel.joinGroup(group.groupSeq, permissions)
                                     .onSuccess {
                                         Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                                        // 검색 결과 새로고침 (상태 업데이트)
+                                        if (healthSearchQuery.isNotBlank()) {
+                                            searchViewModel.searchGroups(healthSearchQuery)
+                                        }
                                         groupvm.loadHealth() // 헬스 그룹 목록 새로고침
                                     }
                                     .onFailure { error ->
