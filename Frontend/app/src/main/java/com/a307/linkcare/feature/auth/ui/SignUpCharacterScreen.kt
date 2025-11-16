@@ -2,8 +2,6 @@
 
 package com.a307.linkcare.feature.auth.ui
 
-import android.app.Activity
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,7 +40,18 @@ import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.loadCroppedPainterIO
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.auth.data.HealthPermissions
+import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
+import com.a307.linkcare.feature.watch.data.DataLayerManager
 import kotlinx.coroutines.launch
+
+fun charDrawableToId(@DrawableRes drawable: Int): Int = when (drawable) {
+    R.drawable.char_duck_1 -> 1
+    R.drawable.char_bear_1 -> 2
+    else -> 1
+    // TODO: 임시로 워치에 저장된 캐릭터 두개에만 아이디 적용, 추후 수정
+}
+
+fun defaultBackgroundId(): Int = 1   // 회원가입은 배경 선택 없음 → 기본값 1
 
 @Composable
 fun SignupCharacterScreen(
@@ -67,11 +75,15 @@ fun SignupCharacterScreen(
     var name by rememberSaveable { mutableStateOf("") }
     val canStart = name.isNotBlank()
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
-    var shouldSubmitProfile by remember { mutableStateOf(false) }
+    //var shouldSubmitProfile by remember { mutableStateOf(false) }
 
     // --- 권한 처리 준비 ---
     val context = LocalContext.current
-    val healthState by healthVm.state.collectAsState()
+    val healthState by healthVm.state.collectAsState() // 지금은 UI에서 안 쓰지만 남겨둬도 무방
+
+    // 워치 커스터마이즈 저장용 repo, 컨텍스트
+    val repo = hiltViewModel<CustomizeRepoHolderVM>().repo
+    val appContext = context.applicationContext
 
     // Health Connect 권한 요청 런처
     val permissionLauncher =
@@ -79,31 +91,13 @@ fun SignupCharacterScreen(
             PermissionController.createRequestPermissionResultContract()
         ) { granted: Set<String> ->
             if (HealthPermissions.permissions.all { it in granted }) {
-                // 권한 승인 후 프로필 제출 트리거
-                shouldSubmitProfile = true
-                // 권한 상태 재확인하여 State.Granted로 전이 유도
+                // 권한 승인했으면 vm만 맞춰두기
+                //shouldSubmitProfile = true
                 healthVm.checkPermissions()
             }
         }
 
-    // VM 상태 변화 또는 제출 플래그 변화 시, 실제 권한 요청/제출 실행
-    LaunchedEffect(healthState, shouldSubmitProfile) {
-        if (shouldSubmitProfile) {
-            when (healthState) {
-                HealthPermissionViewModel.State.NeedPermission -> {
-                    permissionLauncher.launch(HealthPermissions.permissions)
-                }
-                HealthPermissionViewModel.State.Granted -> {
-                    // 권한이 있으면 바로 프로필 제출
-                    onStart(selectedIndex, name) // 선택한 캐릭터 인덱스와 이름
-                    shouldSubmitProfile = false
-                }
-                else -> Unit
-            }
-        }
-    }
-
-    // 최초 1회 권한 상태 확인
+    // 최초 1회 권한 상태 확인 (있으면 바로 Granted로 갈 수 있음)
     LaunchedEffect(Unit) {
         healthVm.checkPermissions()
     }
@@ -258,7 +252,21 @@ fun SignupCharacterScreen(
                 buttonTextColor = if (canStart) white else unActiveField,
                 isEnabled = canStart,
                 onClick = {
-                    onStart(0, "duck")
+                    val selectedCharDrawable = characterImages[selectedIndex]
+                    val charId = charDrawableToId(selectedCharDrawable)
+                    val bgId = defaultBackgroundId()
+
+                    // 캐릭터/배경 저장
+                    scope.launch {
+                        repo.saveCustom(charId, bgId)
+                    }
+                    // 워치 전송
+                    DataLayerManager.sendTheme(appContext, charId, bgId)
+
+                    // 온보딩 흐름은 원래대로 여기서 진행
+                    onStart(selectedIndex, name)
+
+                    // 권한 안내 다이얼로그 표시
                     showPermissionDialog = true
                 }
             )
@@ -270,9 +278,8 @@ fun SignupCharacterScreen(
                 onDismiss = { showPermissionDialog = false },
                 onConnectClick = {
                     showPermissionDialog = false
-                    shouldSubmitProfile = true
-                    // 권한 체크 시작
-                    healthVm.checkPermissions()
+                    // 여기서 바로 OS 권한 요청만 수행
+                    permissionLauncher.launch(HealthPermissions.permissions)
                 }
             )
         }
