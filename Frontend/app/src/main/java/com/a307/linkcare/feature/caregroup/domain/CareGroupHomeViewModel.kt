@@ -68,7 +68,7 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    // 💤 수면 통계 저장 (StateFlow)
+    // 수면 통계 저장 (StateFlow)
     private val _sleepStatistics = MutableStateFlow<SleepStatisticsResponse?>(null)
     val sleepStatistics: StateFlow<SleepStatisticsResponse?> = _sleepStatistics
 

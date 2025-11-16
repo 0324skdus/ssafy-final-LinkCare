@@ -469,12 +469,18 @@ fun CareGroupHome(
                 item {
                     Spacer(Modifier.height(8.dp))
 
-                    val summaryChips = remember(metricType, summary, totalStats, sleepStatistics, members) {
+                    val summaryChips = remember(metricType, selectedDate, summary, totalStats, sleepStatistics, members) {
                         if (metricType == MetricType.ACTIVITY) {
                             val calories = totalStats?.totalCalories?.toInt() ?: 0
                             val steps = totalStats?.totalSteps ?: 0
-                            val durationSec = totalStats?.totalDuration ?: 0
+                            val rawDuration = totalStats?.totalDuration ?: 0L
+                            val durationSec = (rawDuration.toFloat() / 1000f).toInt()
                             val durationStr = formatDuration(durationSec)
+                            val start = selectedDate.startOfWeek()
+                            val end = selectedDate.endOfWeek()
+
+
+                            groupViewModel.loadTotalActivityStats(groupSeq, start, end)
 
                             listOf(
                                 "🔥 ${calories} kcal 태웠어요",
