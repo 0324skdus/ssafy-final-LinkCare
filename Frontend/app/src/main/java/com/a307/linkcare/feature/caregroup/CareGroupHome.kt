@@ -290,12 +290,8 @@ fun CareGroupHome(
                 }
             )
         }
-    )  { paddingValues ->
-        Box(modifier = modifier
-            .fillMaxSize()
-            .padding(paddingValues)) {
-
-            LazyColumn(Modifier.fillMaxSize()) {
+    )  { _ ->
+        LazyColumn(Modifier.fillMaxSize()) {
 
                 item {
                     Spacer(Modifier.height(8.dp))
@@ -493,7 +489,6 @@ fun CareGroupHome(
             }
         }
     }
-}
 
 /* ---------- 컴포넌트 ---------- */
 @Composable
