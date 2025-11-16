@@ -12,4 +12,5 @@ public class WaterIntakeResponse {
     private int waterIntakeId;
     private LocalDateTime startTime;
     private float amount;
+    private Float goal;
 }
