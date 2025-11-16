@@ -11,6 +11,7 @@ import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,15 +26,29 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ExerciseService {
 
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final ExerciseSessionRepository exerciseSessionRepository;
+
+    @Lazy
     private final HealthSyncService healthSyncService;
 
     private final TimeStampUtil timeStampUtil;
+
+    public ExerciseService(
+            UserRepository userRepository,
+            ExerciseRepository exerciseRepository,
+            ExerciseSessionRepository exerciseSessionRepository,
+            @Lazy HealthSyncService healthSyncService,
+            TimeStampUtil timeStampUtil) {
+        this.userRepository = userRepository;
+        this.exerciseRepository = exerciseRepository;
+        this.exerciseSessionRepository = exerciseSessionRepository;
+        this.healthSyncService = healthSyncService;
+        this.timeStampUtil = timeStampUtil;
+    }
 
     @Transactional
     public void saveAllExerciseData(List<ExerciseDto> exerciseList, int userSeq) {
