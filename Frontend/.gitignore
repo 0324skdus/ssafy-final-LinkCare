@@ -257,3 +257,7 @@ google-services.json
 *.BASE.*
 *.LOCAL.*
 *.REMOTE.*
+
+
+/app/readthis.md
+/app/readthisforGemma.md
