@@ -353,4 +353,27 @@ public class TimeStampUtil {
         LocalDate thisMonday = date.with(DayOfWeek.MONDAY);
         return thisMonday.minusDays(1);
     }
+
+    /**
+     * 주어진 timestamp(초 단위)에 하루(24시간)를 더한 timestamp 반환
+     */
+    public Long plusOneDay(Long timestamp) {
+        if (timestamp == null) {
+            return null;
+        }
+        // 24시간 = 86400초
+        return timestamp + 86400L;
+    }
+
+    /**
+     * LocalDate 기준으로 다음날 00시 timestamp 반환
+     */
+    public Long toNextDayTimestamp(LocalDate localDate) {
+        if (localDate == null) {
+            return null;
+        }
+        return localDate.plusDays(1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toEpochSecond();
+    }
 }

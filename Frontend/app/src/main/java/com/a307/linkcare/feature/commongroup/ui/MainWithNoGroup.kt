@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.commongroup
+package com.a307.linkcare.feature.commongroup.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -14,9 +14,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.navigation.Route
 
 @Composable

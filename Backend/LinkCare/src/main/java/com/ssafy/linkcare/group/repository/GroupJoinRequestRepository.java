@@ -27,4 +27,7 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
 
     // 특정 사용자의 모든 신청 이력 조회
     List<GroupJoinRequest> findByUser(User user);
+
+    // 특정 그룹에 특정 사용자가 특정 상태의 신청이 있는지 확인 (userId로)
+    boolean existsByGroup_GroupSeqAndUser_UserPkAndStatus(Long groupSeq, Long userPk, RequestStatus status);
 }

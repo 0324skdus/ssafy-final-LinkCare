@@ -2,6 +2,7 @@
 
 package com.a307.linkcare.feature.caregroup
 
+import android.app.Activity
 import android.os.Build
 import androidx.annotation.*
 import androidx.compose.foundation.layout.*
@@ -26,7 +27,18 @@ import androidx.compose.ui.text.font.FontWeight
 import com.a307.linkcare.feature.caregroup.domain.CareWeekSummary
 import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.caregroup.data.*;
+import com.a307.linkcare.feature.caregroup.data.*
+import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import android.util.Log
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -34,41 +46,44 @@ fun sampleHealthToday(m: Member): HealthToday =
             val hour = (7..21).random()
             val minute = listOf("00", "15", "30", "45").random()
             BloodPressure(
-                time = String.format("%02d:%s", hour, minute),
-                sys = (110..135).random(),
-                dia = (70..88).random()
+                startTime = String.format("2025-01-15T%02d:%s:00", hour, minute),
+                systolic = (110..135).random().toFloat(),
+                diastolic = (70..88).random().toFloat()
             )
-        }.sortedBy { it.time },
+        }.sortedBy { it.startTime },
 
         // 💧 음수량
-        waterLogs = List((3..6).random()) {
+        waterIntakes = List((3..6).random()) {
             val hour = (8..22).random()
             val minute = listOf("00", "30").random()
-            WaterLog(
-                time = String.format("%02d:%s", hour, minute),
-                amountMl = listOf(150, 200, 250, 300).random()
+            WaterIntake(
+                startTime = String.format("2025-01-15T%02d:%s:00", hour, minute),
+                amount = listOf(150f, 200f, 250f, 300f).random()
             )
-        }.sortedBy { it.time },
+        }.sortedBy { it.startTime },
         waterGoalMl = 2000,
 
         // 😴 수면
-        sleepSessions = listOf(
-            SleepSession("23:30", "06:50")
+        sleeps = listOf(
+            Sleep(startTime = "2025-01-14T23:30:00", endTime = "2025-01-15T06:50:00", duration = 440)
         ) + if ((0..1).random() == 1) {
-            listOf(SleepSession("13:20", "14:10")) // 낮잠 있을 수도 있음
+            listOf(Sleep(startTime = "2025-01-15T13:20:00", endTime = "2025-01-15T14:10:00", duration = 50)) // 낮잠
         } else emptyList(),
 
         // 🏃 운동
-        activitySessions = List((1..3).random()) { idx ->
-            ActivitySession(
-                sessionId = "${System.currentTimeMillis()}_$idx",
-                avgHeartRate = listOf(98, 110, 121, 130).random(),
-                calories = listOf(180, 240, 300).random(),
-                distance = listOf(1200, 1500, 2000).random(),  // meter
-                durationSec = listOf(480, 600, 900).random(),
-                timestamp = System.currentTimeMillis() - (idx * 60 * 60 * 1000)
-            )
-        }
+        dailyActivitySummary = DailyActivitySummary(
+            exercises = List((1..3).random()) { idx ->
+                ExerciseSession(
+                    startTime = "2025-01-15T${String.format("%02d", 7 + idx * 2)}:00:00",
+                    endTime = "2025-01-15T${String.format("%02d", 7 + idx * 2 + 1)}:00:00",
+                    distance = listOf(1200f, 1500f, 2000f).random(),  // meter
+                    calories = listOf(180f, 240f, 300f).random(),
+                    meanPulseRate = listOf(98f, 110f, 121f, 130f).random(),
+                    duration = listOf(480L, 600L, 900L).random()
+                )
+            },
+            steps = (5000..12000).random()
+        )
     )
 
 /* ---------- 날짜 유틸 ---------- */
@@ -78,19 +93,70 @@ enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CareGroupHome(
-    membersAll: List<Member>,
-    modifier: Modifier = Modifier
+    healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
+    groupSeq: Long,
+    modifier: Modifier = Modifier,
+    groupViewModel: MyGroupsViewModel = hiltViewModel(),
+    healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
+    syncViewModel: HealthSyncViewModel = hiltViewModel()
 ) {
-    // 데모 데이터
-    val members = remember {
-        listOf(
-            Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
-            Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
-            Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
-            Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-        )
+    val context = LocalContext.current
+    val activity = context as Activity
+
+    val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 화면 들어올 때 한 번 권한 상태 체크
+    LaunchedEffect(Unit) {
+        healthPermissionViewModel.checkPermissions()
     }
-    val leader = remember(members) { members.first { it.isLeader } }
+
+    // 그룹 상세 정보 로드
+    LaunchedEffect(groupSeq) {
+        groupViewModel.loadGroupDetail(groupSeq)
+    }
+
+//    val context = LocalContext.current
+    val currentUserName = remember {
+        com.a307.linkcare.feature.auth.data.TokenStore(context).getName() ?: "나"
+    }
+
+    // 동기화 상태 관찰
+    val syncState by syncViewModel.syncState.collectAsState()
+
+    // 동기화 완료 시 토스트 표시
+    LaunchedEffect(syncState) {
+        when (syncState) {
+            is SyncState.Success -> {
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+            }
+            is SyncState.Error -> {
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
+    val membersResponse by groupViewModel.members.collectAsState()
+    val groupName by groupViewModel.groupName.collectAsState()
+    val healthData by healthViewModel.healthData.collectAsState()
+
+    // API에서 가져온 멤버를 Member 객체로 변환
+    val members = remember(membersResponse) {
+        Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
+        membersResponse.map { m ->
+            Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+            Member(
+                name = m.userName,
+                progresses = 10000,  // TODO: 실제 건강 데이터로 교체
+                goal = 30000,  // TODO: 그룹 목표로 교체
+                avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
+                bubbleText = "",
+                isLeader = m.isLeader,
+                userPk = m.userSeq
+            )
+        }
+    }
 
     var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
@@ -114,17 +180,30 @@ fun CareGroupHome(
     val year = selectedDate.year
     val month = selectedDate.monthValue
     val wom = selectedDate.weekOfMonth()
-    LaunchedEffect(year, month, wom) {
+    LaunchedEffect(year, month, wom, members) {
         val start = selectedDate.startOfWeek()
         val end = selectedDate.endOfWeek()
-        // TODO API 교체
-        weekMembers = membersAll.ifEmpty { members }
+        // TODO: 주차별 데이터 필터링이 필요하면 여기서 처리
+        weekMembers = members
     }
 
     // 날짜 변경 시
     LaunchedEffect(selectedDate, weekMembers) {
-        // TODO API 교체
-        todayMembers = weekMembers.ifEmpty { members }
+        // TODO: 날짜별 데이터 필터링이 필요하면 여기서 처리
+        todayMembers = weekMembers
+    }
+
+    // 멤버 건강 데이터 로드
+    LaunchedEffect(todayMembers) {
+        val userPks = todayMembers.mapNotNull {
+            if (it.userPk > 0) it.userPk.toInt() else null
+        }
+        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
+        if (userPks.isNotEmpty()) {
+            healthViewModel.loadHealthDataForMembers(userPks)
+        } else {
+            Log.d("CareGroupHome", "No valid userPks to load health data")
+        }
     }
 
     // 다이얼로그는 리스트 바깥에서 remember
@@ -148,13 +227,40 @@ fun CareGroupHome(
     }
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
-    val todayHealthByName = remember(selectedDate, todayMembers) {
-        todayMembers.associate { m -> m.name to sampleHealthToday(m) }
+    val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
+        Log.d("CareGroupHome", "healthData size = ${healthData.size}, keys = ${healthData.keys}")
+        todayMembers.associate { m ->
+            Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
+            val health = if (m.userPk > 0) {
+                val apiData = healthData[m.userPk.toInt()]
+                Log.d("CareGroupHome", "API data for ${m.name}: ${if (apiData != null) "FOUND" else "NOT FOUND"}")
+                apiData ?: sampleHealthToday(m)
+            } else {
+                Log.d("CareGroupHome", "userPk is 0 for ${m.name}, using dummy data")
+                sampleHealthToday(m)
+            }
+            m.name to health
+        }
     }
 
 
-    Scaffold { _ ->
-        Box(modifier = modifier.fillMaxSize()) {
+    Scaffold(
+        floatingActionButton = {
+            CareGroupFab(
+                permissionState = permissionState,
+                onRequestPermission = {
+                    healthPermissionViewModel.requestPermissions(activity)
+                },
+                onSync = {
+                    syncViewModel.syncTodayData()
+                    Toast.makeText(context, "건강 데이터 동기화 중...", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    )  { paddingValues ->
+        Box(modifier = modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
 
             LazyColumn(Modifier.fillMaxSize()) {
 
@@ -220,7 +326,7 @@ fun CareGroupHome(
                         horizontalAlignment = Alignment.CenterHorizontally 
                     ) {
                         Text(
-                            text = "만수무강 그룹의 건강을 분석했어요",
+                            text = "${groupName.ifBlank { "케어" }} 그룹의 건강을 분석했어요",
                             fontWeight = FontWeight.SemiBold,
                             color = black
                         )
@@ -279,12 +385,23 @@ fun CareGroupHome(
             }
 
             selectedMember?.let { m ->
+
+                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
+                LaunchedEffect(m.userPk) {
+                    if (m.userPk > 0) {
+                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
+                        healthViewModel.loadHealthData(m.userPk.toInt())
+                    }
+                }
+
                 CareMemberDetail(
                     member = m,
                     today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    onDismiss = { selectedMember = null },
+                    currentUserName = currentUserName
                 )
             }
+
 
             if (showCalendar) {
                 DatePickerDialog(
@@ -473,3 +590,26 @@ private fun MetricTypeTabs(
         }
     }
 }
+
+@Composable
+private fun CareGroupFab(
+    permissionState: HealthPermissionViewModel.State,
+    onRequestPermission: () -> Unit,
+    onSync: () -> Unit
+) {
+    FloatingActionButton(
+        onClick = {
+            when (permissionState) {
+                HealthPermissionViewModel.State.Granted -> onSync()
+                HealthPermissionViewModel.State.NeedPermission -> onRequestPermission()
+                is HealthPermissionViewModel.State.Error -> onRequestPermission()
+                HealthPermissionViewModel.State.Idle -> onRequestPermission()
+            }
+        },
+        containerColor = main,
+        contentColor = white
+    ) {
+        Icon(Icons.Default.Refresh, contentDescription = "동기화")
+    }
+}
+
