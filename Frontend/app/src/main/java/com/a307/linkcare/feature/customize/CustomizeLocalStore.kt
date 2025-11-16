@@ -1,39 +1,91 @@
-package com.a307.linkcare.feature.customize
+package com.a307.linkcare.feature.watch.service
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import android.content.Intent
+import android.util.Log
+import com.a307.linkcare.feature.watch.data.mapper.toRequest
+import com.a307.linkcare.feature.watch.model.WorkoutSummary
+import com.a307.linkcare.feature.workout.data.repository.WorkoutRepository
+import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.WearableListenerService
+import dagger.hilt.EntryPoints
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
-//로컬 설정 저장소
-class CustomizeLocalStore @Inject constructor(
-    private val dataStore: DataStore<Preferences>
-) {
-    companion object {
-        private val KEY_CHARACTER = intPreferencesKey("custom_character_id")
-        private val KEY_BACKGROUND = intPreferencesKey("custom_background_id")
+
+@AndroidEntryPoint  // ❗ 이것도 필요하면 추가
+class WatchListenerService : WearableListenerService() {
+
+    @Inject lateinit var workoutRepository: WorkoutRepository
+
+    override fun onCreate() {
+        super.onCreate()
+        EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
+            .inject(this)
     }
 
-    val customFlow: Flow<CustomEntity> = dataStore.data.map { prefs ->
-        CustomEntity(
-            characterId = prefs[KEY_CHARACTER] ?: 1,
-            backgroundId = prefs[KEY_BACKGROUND] ?: 1
-        )
-    }
+    override fun onDataChanged(dataEvents: DataEventBuffer) {
+        super.onDataChanged(dataEvents)
 
-    suspend fun saveCustom(characterId: Int, backgroundId: Int) {
-        dataStore.edit { prefs ->
-            prefs[KEY_CHARACTER] = characterId
-            prefs[KEY_BACKGROUND] = backgroundId
+        for (event in dataEvents) {
+            val path = event.dataItem.uri.path
+
+            val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
+
+            when (path) {
+
+                "/linkcare/metrics" -> {
+                    val hr = dataMap.getInt("heartRate")
+                    val cal = dataMap.getInt("calories")
+                    val dur = dataMap.getInt("durationSec")
+                    val ts = dataMap.getLong("timestamp")
+
+                    Log.d("DataLayer", "📡 Realtime data: HR=$hr, Cal=$cal, Dur=$dur, Ts=$ts")
+
+                    sendBroadcast(Intent("REALTIME_METRICS_RECEIVED").apply {
+                        putExtra("heartRate", hr)
+                        putExtra("calories", cal)
+                        putExtra("durationSec", dur)
+                        putExtra("timestamp", ts)
+                    })
+                }
+
+                "/linkcare/summary" -> {
+                    val summary = WorkoutSummary(
+                        sessionId = dataMap.getLong("sessionId"),
+                        avgHeartRate = dataMap.getInt("avgHeartRate"),
+                        calories = dataMap.getInt("calories"),
+                        distance = dataMap.getInt("distance"),
+                        durationSec = dataMap.getInt("durationSec"),
+                        startTimestamp = dataMap.getLong("startTimestamp"),
+                        endTimestamp = dataMap.getLong("endTimestamp")
+                    )
+
+                    Log.d("DataLayer", "📩 Summary received: $summary")
+
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            workoutRepository.uploadSummary(summary.toRequest())
+                            Log.d("DataLayer", "🔥 Server upload success")
+                        } catch (e: Exception) {
+                            Log.e("DataLayer", "❌ Server upload failed", e)
+                        }
+                    }
+                }
+            }
         }
     }
 
-    fun loadCustom(): Pair<Int, Int> {
-        return 1 to 1
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        if (messageEvent.path == "/linkcare/session") {
+            val state = String(messageEvent.data)
+            Log.d("DataLayer", "📨 Session state: $state")
+            sendBroadcast(Intent("SESSION_STATE_RECEIVED").apply {
+                putExtra("state", state)
+            })
+        }
     }
 }
-
-data class CustomEntity(
-    val characterId: Int,
-    val backgroundId: Int
-)

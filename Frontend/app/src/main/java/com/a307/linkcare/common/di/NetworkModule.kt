@@ -103,5 +103,10 @@ object NetworkModule {
     @Singleton
     fun provideHealthApiService(retrofit: Retrofit): HealthApiService =
         retrofit.create(HealthApiService::class.java)
+    // 추가: Workout API 제공, TODO:서버 저장시 토큰이 필요하면 추가
+//    @Provides
+//    @Singleton
+//    fun provideWorkoutApi(retrofit: Retrofit): WorkoutApi =
+//        retrofit.create(WorkoutApi::class.java)
 
 }
