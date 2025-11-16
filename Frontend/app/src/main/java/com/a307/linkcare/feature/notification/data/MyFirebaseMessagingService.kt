@@ -31,6 +31,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         private const val CHANNEL_ID = "linkcare_notification_channel"
         private const val CHANNEL_NAME = "LinkCare 알림"
         const val ACTION_GROUP_JOINED = "com.a307.linkcare.GROUP_JOINED"
+        const val ACTION_NEW_NOTIFICATION = "com.a307.linkcare.NEW_NOTIFICATION"
         const val EXTRA_GROUP_TYPE = "group_type"
         private const val BASE_URL = "http://k13a307.p.ssafy.io:9090/"
     }
@@ -41,7 +42,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     // 새로운 FCM 토큰이 생성되었을 때 호출됨
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "새로운 FCM 토큰 생성: $token")
+        Log.i(TAG, "=== 새로운 FCM 토큰 생성 ===")
+        Log.i(TAG, "토큰: $token")
 
         // 백엔드 서버로 토큰 전송
         sendTokenToServer(token)
@@ -50,6 +52,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun sendTokenToServer(token: String) {
         serviceScope.launch {
             try {
+                Log.d(TAG, "FCM 토큰 서버 전송 시작")
                 val tokenStore = TokenStore(applicationContext)
                 val accessToken = tokenStore.getAccess()
 
@@ -57,6 +60,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     Log.w(TAG, "액세스 토큰이 없어 FCM 토큰 전송 불가")
                     return@launch
                 }
+
+                Log.d(TAG, "액세스 토큰 확인 완료, API 호출 준비")
 
                 // Retrofit 인스턴스 생성
                 val client = OkHttpClient.Builder()
@@ -76,15 +81,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     .build()
 
                 val api = retrofit.create(ProfileApi::class.java)
+                Log.d(TAG, "API 호출 중: updateFcmToken")
                 val response = api.updateFcmToken(UpdateFcmTokenRequest(token))
 
                 if (response.isSuccessful) {
-                    Log.i(TAG, "FCM 토큰 서버 전송 성공")
+                    Log.i(TAG, "✅ FCM 토큰 서버 전송 성공!")
                 } else {
-                    Log.e(TAG, "FCM 토큰 서버 전송 실패: ${response.code()}")
+                    Log.e(TAG, "❌ FCM 토큰 서버 전송 실패: ${response.code()} - ${response.message()}")
+                    response.errorBody()?.string()?.let { errorBody ->
+                        Log.e(TAG, "에러 응답: $errorBody")
+                    }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "FCM 토큰 서버 전송 중 에러: ${e.message}", e)
+                Log.e(TAG, "❌ FCM 토큰 서버 전송 중 에러: ${e.message}", e)
             }
         }
     }
@@ -122,7 +131,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
             // 앱이 포그라운드든 백그라운드든 항상 알림 표시
             showNotification(it.title, it.body)
+
+            // 새 알림 브로드캐스트 전송 (UI 실시간 업데이트용)
+            sendNewNotificationBroadcast()
         }
+    }
+
+    private fun sendNewNotificationBroadcast() {
+        val intent = Intent(ACTION_NEW_NOTIFICATION)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        Log.d(TAG, "새 알림 브로드캐스트 전송")
     }
 
     private fun sendGroupJoinedBroadcast(groupType: String?) {

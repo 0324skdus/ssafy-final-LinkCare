@@ -561,7 +561,12 @@ public class GroupService {
                 .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
 
+        log.info("방장 찾기 완료: leaderId={}, leaderName={}", leader.getUser().getUserPk(), leader.getUser().getName());
+
         String notificationContent = user.getName() + "님이 가입 신청을 했습니다.";
+        log.info("알림 생성 시작: 방장={}에게, 신청자={}, 그룹={}",
+                leader.getUser().getName(), user.getName(), group.getGroupName());
+
         notificationService.createNotification(
                 leader.getUser(),
                 NotificationType.GROUP_JOIN_REQUEST,
@@ -571,8 +576,8 @@ public class GroupService {
                 joinRequest
         );
 
-        log.info("그룹 참가 신청 완료 ({}): userId={}, groupSeq={}, agreedPermissions=[sleep={}, water={}, bp={}, bs={}]",
-                joinMethod, user.getUserPk(), group.getGroupSeq(),
+        log.info("✅ 그룹 참가 신청 완료 ({}): 신청자userId={}, 방장userId={}, groupSeq={}, agreedPermissions=[sleep={}, water={}, bp={}, bs={}]",
+                joinMethod, user.getUserPk(), leader.getUser().getUserPk(), group.getGroupSeq(),
                 agreement.isSleepAllowed(), agreement.isWaterIntakeAllowed(),
                 agreement.isBloodPressureAllowed(), agreement.isBloodSugarAllowed());
     }

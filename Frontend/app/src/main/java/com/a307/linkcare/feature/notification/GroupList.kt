@@ -1,5 +1,10 @@
 package com.a307.linkcare.feature.notification
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -20,8 +25,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.DisposableEffect
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
@@ -49,6 +57,39 @@ fun GroupList(
     // 알림 로드
     LaunchedEffect(Unit) {
         viewModel.loadNotifications("GROUP")
+    }
+
+    // FCM 알림 수신 시 실시간 새로고침
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                // 새로운 알림이 왔을 때 목록 새로고침
+                viewModel.loadNotifications("GROUP")
+            }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(MyFirebaseMessagingService.ACTION_GROUP_JOINED)
+            addAction(MyFirebaseMessagingService.ACTION_NEW_NOTIFICATION)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
+        }
+
+        onDispose {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.unregisterReceiver(receiver)
+                } else {
+                    LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
+                }
+            } catch (e: Exception) {
+                // 이미 등록 해제된 경우 무시
+            }
+        }
     }
 
     // 에러 메시지 표시
@@ -90,18 +131,20 @@ fun GroupList(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp)
-                                .clickable {
-                                    if (!notification.isRead) {
-                                        viewModel.markAsRead(notification.notificationId)
-                                    }
-                                },
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = white)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clickable(
+                                        enabled = notification.type != NotificationType.GROUP_JOIN_REQUEST
+                                    ) {
+                                        if (!notification.isRead) {
+                                            viewModel.markAsRead(notification.notificationId)
+                                        }
+                                    }
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {

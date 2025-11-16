@@ -55,26 +55,35 @@ class MainActivity : ComponentActivity() {
     private fun updateFcmTokenToServer() {
         lifecycleScope.launch {
             try {
+                Log.i("MainActivity", "=== MainActivity FCM 토큰 업데이트 시작 ===")
+
                 // 액세스 토큰 확인
                 val accessToken = tokenStore.getAccess()
                 if (accessToken.isNullOrEmpty()) {
-                    Log.d("MainActivity", "액세스 토큰이 없어 FCM 토큰 전송 스킵")
+                    Log.w("MainActivity", "액세스 토큰이 없어 FCM 토큰 전송 스킵 (로그인 안됨)")
                     return@launch
                 }
 
+                Log.d("MainActivity", "액세스 토큰 확인 완료")
+
                 // 현재 FCM 토큰 가져오기
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
-                Log.d("MainActivity", "현재 FCM 토큰: $fcmToken")
+                Log.i("MainActivity", "현재 FCM 토큰 획득: ${fcmToken.take(20)}...")
 
                 // 서버에 전송
+                Log.d("MainActivity", "서버로 FCM 토큰 전송 중...")
                 val response = profileApi.updateFcmToken(UpdateFcmTokenRequest(fcmToken))
                 if (response.isSuccessful) {
-                    Log.i("MainActivity", "FCM 토큰 서버 전송 성공")
+                    Log.i("MainActivity", "✅ FCM 토큰 서버 전송 성공!")
                 } else {
-                    Log.e("MainActivity", "FCM 토큰 서버 전송 실패: ${response.code()}")
+                    Log.e("MainActivity", "❌ FCM 토큰 서버 전송 실패: ${response.code()} - ${response.message()}")
+                    response.errorBody()?.string()?.let { errorBody ->
+                        Log.e("MainActivity", "에러 응답: $errorBody")
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "FCM 토큰 처리 중 에러: ${e.message}", e)
+                Log.e("MainActivity", "❌ FCM 토큰 처리 중 에러: ${e.message}", e)
+                e.printStackTrace()
             }
         }
     }
