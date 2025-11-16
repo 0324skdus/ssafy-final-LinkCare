@@ -12,7 +12,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WorkoutSyncViewModel @Inject constructor(
     private val repo: WorkoutRepository
-): ViewModel() {
+) : ViewModel() {
 
     fun sendSummary(summary: WorkoutSummary) {
         viewModelScope.launch {
@@ -22,10 +22,11 @@ class WorkoutSyncViewModel @Inject constructor(
                 calories = summary.calories,
                 distance = summary.distance,
                 durationSec = summary.durationSec,
-                startTime = summary.startTimestamp,
-                endTime = summary.endTimestamp
+                startTimestamp = summary.startTimestamp,
+                endTimestamp = summary.endTimestamp
             )
-            repo.uploadSummary(req)
+
+            repo.uploadSummary(req)   // userSeq는 Repository가 처리
         }
     }
 }

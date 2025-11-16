@@ -1,12 +1,12 @@
 package com.a307.linkcare.feature.workout.data.dto
 
 data class WorkoutSummaryRequest(
-    //TODO: 형식체크필요, 인증필요한지??
+    //TODO:워치 전송 형식 변경할것
     val sessionId: Long,
     val avgHeartRate: Int,
-    val calories: Int,
-    val distance: Int,
-    val durationSec: Int,
-    val startTime: Long,
-    val endTime: Long
+    val calories: Float,
+    val distance: Float,
+    val durationSec: Long,
+    val startTimestamp: Long,
+    val endTimestamp: Long
 )

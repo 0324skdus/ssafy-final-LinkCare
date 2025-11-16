@@ -57,9 +57,9 @@ class WatchListenerService : WearableListenerService() {
                     val summary = WorkoutSummary(
                         sessionId = dataMap.getLong("sessionId"),
                         avgHeartRate = dataMap.getInt("avgHeartRate"),
-                        calories = dataMap.getInt("calories"),
-                        distance = dataMap.getInt("distance"),
-                        durationSec = dataMap.getInt("durationSec"),
+                        calories = dataMap.getFloat("calories"),         // 수정
+                        distance = dataMap.getFloat("distance"),         // 수정
+                        durationSec = dataMap.getLong("durationSec"),    // 수정
                         startTimestamp = dataMap.getLong("startTimestamp"),
                         endTimestamp = dataMap.getLong("endTimestamp")
                     )

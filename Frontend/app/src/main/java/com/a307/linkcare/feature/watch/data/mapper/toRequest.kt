@@ -10,7 +10,7 @@ fun WorkoutSummary.toRequest(): WorkoutSummaryRequest {
         calories = calories,
         distance = distance,
         durationSec = durationSec,
-        startTime = startTimestamp,
-        endTime = endTimestamp
+        startTimestamp = startTimestamp,
+        endTimestamp = endTimestamp
     )
 }
