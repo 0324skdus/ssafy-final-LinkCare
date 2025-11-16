@@ -184,8 +184,8 @@ public class HeartRateService {
     public HeartRateStaticsResponse getHeartRateStatsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
         User user = validateUser(userSeq);
 
-        long startTimestamp = timeStampUtil.toTimestamp(startDate);
-        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+        long startTimestamp = timeStampUtil.getDateStartTimestamp(startDate);
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(endDate);
 
         Double avgHeartRate = heartRateRepository.findAverageHeartRateByPeriod(user, startTimestamp, endTimestamp);
         Double maxHeartRate = heartRateRepository.findMaxHeartRateByPeriod(user, startTimestamp, endTimestamp);
