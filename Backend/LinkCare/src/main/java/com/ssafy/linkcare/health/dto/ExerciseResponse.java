@@ -14,5 +14,6 @@ public class ExerciseResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String exerciseType;
+    private Integer avgHeartRate;
     private List<ExerciseSessionDto> sessions;
 }
