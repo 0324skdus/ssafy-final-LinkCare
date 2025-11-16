@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.group.entity;
 
+import com.ssafy.linkcare.group.enums.MetricType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -50,10 +51,28 @@ public class WeeklyGroupGoals {
     @Column(name = "predicted_growth_rate_distance", nullable = false)
     private Double predictedGrowthRateDistance;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "selected_metric_type", length = 20)
+    private MetricType selectedMetricType;
+
     @Column(name = "created_at")
     private Long createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_seq")
     private Group group;
+
+    /**
+     * 선택된 메트릭 타입에 따라 목표값 업데이트
+     */
+    public void updateGoal(MetricType metricType, Number goalValue) {
+        this.selectedMetricType = metricType;
+
+        switch (metricType) {
+            case STEPS -> this.goalSteps = goalValue.longValue();
+            case KCAL -> this.goalKcal = goalValue.floatValue();
+            case DURATION -> this.goalDuration = goalValue.intValue();
+            case DISTANCE -> this.goalDistance = goalValue.floatValue();
+        }
+    }
 }
