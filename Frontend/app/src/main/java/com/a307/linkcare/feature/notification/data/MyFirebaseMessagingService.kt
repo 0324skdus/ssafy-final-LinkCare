@@ -24,10 +24,12 @@ import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -38,6 +40,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.*
 
+@AndroidEntryPoint
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @EntryPoint
@@ -53,6 +56,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         fun stepReader(): StepReader
         fun activitySummaryReader(): ActivitySummaryReader
     }
+
+    @Inject
+    lateinit var notificationEventManager: NotificationEventManager
 
     companion object {
         private const val TAG = "FCMService"
@@ -211,17 +217,36 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendNewNotificationBroadcast() {
-        val intent = Intent(ACTION_NEW_NOTIFICATION)
+        // SharedFlow를 사용한 이벤트 전송
+        serviceScope.launch {
+            notificationEventManager.notifyNewNotification()
+            Log.d(TAG, "새 알림 이벤트 전송 (SharedFlow)")
+        }
+
+        // 기존 브로드캐스트도 유지 (호환성)
+        val intent = Intent(ACTION_NEW_NOTIFICATION).apply {
+            setPackage(packageName)
+        }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-        Log.d(TAG, "새 알림 브로드캐스트 전송")
+        sendBroadcast(intent)
+        Log.d(TAG, "새 알림 브로드캐스트 전송 (Backup)")
     }
 
     private fun sendGroupJoinedBroadcast(groupType: String?) {
+        // SharedFlow를 사용한 이벤트 전송
+        serviceScope.launch {
+            notificationEventManager.notifyNewNotification()
+            Log.d(TAG, "그룹 가입 이벤트 전송 (SharedFlow): $groupType")
+        }
+
+        // 기존 브로드캐스트도 유지 (호환성)
         val intent = Intent(ACTION_GROUP_JOINED).apply {
             putExtra(EXTRA_GROUP_TYPE, groupType ?: "")
+            setPackage(packageName)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-        Log.d(TAG, "그룹 가입 브로드캐스트 전송: $groupType")
+        sendBroadcast(intent)
+        Log.d(TAG, "그룹 가입 브로드캐스트 전송 (Backup): $groupType")
     }
 
     /**
