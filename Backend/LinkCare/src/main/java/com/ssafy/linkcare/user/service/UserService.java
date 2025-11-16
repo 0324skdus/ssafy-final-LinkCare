@@ -1,11 +1,15 @@
 package com.ssafy.linkcare.user.service;
 
+import com.ssafy.linkcare.background.entity.UserBackground;
 import com.ssafy.linkcare.character.entity.Character;
 import com.ssafy.linkcare.character.entity.UserCharacter;
 import com.ssafy.linkcare.character.repository.CharacterRepository;
 import com.ssafy.linkcare.character.repository.UserCharacterRepository;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.point.service.PointService;
+import com.ssafy.linkcare.s3.S3Service;
+import com.ssafy.linkcare.user.dto.MyPageResponseDto;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
 import com.ssafy.linkcare.user.dto.UserProfileResponse;
 import com.ssafy.linkcare.user.entity.User;
@@ -25,6 +29,37 @@ public class UserService {
     private final UserRepository userRepository;
     private final CharacterRepository characterRepository;
     private final UserCharacterRepository userCharacterRepository;
+    private final PointService pointService;
+    private final S3Service s3Service;
+
+    public MyPageResponseDto getMyPageInfo(Long userPk) {
+        User user = userRepository.findById(userPk)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 포인트 조회
+        int points = pointService.getPointBalance(userPk);
+
+        // 메인 캐릭터 이미지 URL 조회
+        String mainCharacterImageUrl = null;
+        UserCharacter mainCharacter = user.getMainCharacter();
+        if (mainCharacter != null && mainCharacter.getCharacter() != null) {
+            mainCharacterImageUrl = s3Service.generatePresignedGetUrl(mainCharacter.getCharacter().getBaseImageS3Key());
+        }
+
+        // 메인 배경 이미지 URL 조회
+        String mainBackgroundImageUrl = null;
+        UserBackground mainBackground = user.getMainBackground();
+        if (mainBackground != null && mainBackground.getBackground() != null) {
+            mainBackgroundImageUrl = s3Service.generatePresignedGetUrl(mainBackground.getBackground().getS3Key());
+        }
+
+        return MyPageResponseDto.builder()
+                .name(user.getName())
+                .points(points)
+                .mainCharacterImageUrl(mainCharacterImageUrl)
+                .mainBackgroundImageUrl(mainBackgroundImageUrl)
+                .build();
+    }
 
     @Transactional
     public void completeInitialSetup(Long userPk, Long characterId, String petName) {
@@ -84,14 +119,6 @@ public class UserService {
         log.info("프로필 업데이트 완료: userId={}, birth={}", userPk, request.birth());
     }
 
-    public User getUserById(Long userPk) {
-        return userRepository.findById(userPk)
-            .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    /**
-     * 사용자 프로필 조회
-     */
     public UserProfileResponse getUserProfile(Long userPk) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
