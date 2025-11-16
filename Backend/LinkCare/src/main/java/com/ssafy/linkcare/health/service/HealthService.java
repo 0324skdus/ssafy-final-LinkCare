@@ -46,7 +46,7 @@ public class HealthService {
 
 
     private final ObjectMapper objectMapper;
-    private TimeStampUtil timeStampUtil;
+    private final TimeStampUtil timeStampUtil;
 
     // 전체 데이터 동기화 (초기 1회)
     public void syncAllHealthData(AllHealthDataDto dto, int userSeq) {
@@ -133,6 +133,22 @@ public class HealthService {
         return TotalActivityStatisticsResponse.builder()
                 .totalCalories(activitySummaryStaticsResponse.getTotalCalories())
                 .totalDuration(exerciseStatisticsResponse.getTotalDuration())
+                .totalSteps(totalSteps)
+                .build();
+    }
+
+    public HealthActualActivityResponse getHealthActualActivity(int userSeq, LocalDate startDate, LocalDate endDate) {
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        ActivitySummaryStaticsResponse activitySummaryStaticsResponse = activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate);
+        ExerciseStatisticsResponse exerciseStatisticsResponse = exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate);
+        Long totalSteps = stepService.getStepStatisticsByDate(userSeq, startDate, endDate).getTotalSteps();
+
+        return HealthActualActivityResponse.builder()
+                .totalCalories(activitySummaryStaticsResponse.getTotalCalories())
+                .totalDuration(exerciseStatisticsResponse.getTotalDuration())
+                .totalDistances(exerciseStatisticsResponse.getTotalDistance())
                 .totalSteps(totalSteps)
                 .build();
     }
