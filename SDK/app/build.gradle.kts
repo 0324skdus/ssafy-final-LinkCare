@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.parcelize)
+    id("com.google.gms.google-services")  // 추가!
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
 }
@@ -79,4 +80,10 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging)
+
+    // Firebase BOM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+
+    // Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-messaging-ktx")
 }

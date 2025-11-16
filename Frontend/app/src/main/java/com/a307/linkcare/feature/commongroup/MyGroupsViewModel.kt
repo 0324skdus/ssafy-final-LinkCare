@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
+import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
 
 
 @HiltViewModel
@@ -32,13 +35,19 @@ class MyGroupsViewModel @Inject constructor(
 
     fun loadCare() {
         viewModelScope.launch {
-            _careGroups.value = repo.getMyGroups("CARE")
+            android.util.Log.d("MyGroupsViewModel", "케어 그룹 목록 로드 시작")
+            val groups = repo.getMyGroups("CARE")
+            _careGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "케어 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 
     fun loadHealth() {
         viewModelScope.launch {
-            _healthGroups.value = repo.getMyGroups("HEALTH")
+            android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 시작")
+            val groups = repo.getMyGroups("HEALTH")
+            _healthGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 
@@ -58,5 +67,42 @@ class MyGroupsViewModel @Inject constructor(
     val groupName = detail
         .map { it?.groupName ?: "" }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    // 초대 링크 생성
+    suspend fun createInvitationLink(groupSeq: Long): Result<String> {
+        return try {
+            val result = repo.createInvitation(groupSeq)
+            result.map { invitation ->
+                // 커스텀 스킴 사용 (앱에서만 열림)
+                "linkcare://invite/${invitation.invitationToken}"
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // 그룹 이번주 운동 통계
+    private val _totalActivityStats =
+        MutableStateFlow<GroupTotalActivityStats?>(null)
+    val totalActivityStats: StateFlow<GroupTotalActivityStats?> =
+        _totalActivityStats.asStateFlow()
+
+    fun loadTotalActivityStats(
+        groupSeq: Long,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                repo.getTotalActivityStats(
+                    groupSeq, startDate, endDate
+                )
+            }.onSuccess {
+                _totalActivityStats.value = it
+            }.onFailure {
+                _totalActivityStats.value = null
+            }
+        }
+    }
 }
 

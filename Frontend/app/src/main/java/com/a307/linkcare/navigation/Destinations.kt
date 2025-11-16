@@ -45,6 +45,17 @@ sealed class Route(val route: String) {
         const val HealthSearch = "health/search"
     }
 
+    /** 초대 링크 미리보기 */
+    object InvitationPreview : Route("invitation/{token}") {
+        const val ARG_TOKEN = "token"
+
+        val arguments = listOf(
+            navArgument(ARG_TOKEN) { type = NavType.StringType }
+        )
+
+        fun withArgs(token: String) = "invitation/$token"
+    }
+
     /** 그룹 수정 (id 인자 전달용) */
     object EditCareGroup : Route("care/edit_care_group/{groupId}") {
         const val ARG_GROUP_ID = "groupId"

@@ -1,5 +1,6 @@
 package com.ssafy.sdk.health.data.remote
 
+import com.ssafy.sdk.health.data.model.ExerciseData
 import com.ssafy.sdk.health.domain.sync.AllHealthData
 import com.ssafy.sdk.health.domain.sync.DailyHealthData
 import retrofit2.Response
@@ -48,6 +49,16 @@ interface HealthApiService {
     suspend fun uploadUserAllHealthData(
         @Path("userId") userId: Int,
         @Body data: AllHealthData
+    ): Response<ApiResponse<Unit>>
+
+    /**
+     * 운동 데이터만 전송 (워치 병합용)
+     * POST /api/health/users/{userId}/exercise-sync
+     */
+    @POST("api/health/sync/users/{userId}/exercise-sync")
+    suspend fun uploadExerciseOnly(
+        @Path("userId") userId: Int,
+        @Body exercises: ExerciseData
     ): Response<ApiResponse<Unit>>
 }
 

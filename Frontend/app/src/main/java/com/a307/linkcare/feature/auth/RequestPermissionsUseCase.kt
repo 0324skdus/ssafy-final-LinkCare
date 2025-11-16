@@ -1,12 +1,17 @@
 package com.a307.linkcare.feature.auth
 
+import android.app.Activity
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import com.a307.linkcare.feature.auth.data.HealthPermissions
+import com.samsung.android.sdk.health.data.HealthDataStore
+import com.samsung.android.sdk.health.data.error.HealthDataException
 import javax.inject.Inject
 
 class RequestPermissionsUseCase @Inject constructor(
-    private val client: HealthConnectClient
+    private val client: HealthConnectClient,
+    private val healthDataStore: HealthDataStore
+
 ) {
     /**
      * 현재 부여되지 않은(요청이 필요한) 권한 Set을 돌려준다.
@@ -16,4 +21,15 @@ class RequestPermissionsUseCase @Inject constructor(
         val granted: Set<String> = client.permissionController.getGrantedPermissions()
         return HealthPermissions.permissions - granted
     }
+
+    @Throws(HealthDataException::class)
+    suspend operator fun invoke(activity: Activity): Boolean {
+        return try {
+            val result = healthDataStore.requestPermissions(Permissions.PERMISSIONS, activity)
+            result.containsAll(Permissions.PERMISSIONS)
+        } catch (e: HealthDataException) {
+            throw e
+        }
+    }
+
 }

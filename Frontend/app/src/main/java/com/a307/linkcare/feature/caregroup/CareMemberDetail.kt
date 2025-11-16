@@ -38,43 +38,56 @@ import kotlin.math.roundToInt
 /* ---------- 모델 ---------- */
 
 data class BloodPressure(
-    val time: String,
-    val sys: Int,
-    val dia: Int
+    val bloodPressureId: Int = 0,
+    val uid: String = "",
+    val startTime: String = "",
+    val systolic: Float = 0f,
+    val diastolic: Float = 0f,
+    val mean: Float = 0f,
+    val pulseRate: Int = 0
 )
 
-data class GlucoseLog(
-    val time: String,
-    val mgDl: Int,
-    val memo: String? = null  // "식전", "식후" 등
+data class WaterIntake(
+    val waterIntakeId: Int = 0,
+    val startTime: String = "",
+    val amount: Float = 0f
 )
 
-data class WaterLog(
-    val time: String,
-    val amountMl: Int
+data class Sleep(
+    val sleepId: Int = 0,
+    val startTime: String = "",
+    val endTime: String = "",
+    val duration: Int = 0  // 분 단위
 )
 
-data class SleepSession(
-    val startTime: String,
-    val endTime: String
+data class ExerciseSession(
+    val startTime: String = "",
+    val endTime: String = "",
+    val distance: Float = 0f,  // meter
+    val calories: Float = 0f,
+    val meanPulseRate: Float = 0f,
+    val duration: Long = 0  // 초 단위
 )
 
-data class ActivitySession(
-    val sessionId: String,
-    val avgHeartRate: Int,
-    val calories: Int,
-    val distance: Int,  // meter
-    val durationSec: Int,
-    val timestamp: Long
+data class DailyActivitySummary(
+    val exercises: List<ExerciseSession> = emptyList(),
+    val steps: Int = 0
+)
+
+data class HeartRate(
+    val heartRateId: Int = 0,
+    val startTime: String = "",
+    val endTime: String = "",
+    val heartRate: Double = 0.0
 )
 
 data class HealthToday(
     val bloodPressures: List<BloodPressure> = emptyList(),
-    val glucoseLogs: List<GlucoseLog> = emptyList(),
-    val waterLogs: List<WaterLog> = emptyList(),
+    val waterIntakes: List<WaterIntake> = emptyList(),
     val waterGoalMl: Int = 2000,
-    val sleepSessions: List<SleepSession> = emptyList(),
-    val activitySessions: List<ActivitySession> = emptyList()
+    val sleeps: List<Sleep> = emptyList(),
+    val dailyActivitySummary: DailyActivitySummary? = null,
+    val heartRates: List<HeartRate> = emptyList()
 )
 
 @Composable
@@ -82,6 +95,7 @@ fun CareMemberDetail(
     member: Member,
     today: HealthToday,
     onDismiss: () -> Unit,
+    currentUserName: String = "나",
     maxWidth: Dp = 380.dp
 ) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -129,7 +143,7 @@ fun CareMemberDetail(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "000님의 오늘의 건강 정보",
+                                    "${currentUserName}님의 오늘의 건강 정보",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = white.copy(alpha = 0.9f)
                                 )
@@ -165,50 +179,56 @@ fun CareMemberDetail(
                             EmptyDataText()
                         } else {
                             today.bloodPressures.forEach { bp ->
-                                DetailRow("${bp.time}", "${bp.sys}/${bp.dia} mmHg")
+                                val time = if (bp.startTime.contains("T")) {
+                                    bp.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                                } else bp.startTime
+                                DetailRow(time, "${bp.systolic.toInt()}/${bp.diastolic.toInt()} mmHg")
                             }
                         }
                     }
 
                     // 혈당
-                    HealthAccordion(
-                        icon = "💉",
-                        title = "혈당",
-                        summary = getGlucoseSummary(today.glucoseLogs),
-                        status = getGlucoseStatus(today.glucoseLogs)
-                    ) {
-                        if (today.glucoseLogs.isEmpty()) {
-                            EmptyDataText()
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                today.glucoseLogs.forEach { log ->
-                                    DetailRow(
-                                        "${log.time}${log.memo?.let { " ($it)" } ?: ""}",
-                                        "${log.mgDl} mg/dL"
-                                    )
-                                }
-                            }
-                        }
-                    }
+//                    HealthAccordion(
+//                        icon = "💉",
+//                        title = "혈당",
+//                        summary = getGlucoseSummary(today.glucoseLogs),
+//                        status = getGlucoseStatus(today.glucoseLogs)
+//                    ) {
+//                        if (today.glucoseLogs.isEmpty()) {
+//                            EmptyDataText()
+//                        } else {
+//                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+//                                today.glucoseLogs.forEach { log ->
+//                                    DetailRow(
+//                                        "${log.time}${log.memo?.let { " ($it)" } ?: ""}",
+//                                        "${log.mgDl} mg/dL"
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
 
                     // 음수량
                     HealthAccordion(
                         icon = "💧",
                         title = "음수량",
-                        summary = getWaterSummary(today.waterLogs, today.waterGoalMl),
-                        status = getWaterStatus(today.waterLogs, today.waterGoalMl)
+                        summary = getWaterSummary(today.waterIntakes, today.waterGoalMl),
+                        status = getWaterStatus(today.waterIntakes, today.waterGoalMl)
                     ) {
-                        if (today.waterLogs.isEmpty()) {
+                        if (today.waterIntakes.isEmpty()) {
                             EmptyDataText()
                         } else {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                today.waterLogs.forEach { log ->
-                                    DetailRow("${log.time}", "${log.amountMl} mL")
+                                today.waterIntakes.forEach { intake ->
+                                    val time = if (intake.startTime.contains("T")) {
+                                        intake.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                                    } else intake.startTime
+                                    DetailRow(time, "${intake.amount.toInt()} mL")
                                 }
                                 Divider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 4.dp))
                                 DetailRow(
                                     "오늘 총 섭취",
-                                    "${today.waterLogs.sumOf { it.amountMl }} mL",
+                                    "${today.waterIntakes.sumOf { it.amount.toInt() }} mL",
                                     bold = true
                                 )
                                 DetailRow(
@@ -224,23 +244,29 @@ fun CareMemberDetail(
                     HealthAccordion(
                         icon = "😴",
                         title = "수면",
-                        summary = getSleepSummary(today.sleepSessions),
-                        status = getSleepStatus(today.sleepSessions)
+                        summary = getSleepSummary(today.sleeps),
+                        status = getSleepStatus(today.sleeps)
                     ) {
-                        if (today.sleepSessions.isEmpty()) {
+                        if (today.sleeps.isEmpty()) {
                             EmptyDataText()
                         } else {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                today.sleepSessions.forEachIndexed { idx, session ->
+                                today.sleeps.forEachIndexed { idx, sleep ->
+                                    val startTime = if (sleep.startTime.contains("T")) {
+                                        sleep.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                                    } else sleep.startTime
+                                    val endTime = if (sleep.endTime.contains("T")) {
+                                        sleep.endTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                                    } else sleep.endTime
                                     DetailRow(
-                                        if (today.sleepSessions.size > 1) "수면 ${idx + 1}" else "수면 시간",
-                                        "${session.startTime} ~ ${session.endTime}"
+                                        if (today.sleeps.size > 1) "수면 ${idx + 1}" else "수면 시간",
+                                        "$startTime ~ $endTime"
                                     )
                                 }
                                 Divider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 4.dp))
                                 DetailRow(
                                     "총 수면 시간",
-                                    getTotalSleepHours(today.sleepSessions),
+                                    getTotalSleepHours(today.sleeps),
                                     bold = true
                                 )
                             }
@@ -248,36 +274,44 @@ fun CareMemberDetail(
                     }
 
                     // 일일 활동
+                    val exercises = today.dailyActivitySummary?.exercises ?: emptyList()
                     HealthAccordion(
                         icon = "🏃",
                         title = "일일 활동",
-                        summary = getActivitySummary(today.activitySessions),
-                        status = getActivityStatus(today.activitySessions)
+                        summary = getActivitySummary(exercises, today.dailyActivitySummary?.steps ?: 0),
+                        status = getActivityStatus(exercises)
                     ) {
-                        if (today.activitySessions.isEmpty()) {
+                        if (exercises.isEmpty()) {
                             EmptyDataText()
                         } else {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                today.activitySessions.forEachIndexed { idx, session ->
+                                exercises.forEachIndexed { idx, session ->
                                     ActivitySessionCard(session, idx + 1)
                                 }
                                 Divider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 4.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     DetailRow(
                                         "총 칼로리 소모",
-                                        "${today.activitySessions.sumOf { it.calories }} kcal",
+                                        "${exercises.sumOf { it.calories.toInt() }} kcal",
                                         bold = true
                                     )
                                     DetailRow(
                                         "총 운동 시간",
-                                        formatTotalDuration(today.activitySessions.sumOf { it.durationSec }),
+                                        formatTotalDuration(exercises.sumOf { it.duration }),
                                         bold = true
                                     )
                                     DetailRow(
                                         "총 거리",
-                                        "${(today.activitySessions.sumOf { it.distance } / 1000f).round1()} km",
+                                        "${(exercises.sumOf { it.distance.toDouble() } / 1000).toFloat().round1()} km",
                                         bold = true
                                     )
+                                    today.dailyActivitySummary?.steps?.let { steps ->
+                                        DetailRow(
+                                            "걸음 수",
+                                            "$steps 걸음",
+                                            bold = true
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -308,7 +342,7 @@ fun CareMemberDetail(
                 if (showLetter) {
                     androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
                         NudgeLetterCard(
-                            sender = User("나", member.avatarRes),  // 실제 로그인 사용자 이름/아바타로 변경
+                            sender = User(currentUserName, member.avatarRes),
                             receiver = User(member.name, member.avatarRes),
                             suggestions = listOf(
                                 Suggestion(1, "오늘 컨디션 좋아 보여요!"),
@@ -423,7 +457,7 @@ private fun HealthAccordion(
 }
 
 @Composable
-private fun ActivitySessionCard(session: ActivitySession, index: Int) {
+private fun ActivitySessionCard(session: ExerciseSession, index: Int) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFF8F9FA),
@@ -444,12 +478,15 @@ private fun ActivitySessionCard(session: ActivitySession, index: Int) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MetricItem("칼로리", "${session.calories} kcal")
-                    MetricItem("평균 심박수", "${session.avgHeartRate} bpm")
+                    MetricItem("칼로리", "${session.calories.toInt()} kcal")
+                    MetricItem(
+                        "평균 심박수",
+                        if (session.meanPulseRate > 0) "${session.meanPulseRate.toInt()} bpm" else "-"
+                    )
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     MetricItem("거리", "${(session.distance / 1000f).round1()} km")
-                    MetricItem("시간", formatDuration(session.durationSec))
+                    MetricItem("시간", formatDuration(session.duration))
                 }
             }
         }
@@ -544,15 +581,15 @@ private fun StatusBadge(status: String) {
 
 private fun getBloodPressureSummary(bps: List<BloodPressure>): String {
     if (bps.isEmpty()) return "오늘 측정 기록이 없습니다"
-    val avgSys = bps.map { it.sys }.average().roundToInt()
-    val avgDia = bps.map { it.dia }.average().roundToInt()
+    val avgSys = bps.map { it.systolic }.average().roundToInt()
+    val avgDia = bps.map { it.diastolic }.average().roundToInt()
     return "평균 $avgSys/$avgDia mmHg (${bps.size}회 측정)"
 }
 
 private fun getBloodPressureStatus(bps: List<BloodPressure>): String? {
     if (bps.isEmpty()) return null
-    val avgSys = bps.map { it.sys }.average().roundToInt()
-    val avgDia = bps.map { it.dia }.average().roundToInt()
+    val avgSys = bps.map { it.systolic }.average().roundToInt()
+    val avgDia = bps.map { it.diastolic }.average().roundToInt()
     return when {
         avgSys < 120 && avgDia < 80 -> "정상"
         avgSys < 140 && avgDia < 90 -> "주의"
@@ -560,32 +597,32 @@ private fun getBloodPressureStatus(bps: List<BloodPressure>): String? {
     }
 }
 
-private fun getGlucoseSummary(logs: List<GlucoseLog>): String {
-    if (logs.isEmpty()) return "오늘 측정 기록이 없습니다"
-    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
-    return "평균 $avgGlucose mg/dL (${logs.size}회 측정)"
-}
+//private fun getGlucoseSummary(logs: List<GlucoseLog>): String {
+//    if (logs.isEmpty()) return "오늘 측정 기록이 없습니다"
+//    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
+//    return "평균 $avgGlucose mg/dL (${logs.size}회 측정)"
+//}
+//
+//private fun getGlucoseStatus(logs: List<GlucoseLog>): String? {
+//    if (logs.isEmpty()) return null
+//    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
+//    return when {
+//        avgGlucose < 100 -> "정상"
+//        avgGlucose < 126 -> "주의"
+//        else -> "위험"
+//    }
+//}
 
-private fun getGlucoseStatus(logs: List<GlucoseLog>): String? {
-    if (logs.isEmpty()) return null
-    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
-    return when {
-        avgGlucose < 100 -> "정상"
-        avgGlucose < 126 -> "주의"
-        else -> "위험"
-    }
-}
-
-private fun getWaterSummary(logs: List<WaterLog>, goalMl: Int): String {
-    if (logs.isEmpty()) return "오늘 기록이 없습니다"
-    val totalMl = logs.sumOf { it.amountMl }
+private fun getWaterSummary(intakes: List<WaterIntake>, goalMl: Int): String {
+    if (intakes.isEmpty()) return "오늘 기록이 없습니다"
+    val totalMl = intakes.sumOf { it.amount.toInt() }
     val percent = ((totalMl.toFloat() / goalMl) * 100).roundToInt()
     return "${(totalMl / 1000f).round1()} L 섭취 (목표의 $percent%)"
 }
 
-private fun getWaterStatus(logs: List<WaterLog>, goalMl: Int): String? {
-    if (logs.isEmpty()) return null
-    val totalMl = logs.sumOf { it.amountMl }
+private fun getWaterStatus(intakes: List<WaterIntake>, goalMl: Int): String? {
+    if (intakes.isEmpty()) return null
+    val totalMl = intakes.sumOf { it.amount.toInt() }
     return when {
         totalMl >= goalMl -> "양호"
         totalMl >= goalMl * 0.7f -> "적정"
@@ -593,15 +630,15 @@ private fun getWaterStatus(logs: List<WaterLog>, goalMl: Int): String? {
     }
 }
 
-private fun getSleepSummary(sessions: List<SleepSession>): String {
-    if (sessions.isEmpty()) return "오늘 수면 기록이 없습니다"
-    val totalHours = getTotalSleepHours(sessions)
-    return "$totalHours 수면 (${sessions.size}회)"
+private fun getSleepSummary(sleeps: List<Sleep>): String {
+    if (sleeps.isEmpty()) return "오늘 수면 기록이 없습니다"
+    val totalHours = getTotalSleepHours(sleeps)
+    return "$totalHours 수면 (${sleeps.size}회)"
 }
 
-private fun getSleepStatus(sessions: List<SleepSession>): String? {
-    if (sessions.isEmpty()) return null
-    val totalMin = calculateTotalSleepMinutes(sessions)
+private fun getSleepStatus(sleeps: List<Sleep>): String? {
+    if (sleeps.isEmpty()) return null
+    val totalMin = sleeps.sumOf { it.duration }
     val hours = totalMin / 60f
     return when {
         hours >= 7 && hours <= 9 -> "적정"
@@ -610,16 +647,20 @@ private fun getSleepStatus(sessions: List<SleepSession>): String? {
     }
 }
 
-private fun getActivitySummary(sessions: List<ActivitySession>): String {
-    if (sessions.isEmpty()) return "오늘 운동 기록이 없습니다"
-    val totalCalories = sessions.sumOf { it.calories }
-    val totalMin = sessions.sumOf { it.durationSec } / 60
-    return "${totalCalories} kcal 소모 (${totalMin}분)"
+private fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): String {
+    if (exercises.isEmpty() && steps == 0) return "오늘 운동 기록이 없습니다"
+    val totalCalories = exercises.sumOf { it.calories.toInt() }
+    val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
+    return if (exercises.isNotEmpty()) {
+        "${totalCalories} kcal 소모 (${totalMin}분)"
+    } else {
+        "$steps 걸음"
+    }
 }
 
-private fun getActivityStatus(sessions: List<ActivitySession>): String? {
-    if (sessions.isEmpty()) return null
-    val totalMin = sessions.sumOf { it.durationSec } / 60
+private fun getActivityStatus(exercises: List<ExerciseSession>): String? {
+    if (exercises.isEmpty()) return null
+    val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
     return when {
         totalMin >= 30 -> "양호"
         totalMin >= 15 -> "보통"
@@ -629,33 +670,25 @@ private fun getActivityStatus(sessions: List<ActivitySession>): String? {
 
 /* ---------- 유틸 함수 ---------- */
 
-private fun getTotalSleepHours(sessions: List<SleepSession>): String {
-    val totalMin = calculateTotalSleepMinutes(sessions)
-    val hours = totalMin / 60
-    val mins = totalMin % 60
+private fun getTotalSleepHours(sleeps: List<Sleep>): String {
+    val totalSeconds = sleeps.sumOf { it.duration } / 1000  // 밀리초 → 초
+    val totalMinutes = totalSeconds / 60  // 초 → 분
+    val hours = totalMinutes / 60
+    val mins = totalMinutes % 60
     return "${hours}시간 ${mins}분"
 }
 
-private fun calculateTotalSleepMinutes(sessions: List<SleepSession>): Int {
-    return sessions.sumOf { session ->
-        val (startH, startM) = session.startTime.split(":").map { it.toInt() }
-        val (endH, endM) = session.endTime.split(":").map { it.toInt() }
-        var startMin = startH * 60 + startM
-        var endMin = endH * 60 + endM
-        if (endMin < startMin) endMin += 24 * 60
-        endMin - startMin
-    }
-}
-
-private fun formatDuration(seconds: Int): String {
-    val min = seconds / 60
-    val sec = seconds % 60
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val min = totalSeconds / 60
+    val sec = totalSeconds % 60
     return "${min}분 ${sec}초"
 }
 
-private fun formatTotalDuration(seconds: Int): String {
-    val hours = seconds / 3600
-    val min = (seconds % 3600) / 60
+private fun formatTotalDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val min = (totalSeconds % 3600) / 60
     return if (hours > 0) "${hours}시간 ${min}분" else "${min}분"
 }
 

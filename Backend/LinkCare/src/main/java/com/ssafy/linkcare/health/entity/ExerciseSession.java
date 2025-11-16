@@ -29,10 +29,10 @@ public class ExerciseSession {
     private String exerciseType;
 
     @Column(name = "calories")
-    private float calories;
+    private Float calories;
 
     @Column(name = "distance")
-    private float distance;
+    private Float distance;
 
     @Column(name = "duration")
     private Long duration;

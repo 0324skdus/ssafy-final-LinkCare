@@ -103,4 +103,26 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Integer> {
             @Param("startTime") Long startTime,
             @Param("endTime") Long endTime
     );
+
+    /**
+     * 특정 시간대에 겹치는 운동 찾기
+     * (±2분 여유)
+     */
+    @Query("SELECT e FROM Exercise e " +
+            "WHERE e.user = :user " +
+            "AND e.startTime <= :endWindow " +
+            "AND e.endTime >= :startWindow")
+    List<Exercise> findByUserAndStartTimeBetween(
+            @Param("user") User user,
+            @Param("startWindow") Long startWindow,
+            @Param("endWindow") Long endWindow
+    );
+
+    /**
+     * 워치 데이터만 조회 (sessionId 있는 것)
+     */
+    @Query("SELECT e FROM Exercise e " +
+            "WHERE e.user = :user " +
+            "AND e.sessionId IS NOT NULL")
+    List<Exercise> findWatchExercisesByUser(@Param("user") User user);
 }

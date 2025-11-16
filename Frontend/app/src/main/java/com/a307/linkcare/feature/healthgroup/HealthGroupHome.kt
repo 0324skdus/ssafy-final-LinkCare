@@ -3,12 +3,10 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.os.Build
-import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,6 +81,7 @@ fun HealthGroupHome(
 
     val detail by vm.detail.collectAsState()   // 전체 그룹 상세 정보
     val membersResponse = detail?.members ?: emptyList()
+    val totalStats by vm.totalActivityStats.collectAsState()
 
     val members = remember(membersResponse) {
         membersResponse.map { m ->
@@ -107,7 +105,7 @@ fun HealthGroupHome(
 
     val leader = remember(members) {
         members.firstOrNull { it.isLeader } ?: members.firstOrNull()
-        ?: Member("나", 0, 0, R.drawable.char_bear_1, "", isLeader = true)
+        ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
 
     val today = remember { LocalDate.now() }
@@ -127,8 +125,21 @@ fun HealthGroupHome(
     }
     val percentText = ((todayGroupPercent * 100).toInt()).coerceIn(0, 100)
 
-    val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
-    val onNextDay = { selectedDate = selectedDate.plusDays(1) }
+    val onPrevDay = {
+        selectedDate = clampDate(
+            selectedDate.minusDays(1),
+            minDate,
+            today
+        )
+    }
+
+    val onNextDay = {
+        selectedDate = clampDate(
+            selectedDate.plusDays(1),
+            minDate,
+            today
+        )
+    }
 
     val year = selectedDate.year
     val month = selectedDate.monthValue
@@ -139,6 +150,14 @@ fun HealthGroupHome(
 
     LaunchedEffect(selectedDate, weekMembers) {
         todayMembers = weekMembers
+    }
+
+    LaunchedEffect(groupSeq, selectedDate) {
+        vm.loadTotalActivityStats(
+            groupSeq = groupSeq,
+            startDate = selectedDate.startOfWeek(),
+            endDate = selectedDate.endOfWeek()
+        )
     }
 
     val dpState = rememberDatePickerState(
@@ -212,8 +231,8 @@ fun HealthGroupHome(
                     )
                 }
 
-                itemsIndexed(todayMembers, key = { _, item -> item.name }) { index, m ->
-                    MemberRow(
+                itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                    MemberRowHealth(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
@@ -230,8 +249,20 @@ fun HealthGroupHome(
                     Spacer(Modifier.height(12.dp))
                     DatePagerRow(
                         label = "${selectedDate.year}년 ${selectedDate.monthValue}월 ${selectedDate.weekOfMonth()}주차",
-                        onPrev = { selectedDate = selectedDate.minusWeeks(1) },
-                        onNext = { selectedDate = selectedDate.plusWeeks(1) }
+                        onPrev = {
+                            selectedDate = clampDate(
+                                selectedDate.minusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        },
+                        onNext = {
+                            selectedDate = clampDate(
+                                selectedDate.plusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        }
                     )
                 }
 
@@ -261,12 +292,21 @@ fun HealthGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
-                    SummaryChipList(
-                        items = listOf(
-                            "🔥 10043 kcal 태웠어요",
-                            "👣 10043 걸음 걸었어요",
-                            "⏱️ 10043 시간 운동했어요"
+                    val summaryChips = remember(totalStats) {
+                        val calories = totalStats?.totalCalories ?: 0.0
+                        val steps = totalStats?.totalSteps ?: 0
+                        val durationSec = totalStats?.totalDuration ?: 0
+                        val formattedDuration = formatDuration(durationSec)
+
+                        listOf(
+                            "🔥 ${calories.toInt()} kcal 태웠어요",
+                            "👣 ${steps} 걸음 걸었어요",
+                            "⏱️ ${formattedDuration} 운동했어요"
                         )
+                    }
+
+                    SummaryChipList(
+                        items = summaryChips
                     )
                 }
             }
@@ -464,5 +504,32 @@ private fun GoalEditSheet(
 
             Spacer(Modifier.height(20.dp))
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+private fun clampDate(
+    date: LocalDate,
+    min: LocalDate,
+    max: LocalDate
+): LocalDate = when {
+    date.isBefore(min) -> min
+    date.isAfter(max) -> max
+    else -> date
+}
+
+fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return "0 초"
+
+    val h = seconds / 3600                  // 시간
+    val m = (seconds % 3600) / 60           // 분
+    val s = seconds % 60                    // 초
+
+    return when {
+        h > 0 && m > 0 -> "${h} 시간 ${m} 분"
+        h > 0 && m == 0 -> "${h} 시간"
+        m > 0 && s > 0 -> "${m} 분 ${s} 초"
+        m > 0 && s == 0 -> "${m} 분"
+        else -> "${s} 초"
     }
 }

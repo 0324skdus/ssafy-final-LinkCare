@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -109,6 +110,15 @@ public class ActivitySummaryService {
         ActivitySummary activitySummary = activitySummaryRepository
                         .findByUserAndStartTime(user, startTimeTs)
                         .orElse(null);
+
+        if(activitySummary == null) {
+            return ActivitySummaryResponse.builder()
+                    .startTime(timeStampUtil.toLocalDateTime(startTimeTs))
+                    .totalCaloriesBurned(0)
+                    .totalDistance(0)
+                    .build();
+        }
+
         return convertToResponse(activitySummary);
     }
 
