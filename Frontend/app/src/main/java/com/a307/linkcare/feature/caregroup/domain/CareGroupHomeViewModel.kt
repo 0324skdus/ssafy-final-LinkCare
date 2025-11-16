@@ -67,4 +67,19 @@ class CareGroupHomeViewModel @Inject constructor(
             }
         }
     }
+
+    // 💤 수면 통계 저장 (StateFlow)
+    private val _sleepStatistics = MutableStateFlow<SleepStatisticsResponse?>(null)
+    val sleepStatistics: StateFlow<SleepStatisticsResponse?> = _sleepStatistics
+
+    fun loadSleepStatistics(groupSeq: Long, start: LocalDate, end: LocalDate) {
+        viewModelScope.launch {
+            try {
+                val res = repo.fetchWeeklySleepStatistics(groupSeq, start, end)
+                _sleepStatistics.value = res
+            } catch (e: Exception) {
+                _sleepStatistics.value = null
+            }
+        }
+    }
 }

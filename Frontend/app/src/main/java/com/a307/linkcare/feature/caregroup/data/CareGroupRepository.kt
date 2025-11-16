@@ -64,4 +64,7 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
 
     suspend fun fetchWeeklyHeader(groupSeq: Long, today: LocalDate?)
             = api.getWeeklyHeader(groupSeq, today)
+
+    suspend fun fetchWeeklySleepStatistics(groupSeq: Long, startDate: LocalDate, endDate: LocalDate)
+            = api.getWeeklySleepStatistics(groupSeq, startDate, endDate)
 }

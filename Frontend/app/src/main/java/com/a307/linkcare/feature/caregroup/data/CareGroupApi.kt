@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.caregroup.domain.CareGroupResponse
 import com.a307.linkcare.feature.caregroup.domain.DailyHealthDetailResponse
+import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.feature.caregroup.domain.WeeklyHeaderResponse
 import retrofit2.Response
 import okhttp3.MultipartBody
@@ -39,4 +40,11 @@ interface CareGroupApi {
         @Path("groupSeq") groupSeq: Long,
         @Query("today") today: LocalDate?
     ): WeeklyHeaderResponse
+
+    @GET("/api/groups/{groupSeq}/sleep-statistics")
+    suspend fun getWeeklySleepStatistics(
+        @Path("groupSeq") groupSeq: Long,
+        @Query("startDate") startDate: LocalDate,
+        @Query("endDate") endDate: LocalDate
+    ): SleepStatisticsResponse
 }
