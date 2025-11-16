@@ -143,7 +143,7 @@ fun CareMemberDetail(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "${currentUserName}님의 오늘의 건강 정보",
+                                    "${member.name}님의 오늘의 건강 정보",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = white.copy(alpha = 0.9f)
                                 )
