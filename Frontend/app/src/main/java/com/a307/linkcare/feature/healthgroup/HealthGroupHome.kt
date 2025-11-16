@@ -149,6 +149,7 @@ fun HealthGroupHome(
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
     var goalInput by rememberSaveable { mutableStateOf(if (currentGoal != null) currentGoal.toString() else "") }
     var goalError by rememberSaveable { mutableStateOf<String?>(null) }
+    var currentMetricType by rememberSaveable { mutableStateOf(MetricType.STEPS) }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
         Box(modifier = modifier.fillMaxSize()) {
@@ -159,7 +160,7 @@ fun HealthGroupHome(
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleRow(
                         title = "$todayGroupProgress",
-                        subtitle = "목표 ${if (totalGroupGoal > 0) totalGroupGoal else "미설정"} 까지\n${percentText}% 달성했어요",
+                        subtitle = "목표 ${if (totalGroupGoal > 0) "$totalGroupGoal${currentMetricType.unit}" else "미설정"}까지\n${percentText}% 달성했어요",
                         onEditClick = {
                             if (!isLeader) {
                                 scope.launch { snackbar.showSnackbar("그룹장만 목표를 수정할 수 있어요.") }
@@ -287,12 +288,13 @@ fun HealthGroupHome(
                 GoalEditSheet(
                     initialText = goalInput,
                     errorText = goalError,
+                    initialMetric = currentMetricType,
                     onTextChange = {
                         goalInput = it
                         goalError = null
                     },
                     onDismiss = { showGoalSheet = false },
-                    onSave = {
+                    onSave = { selectedMetric ->
                         val value = goalInput.trim()
                         val parsed = value.toIntOrNull()
                         when {
@@ -301,6 +303,7 @@ fun HealthGroupHome(
                             parsed < 1000 -> goalError = "최소 1,000 이상을 권장해요."
                             else -> {
                                 totalGroupGoal = parsed
+                                currentMetricType = selectedMetric
                                 onSaveGoal(parsed) // 실제 저장 콜백 (API)
                                 showGoalSheet = false
                                 scope.launch { snackbar.showSnackbar("목표가 저장되었어요.") }
@@ -385,15 +388,31 @@ fun HeaderCard(
     }
 }
 
+// 메트릭 타입 enum
+enum class MetricType(
+    val displayName: String,
+    val unit: String,
+    val icon: String,
+    val placeholder: String
+) {
+    STEPS("걸음수", "걸음", "👣", "20000"),
+    CALORIES("칼로리", "kcal", "🔥", "200"),
+    EXERCISE_TIME("운동시간", "분", "⏱️", "20"),
+    DISTANCE("운동거리", "km", "🏃", "5")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalEditSheet(
     initialText: String,
     errorText: String?,
+    initialMetric: MetricType,
     onTextChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: () -> Unit
+    onSave: (MetricType) -> Unit
 ) {
+    var selectedMetric by remember { mutableStateOf(initialMetric) }
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -405,15 +424,54 @@ private fun GoalEditSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Text("그룹 목표 설정", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = black)
-            Spacer(Modifier.height(10.dp))
+            // 제목 + 새로고침 버튼
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("그룹 목표 설정", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = black)
+                IconButton(onClick = {
+                    // TODO: 새로고침 로직 추가 여기에
+                }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "새로고침", tint = main)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
 
+            // 메트릭 선택 버튼
+            Text("측정 항목", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF666666))
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MetricType.values().forEach { metric ->
+                    MetricButton(
+                        metric = metric,
+                        isSelected = selectedMetric == metric,
+                        onClick = { selectedMetric = metric },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // 목표 입력 필드
             OutlinedTextField(
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFCCCCCC),
+                    unfocusedBorderColor = Color(0xFFCCCCCC),
+
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+
                 value = initialText,
                 onValueChange = onTextChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("목표 걸음수(예: 20000)") },
-                placeholder = { Text("숫자만 입력") },
+                label = { Text("목표 ${selectedMetric.displayName}") },
+                suffix = { Text(selectedMetric.unit) },
                 singleLine = true,
                 trailingIcon = {
                     if (initialText.isNotEmpty()) {
@@ -439,7 +497,7 @@ private fun GoalEditSheet(
                 ) { Text("취소") }
 
                 Button(
-                    onClick = onSave,
+                    onClick = { onSave(selectedMetric) },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = main, contentColor = white),
                     shape = RoundedCornerShape(10.dp)
@@ -447,6 +505,38 @@ private fun GoalEditSheet(
             }
 
             Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun MetricButton(
+    metric: MetricType,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) main else Color.White,
+            contentColor = if (isSelected) white else Color(0xFF666666)
+        ),
+        shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(vertical = 12.dp, horizontal = 8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(metric.icon, fontSize = 18.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                metric.displayName,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            )
         }
     }
 }
