@@ -7,10 +7,22 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.a307.linkcare.MainActivity
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.auth.data.ProfileApi
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -18,15 +30,68 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         private const val TAG = "FCMService"
         private const val CHANNEL_ID = "linkcare_notification_channel"
         private const val CHANNEL_NAME = "LinkCare 알림"
+        const val ACTION_GROUP_JOINED = "com.a307.linkcare.GROUP_JOINED"
+        const val EXTRA_GROUP_TYPE = "group_type"
+        private const val BASE_URL = "http://k13a307.p.ssafy.io:9090/"
     }
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     // 새로운 FCM 토큰이 생성되었을 때 호출됨
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "새로운 FCM 토큰 생성: $token")
 
-        // TODO: 여기서 토큰을 백엔드 서버로 전송해야 함
-        // sendTokenToServer(token)
+        // 백엔드 서버로 토큰 전송
+        sendTokenToServer(token)
+    }
+
+    private fun sendTokenToServer(token: String) {
+        serviceScope.launch {
+            try {
+                val tokenStore = TokenStore(applicationContext)
+                val accessToken = tokenStore.getAccess()
+
+                if (accessToken.isNullOrEmpty()) {
+                    Log.w(TAG, "액세스 토큰이 없어 FCM 토큰 전송 불가")
+                    return@launch
+                }
+
+                // Retrofit 인스턴스 생성
+                val client = OkHttpClient.Builder()
+                    .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
+                    .addInterceptor { chain ->
+                        val request = chain.request().newBuilder()
+                            .addHeader("Authorization", "Bearer $accessToken")
+                            .build()
+                        chain.proceed(request)
+                    }
+                    .build()
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(BASE_URL)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(ProfileApi::class.java)
+                val response = api.updateFcmToken(UpdateFcmTokenRequest(token))
+
+                if (response.isSuccessful) {
+                    Log.i(TAG, "FCM 토큰 서버 전송 성공")
+                } else {
+                    Log.e(TAG, "FCM 토큰 서버 전송 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "FCM 토큰 서버 전송 중 에러: ${e.message}", e)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceJob.cancel()
     }
 
     // 푸시 알림을 받았을 때 호출됨
@@ -38,6 +103,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // 알림 데이터가 있는 경우
         if (message.data.isNotEmpty()) {
             Log.d(TAG, "알림 데이터: ${message.data}")
+
+            // 알림 타입 확인
+            val notificationType = message.data["type"]
+            val groupType = message.data["groupType"]
+
+            // GROUP_JOIN_APPROVED 알림인 경우 자동 새로고침
+            if (notificationType == "GROUP_JOIN_APPROVED") {
+                Log.d(TAG, "그룹 가입 승인 알림 수신, 자동 새로고침 트리거")
+                sendGroupJoinedBroadcast(groupType)
+            }
         }
 
         // 알림 메시지가 있는 경우
@@ -48,6 +123,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             // 알림 표시
             showNotification(it.title, it.body)
         }
+    }
+
+    private fun sendGroupJoinedBroadcast(groupType: String?) {
+        val intent = Intent(ACTION_GROUP_JOINED).apply {
+            putExtra(EXTRA_GROUP_TYPE, groupType ?: "")
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        Log.d(TAG, "그룹 가입 브로드캐스트 전송: $groupType")
     }
 
     private fun showNotification(title: String?, body: String?) {

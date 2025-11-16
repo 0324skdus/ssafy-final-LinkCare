@@ -22,7 +22,7 @@ public class BloodPressureController {
     private final BloodPressureService bloodPressureService;
 
     @GetMapping("/stats/{userSeq}")
-    @Operation(summary = "기간별 혈압 통계 조회", description = "특정 기간의 평균 수축기/이완기 혈압을 조회합니다")
+    @Operation(summary = "기간별 혈압 통계 조회", description = "특정 기간의 평균,최고,최저 수축기/이완기 혈압을 조회합니다")
     public ResponseEntity<BloodPressureStaticsResponse> getBloodPressureStats(
             @PathVariable int userSeq,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,

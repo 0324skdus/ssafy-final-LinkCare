@@ -16,8 +16,15 @@ public class BloodPressureStaticsResponse {
 
     private LocalDate startDate;
     private LocalDate endDate;
+
+    // 최고
+    private Double maxSystolic;
     private Double maxDiastolic;
+
+    // 최저
+    private Double minSystolic;
     private Double minDiastolic;
+
     private Double avgDiastolic;
     private Double avgSystolic;
 

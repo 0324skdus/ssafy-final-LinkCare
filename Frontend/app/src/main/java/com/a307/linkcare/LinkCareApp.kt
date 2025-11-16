@@ -10,17 +10,14 @@ import com.a307.linkcare.R
 import com.kakao.sdk.common.KakaoSdk
 import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
-
+import com.a307.linkcare.feature.auth.data.RetrofitClient
 @HiltAndroidApp
 class LinkCareApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
+        RetrofitClient.init(this)
         KakaoSdk.init(this, getString(R.string.kakao_native_app_key))
-
-        // KeyHash 출력 (카카오 콘솔 등록용)
-        printKeyHash()
     }
 
     private fun printKeyHash() {

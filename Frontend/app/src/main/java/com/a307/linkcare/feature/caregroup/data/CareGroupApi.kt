@@ -1,23 +1,28 @@
 package com.a307.linkcare.feature.caregroup.data
 
-import com.a307.linkcare.feature.commongroup.domain.Member
-import java.time.LocalDate
+import com.a307.linkcare.feature.caregroup.domain.CareGroupResponse
+import retrofit2.Response
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.*
 
-object CareGroupApi {
-    suspend fun getWeekData(
-        year: Int,
-        month: Int,
-        weekOfMonth: Int,
-        start: LocalDate,
-        end: LocalDate
-    ): List<Member> {
-        // 서버에선 start~end(일~토) 범위를 쓰는 게 안전
-        // TODO: 실제 통신
-        return emptyList()
-    }
 
-    suspend fun getDayData(date: LocalDate): List<Member> {
-        // TODO: 실제 통신
-        return emptyList()
-    }
+interface CareGroupApi {
+
+    @Multipart
+    @POST("/api/groups/care")
+    suspend fun createCareGroup(
+        @Header("Authorization") token: String,
+
+        @Part("groupName") groupName: RequestBody,
+        @Part("groupDescription") description: RequestBody,
+        @Part("capacity") capacity: RequestBody,
+        @Part("isSleepAllowed") isSleepAllowed: RequestBody?,
+        @Part("isWaterIntakeAllowed") isWaterIntakeAllowed: RequestBody?,
+        @Part("isBloodPressureAllowed") isBloodPressureAllowed: RequestBody?,
+        @Part("isBloodSugarAllowed") isBloodSugarAllowed: RequestBody?,
+
+        // multipart image (optional)
+        @Part image: MultipartBody.Part?
+    ): Response<CareGroupResponse>
 }

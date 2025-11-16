@@ -1,8 +1,7 @@
-package com.a307.linkcare.feature.commongroup
+package com.a307.linkcare.feature.commongroup.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,12 +21,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.a307.linkcare.R
 import com.a307.linkcare.common.util.painterResourceCropped
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.SolidColor
 
 data class User(val name: String, val avatarRes: Int)
 data class Suggestion(val id: Int, val text: String)
@@ -215,7 +212,7 @@ private fun OptionCard(text: String, selected: Boolean, onClick: () -> Unit) {
         color = Color.White,
         border = ButtonDefaults.outlinedButtonBorder.copy(
             width = if (selected) 1.5.dp else 1.dp,
-            brush = androidx.compose.ui.graphics.SolidColor(borderColor)
+            brush = SolidColor(borderColor)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {

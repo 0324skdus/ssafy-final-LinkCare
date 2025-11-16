@@ -3,6 +3,10 @@ package com.ssafy.linkcare.health.controller;
 import com.ssafy.linkcare.health.dto.StepResponse;
 import com.ssafy.linkcare.health.dto.StepStatisticsResponse;
 import com.ssafy.linkcare.health.service.StepService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -93,12 +97,12 @@ public class StepController {
 
     /**
      * 해당 날짜가 포함된 일주일(월~일) 총 걸음 수 조회
-     * GET /api/health/step/{userSeq}/weekly-statistics/{date}
+     * GET /api/health/step/{userSeq}/weekly-statistics
      */
-    @GetMapping("/{userSeq}/weekly-statistics/{startDate}")
+    @GetMapping("/{userSeq}/weekly-statistics")
     public ResponseEntity<StepStatisticsResponse> getWeekStepStatistics(
             @PathVariable int userSeq,
-            @PathVariable LocalDate startDate) {
+            @RequestParam LocalDate startDate) {
 
         log.info("API 호출 - 해당 날짜 포함 일주일 총 걸음 수 조회: userSeq ={}, startDate ={}", userSeq, startDate);
 
@@ -112,19 +116,40 @@ public class StepController {
      * 기간별 총 걸음 수 조회
      * GET /api/health/step/{userSeq}/weekly-statistics
      */
-    @GetMapping("/{userSeq}/weekly-statistics")
-    public ResponseEntity<StepStatisticsResponse> getWeekStepStatistics(
-            @PathVariable int userSeq,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate) {
+//    @GetMapping("/{userSeq}/weekly-statistics")
+//    public ResponseEntity<StepStatisticsResponse> getWeekStepStatistics(
+//            @PathVariable int userSeq,
+//            @RequestParam LocalDate startDate,
+//            @RequestParam LocalDate endDate) {
+//
+//        log.info("API 호출 - 해당 날짜 포함 일주일 총 걸음 수 조회: userSeq ={}, startDate ={}, endDate= {}",
+//                userSeq, startDate, endDate);
+//
+//        StepStatisticsResponse response =
+//                stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate);
+//
+//        return ResponseEntity.ok(response);
+//    }
 
-        log.info("API 호출 - 해당 날짜 포함 일주일 총 걸음 수 조회: userSeq ={}, startDate ={}, endDate= {}",
+    // 이번주 총 걸음 수 평균 걸음 수 조회
+    // 기본값 오늘 기준 이번 주 월 ~ 일
+    @Operation(summary = "(LocalDate) 기간별 총 걸음수, 평균 걸음수 조회",
+            description = "기간별 총 걸음수와 평균 걸음수를 조회할 수 있습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/{userSeq}/this-week/steps/detail")
+    public ResponseEntity<StepStatisticsResponse> getThisWeekStepsDetail(
+            @PathVariable int userSeq,
+            @Parameter(description = "시작 날짜 (LocalDate)") @RequestParam LocalDate startDate,
+            @Parameter(description = "종료 날짜 (LocalDate)") @RequestParam LocalDate endDate
+    ) {
+        log.info("API 호출 - 기간별 총 걸음 수 및 평균 걸음 수 조회: userSeq ={}, startDate ={}, endDate= {}",
                 userSeq, startDate, endDate);
 
-        StepStatisticsResponse response =
-                stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate);
+        StepStatisticsResponse response = stepService.getStepStatisticsByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
     }
-
 }
