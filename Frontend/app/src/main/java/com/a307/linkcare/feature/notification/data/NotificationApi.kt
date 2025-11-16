@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.notification.data
 
 import com.a307.linkcare.feature.notification.domain.NotificationResponse
 import retrofit2.Response
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.Path
@@ -24,4 +25,10 @@ interface NotificationApi {
     // 전체 알림 읽음 처리
     @PATCH("/api/notifications/read-all")
     suspend fun markAllAsRead(): Response<Unit>
+
+    // 알림 삭제
+    @DELETE("/api/notifications/{notificationId}")
+    suspend fun deleteNotification(
+        @Path("notificationId") notificationId: Long
+    ): Response<Unit>
 }

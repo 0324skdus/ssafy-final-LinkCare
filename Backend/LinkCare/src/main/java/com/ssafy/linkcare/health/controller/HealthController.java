@@ -95,6 +95,19 @@ public class HealthController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{userSeq}/actual-activity")
+    public ResponseEntity<HealthActualActivityResponse> getActualActivity(
+            @PathVariable int userSeq,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
+    ) {
+        log.info("API 호출 - 기간별 칼로리, 걸음 수, 운동 시간, 운동 거리 조회 userSeq = {}", userSeq);
+
+        HealthActualActivityResponse response = healthService.getHealthActualActivity(userSeq, startDate, endDate);
+
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * 특정 그룹의 모든 멤버 데이터 동기화 (그룹 페이지 진입 시)
      */
