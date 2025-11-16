@@ -86,7 +86,7 @@ public class WaterIntakeService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 목표 x 음수량 x
-        if(waterIntakeDto.getGoal() == 0 &&(waterIntakeDto.getWaterIntakes() == null || waterIntakeDto.getWaterIntakes().isEmpty())) {
+        if(waterIntakeDto == null || waterIntakeDto.getGoal() == 0 &&(waterIntakeDto.getWaterIntakes() == null || waterIntakeDto.getWaterIntakes().isEmpty())) {
             return;
         }
 
@@ -361,6 +361,7 @@ public class WaterIntakeService {
 //                .uid(waterIntake.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(waterIntake.getStartTime()))
                 .amount(waterIntake.getAmount())
+                .goal(waterIntake.getGoal())
                 .build();
     }
 }

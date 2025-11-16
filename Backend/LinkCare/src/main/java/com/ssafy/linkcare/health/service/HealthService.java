@@ -2,7 +2,8 @@ package com.ssafy.linkcare.health.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
@@ -11,6 +12,7 @@ import com.ssafy.linkcare.group.entity.GroupMember;
 import com.ssafy.linkcare.group.repository.GroupMemberRepository;
 import com.ssafy.linkcare.group.repository.GroupRepository;
 import com.ssafy.linkcare.health.dto.*;
+import com.ssafy.linkcare.health.entity.BloodPressure;
 import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
@@ -40,7 +42,7 @@ public class HealthService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
-//    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
+    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
 
 
     private final ObjectMapper objectMapper;
@@ -100,20 +102,26 @@ public class HealthService {
     }
 
     public TodayHealthSummary getTodayHealthSummary(int userSeq) {
-        LocalDate start = LocalDate.now();
-        LocalDate end = LocalDate.now().plusDays(1);
+        LocalDate today = LocalDate.now();
 
         return TodayHealthSummary.builder()
                 .activitySummary(activitySummaryService.getActivitySummaryStatsToday(userSeq))
                 .exercise(exerciseService.getTodayExerciseStatistics(userSeq))
                 .step(stepService.getTodayStepCount(userSeq))
-                .heartRate(heartRateService.getHeartRateStatsByDate(userSeq, start, end))
-                .bloodPressure(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, start, end))
+                .heartRate(heartRateService.getHeartRateStatsByDate(userSeq, today, today))
+                .bloodPressure(bloodPressureService.getBloodPressureStatsByPeriod(userSeq, today, today))
                 .waterIntake(waterIntakeService.getTodayWaterIntakeStatistics(userSeq))
-                .sleep(sleepService.getSleepStatisticsByDate(userSeq, start, end))
+                .sleep(sleepService.getSleepStatisticsByDate(userSeq, today, today))
                 .build();
     }
 
+    /**
+     * 기간별 총 소모 칼로리, 총 걸음수, 총 운동 시간 조회
+     * @param userSeq
+     * @param startDate
+     * @param endDate
+     * @return TotalActivityStatisticsResponse
+     */
     public TotalActivityStatisticsResponse getTotalActivityStatistics(int userSeq, LocalDate startDate, LocalDate endDate) {
         Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
         Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
@@ -129,7 +137,62 @@ public class HealthService {
                 .build();
     }
 
+    public DailyHealthDetailResponse getDailyHealthDetail(int userSeq) {
+        LocalDate today = LocalDate.now();
 
+        List<BloodPressureResponse> bloodPressureResponses = bloodPressureService.getBloodPressureByDate(userSeq, today, today);
+        List<SleepResponse> sleepResponse = sleepService.getSleepsByDate(userSeq, today, today);
+        List<WaterIntakeResponse> waterIntakeResponses = waterIntakeService.getWaterIntakeByDate(userSeq, today, today);
+        List<HeartRateResponse> heartRateResponses = heartRateService.getHeartRatesByPeriod(userSeq, today, today);
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
+
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+
+        return DailyHealthDetailResponse.builder()
+                .bloodPressures(bloodPressureResponses)
+                .sleeps(sleepResponse)
+                .waterIntakes(waterIntakeResponses)
+                .heartRates(heartRateResponses)
+                .dailyActivitySummary(dailyActivitySummaryResponse)
+                .build();
+    }
+
+    public DailyActivitySummaryResponse getDailyActivitySummary(int userSeq) {
+        LocalDate today = LocalDate.now();
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
+
+        return DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+    }
+
+
+    public TodayStatisticsResponse getTodayStatisticsForDialogs(int userSeq) {
+        LocalDate today = LocalDate.now();
+        String lastBloodPressure = "데이터 없음";
+        TodayHealthSummary todayHealthSummary = getTodayHealthSummary(userSeq);
+        BloodPressureResponse bloodPressureResponse = bloodPressureService.getLastBloodPressureByDate(userSeq, today,today);
+
+        if(bloodPressureResponse != null) {
+            lastBloodPressure = (int) bloodPressureResponse.getSystolic() + "/" + (int) bloodPressureResponse.getDiastolic();
+        }
+
+        return TodayStatisticsResponse.builder()
+                .totalSteps(todayHealthSummary.getStep())
+                .totalCalories(todayHealthSummary.getActivitySummary().getTotalCalories())
+                .totalDuration(todayHealthSummary.getExercise().getTotalDuration())
+                .totalDistances(todayHealthSummary.getActivitySummary().getTotalDistance())
+                .avgHeartRates(todayHealthSummary.getHeartRate().getAvgHeartRate())
+                .sleepDuration(todayHealthSummary.getSleep().getTotalDuration())
+                .totalWaterIntakes(todayHealthSummary.getWaterIntake().getTotalAmount())
+                .lastBloodPressure(lastBloodPressure)
+                .build();
+    }
 
 
 
@@ -155,7 +218,7 @@ public class HealthService {
                     .putData("timestamp", String.valueOf(System.currentTimeMillis()))
                     .build();
 
-//            String response = firebaseMessaging.send(message);
+            String response = firebaseMessaging.send(message);
             log.debug("✓ 사용자 {}에게 동기화 요청 전송", userSeq);
 
         } catch (Exception e) {
@@ -246,91 +309,34 @@ public class HealthService {
 
 
     /**
-     * 단일 사용자의 건강 데이터 동기화
+     * 특정 사용자에게 운동 데이터만 동기화 요청
      */
-    public void syncSingleUserHealthData(int userSeq) {
-        log.info("→ 사용자 {} 건강 데이터 동기화 시작", userSeq);
+    public void requestExerciseSyncForUser(int userSeq) {
+        User user = userRepository.findById((long) userSeq)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
 
-        // 사용자 검증
-        User user = validateUser(userSeq);
-
-        // 오늘 날짜 기준으로 동기화
-        LocalDate today = LocalDate.now();
-
-        int successCount = 0;
-        int totalCount = 7; // 전체 동기화 항목 수
-
-        // 1. ActivitySummary 동기화
-        try {
-            log.debug("  - ActivitySummary 동기화 중...");
-            activitySummaryService.getActivitySummariesByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ ActivitySummary 완료");
-        } catch (Exception e) {
-            log.error("  ✗ ActivitySummary 실패: {}", e.getMessage());
+        String fcmToken = user.getFcmToken();
+        if (fcmToken == null || fcmToken.isEmpty()) {
+            log.warn("사용자 {}의 FCM 토큰이 없습니다.", userSeq);
+            return;
         }
 
-        // 2. Step 동기화
         try {
-            log.debug("  - Step 동기화 중...");
-            stepService.getStepsByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ Step 완료");
-        } catch (Exception e) {
-            log.error("  ✗ Step 실패: {}", e.getMessage());
-        }
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .putData("type", "EXERCISE_SYNC")  // 운동만!
+                    .putData("timestamp", String.valueOf(System.currentTimeMillis()))
+                    .setAndroidConfig(AndroidConfig.builder()
+                            .setPriority(AndroidConfig.Priority.HIGH)
+                            .build())
+                    .build();
 
-        // 3. Exercise 동기화
-        try {
-            log.debug("  - Exercise 동기화 중...");
-            exerciseService.getExercisesByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ Exercise 완료");
-        } catch (Exception e) {
-            log.error("  ✗ Exercise 실패: {}", e.getMessage());
-        }
+            String response = firebaseMessaging.send(message);
+            log.info("✓ 사용자 {}에게 운동 동기화 요청 전송", userSeq);
 
-        // 4. Sleep 동기화
-        try {
-            log.debug("  - Sleep 동기화 중...");
-            sleepService.getSleepsByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ Sleep 완료");
         } catch (Exception e) {
-            log.error("  ✗ Sleep 실패: {}", e.getMessage());
+            log.error("✗ 사용자 {} 운동 동기화 FCM 전송 실패", userSeq, e);
         }
-
-        // 5. HeartRate 동기화
-        try {
-            log.debug("  - HeartRate 동기화 중...");
-            heartRateService.getHeartRatesByPeriod(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ HeartRate 완료");
-        } catch (Exception e) {
-            log.error("  ✗ HeartRate 실패: {}", e.getMessage());
-        }
-
-        // 6. BloodPressure 동기화
-        try {
-            log.debug("  - BloodPressure 동기화 중...");
-            bloodPressureService.getBloodPressureByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ BloodPressure 완료");
-        } catch (Exception e) {
-            log.error("  ✗ BloodPressure 실패: {}", e.getMessage());
-        }
-
-        // 7. WaterIntake 동기화
-        try {
-            log.debug("  - WaterIntake 동기화 중...");
-            waterIntakeService.getWaterIntakeByDate(userSeq, today, today.plusDays(1));
-            successCount++;
-            log.debug("  ✓ WaterIntake 완료");
-        } catch (Exception e) {
-            log.error("  ✗ WaterIntake 실패: {}", e.getMessage());
-        }
-
-        log.info("✓ 사용자 {} 동기화 완료 ({}/{}개 성공)", userSeq, successCount, totalCount);
     }
 
     // validate

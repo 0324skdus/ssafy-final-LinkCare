@@ -1,9 +1,6 @@
 package com.ssafy.linkcare.health.controller;
 
-import com.ssafy.linkcare.health.dto.AllHealthDataDto;
-import com.ssafy.linkcare.health.dto.DailyHealthData;
-import com.ssafy.linkcare.health.dto.DailyHealthResponse;
-import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +25,7 @@ public class HealthController {
     public ResponseEntity<ApiResponse<DailyHealthData>> uploadUserDailyHealthData(
             @PathVariable int userId, @RequestBody DailyHealthData data) {
 
-        System.out.println("받은 데이터: " + data);
+        System.out.println("받은 데이터: " + data.toString());
 
         healthService.syncDailyHealthData(data, userId);
 
@@ -50,6 +47,7 @@ public class HealthController {
         );
     }
 
+
     @GetMapping("/{userSeq}/today")
     public ResponseEntity<DailyHealthResponse> getUserTodayHealthData(
             @PathVariable int userSeq
@@ -59,6 +57,28 @@ public class HealthController {
         DailyHealthResponse dailyHealthResponse = healthService.getTodayHealthData(userSeq);
 
         return ResponseEntity.ok(dailyHealthResponse);
+    }
+
+    @GetMapping("/{userSeq}/today/detail")
+    public ResponseEntity<DailyHealthDetailResponse> getUserDailyHealthDetailData(
+            @PathVariable int userSeq
+    ) {
+        log.info("API 호출 - 당일 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetail(userSeq);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
+    }
+
+    @GetMapping("/{userSeq}/today-activity/detail")
+    public ResponseEntity<DailyActivitySummaryResponse> getUserDailyActivitySummaryDetailData(
+            @PathVariable int userSeq
+    ) {
+        log.info("API 호출 - 당일 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyActivitySummaryResponse dailyHealthDetailResponse = healthService.getDailyActivitySummary(userSeq);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
     }
 
     // 기간 별 칼로리, 걸음, 운동 시간
@@ -86,4 +106,15 @@ public class HealthController {
         return ResponseEntity.ok("동기화 완료");
     }
 
+    @GetMapping("/dialogs/{userSeq}/stats/today")
+    @Operation(summary = "AI 대사 생성을 위한 오늘 건강 데이터 요약 조회", description = "사용자의 오늘 건강 데이터 요약을 조회합니다")
+    public ResponseEntity<TodayStatisticsResponse> getTodayStatsForDialogs(
+            @PathVariable int userSeq
+    ) {
+        log.info("AI 대사 생성용 오늘 건강 데이터 요약 조회 - User: {} ", userSeq);
+
+        TodayStatisticsResponse response = healthService.getTodayStatisticsForDialogs(userSeq);
+
+        return ResponseEntity.ok(response);
+    }
 }
