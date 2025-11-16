@@ -3,12 +3,10 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.os.Build
-import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -108,7 +105,7 @@ fun HealthGroupHome(
 
     val leader = remember(members) {
         members.firstOrNull { it.isLeader } ?: members.firstOrNull()
-        ?: Member("나", 0, 0, R.drawable.char_bear_1, "", isLeader = true)
+        ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
 
     val today = remember { LocalDate.now() }
@@ -235,7 +232,7 @@ fun HealthGroupHome(
                 }
 
                 itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
-                    MemberRow(
+                    MemberRowHealth(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {

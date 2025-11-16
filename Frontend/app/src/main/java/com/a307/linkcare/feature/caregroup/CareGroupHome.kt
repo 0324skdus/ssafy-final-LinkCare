@@ -100,7 +100,7 @@ fun CareGroupHome(
             Member(
                 name = m.userName,
                 progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
-                goal = 30000,                        // TODO: 그룹 목표 값으로 교체
+                goal = 30000,                        // TODO: 그룹 총 걸음수 값으로 교체
                 avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
                 bubbleText = "컨디션 좋아요!",       // TODO: AI 한 줄 요약 나오면 교체
                 isLeader = m.isLeader
@@ -253,7 +253,7 @@ fun CareGroupHome(
 
                 // 멤버 리스트
                 itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
-                    MemberRow(
+                    MemberRowCare(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
