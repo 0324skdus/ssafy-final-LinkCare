@@ -1,5 +1,7 @@
 package com.a307.linkcare.feature.commongroup.domain
 
+import com.google.gson.annotations.SerializedName
+
 data class GroupDetailResponse(
     val groupSeq: Long,
     val groupName: String,
@@ -26,4 +28,11 @@ data class GroupMemberResponse(
     val userName: String,
     val isLeader: Boolean,
     val mainCharacterBaseImageUrl: String
+)
+
+data class GoalCriteriaDto(
+    @SerializedName("isSleepAllowed") val isSleepAllowed: Boolean?,
+    @SerializedName("isWaterIntakeAllowed") val isWaterIntakeAllowed: Boolean?,
+    @SerializedName("isBloodPressureAllowed") val isBloodPressureAllowed: Boolean?,
+    @SerializedName("isBloodSugarAllowed") val isBloodSugarAllowed: Boolean?
 )

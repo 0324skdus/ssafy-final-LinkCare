@@ -10,5 +10,6 @@ data class MyGroupResponse(
     @SerializedName("capacity") val capacity: Int,
     @SerializedName("currentMembers") val currentMembers: Int,
     @SerializedName("imageUrl") val imageUrl: String,
-    @SerializedName("createdAt") val createdAt: String
+    @SerializedName("createdAt") val createdAt: String,
+    @SerializedName("joinStatus") val joinStatus: String = "NONE"  // "NONE", "PENDING", "MEMBER"
 )

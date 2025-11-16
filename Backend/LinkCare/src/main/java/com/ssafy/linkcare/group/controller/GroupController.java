@@ -130,10 +130,12 @@ public class GroupController {
     @GetMapping("/search")
     @Operation(summary = "그룹 검색", description = "그룹 이름으로 검색합니다")
     public ResponseEntity<List<GroupResponse>> searchGroups(
+            Authentication authentication,
             @RequestParam String keyword) {
 
-        log.info("그룹 검색 요청: keyword={}", keyword);
-        List<GroupResponse> response = groupService.searchGroups(keyword);
+        Long userId = authentication != null ? Long.parseLong(authentication.getName()) : null;
+        log.info("그룹 검색 요청: keyword={}, userId={}", keyword, userId);
+        List<GroupResponse> response = groupService.searchGroups(keyword, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -168,16 +170,28 @@ public class GroupController {
             @RequestParam(value = "isSleepRequired", required = false) Boolean isSleepRequired,
             @RequestParam(value = "isWaterIntakeRequired", required = false) Boolean isWaterIntakeRequired,
             @RequestParam(value = "isBloodPressureRequired", required = false) Boolean isBloodPressureRequired,
-            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired) {
+            @RequestParam(value = "isBloodSugarRequired", required = false) Boolean isBloodSugarRequired,
+            @RequestParam(value = "minCalorie", required = false) Float minCalorie,
+            @RequestParam(value = "minStep", required = false) Integer minStep,
+            @RequestParam(value = "minDistance", required = false) Float minDistance,
+            @RequestParam(value = "minDuration", required = false) Integer minDuration) {
 
         Long userId = Long.parseLong(authentication.getName());
+
+        // 목표 기준 DTO 생성 (헬스 그룹 전용)
+        GoalCriteriaDto goalCriteria = null;
+        if (minCalorie != null || minStep != null || minDistance != null || minDuration != null) {
+            goalCriteria = new GoalCriteriaDto(minCalorie, minStep, minDistance, minDuration);
+        }
+
         UpdateGroupRequest request = new UpdateGroupRequest(
                 groupName,
                 groupDescription,
                 isSleepRequired,
                 isWaterIntakeRequired,
                 isBloodPressureRequired,
-                isBloodSugarRequired
+                isBloodSugarRequired,
+                goalCriteria
         );
         GroupResponse response = groupService.updateGroup(userId, groupSeq, request, imageAction, image);
 

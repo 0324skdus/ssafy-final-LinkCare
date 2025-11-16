@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
         * - 그룹명, 소개 수정 가능
         * - 이미지는 별도 MultipartFile로 전달
         * - 케어 그룹인 경우 선택 권한 항목도 수정 가능
+        * - 헬스 그룹인 경우 목표 기준도 수정 가능
 */
 public record UpdateGroupRequest(
         @NotBlank(message = "모임 이름은 필수입니다")
@@ -20,5 +21,8 @@ public record UpdateGroupRequest(
         Boolean isSleepRequired,
         Boolean isWaterIntakeRequired,
         Boolean isBloodPressureRequired,
-        Boolean isBloodSugarRequired
+        Boolean isBloodSugarRequired,
+
+        // 헬스 그룹 전용: 목표 기준 (null 가능)
+        GoalCriteriaDto goalCriteria
 ) {}

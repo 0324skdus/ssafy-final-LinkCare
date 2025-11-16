@@ -8,7 +8,8 @@ data class Member(
     val goal: Int,
     @DrawableRes val avatarRes: Int,
     val bubbleText: String = "",
-    val isLeader: Boolean = false
+    val isLeader: Boolean = false,
+    val userPk: Long = 0L
 ) {
     val percent: Float get() = (progresses.coerceAtMost(goal)).toFloat() / goal.toFloat()
 }

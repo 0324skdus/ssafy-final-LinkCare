@@ -144,8 +144,11 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        log.info("FCM 토큰 업데이트 요청: userId={}, userName={}, 토큰길이={}",
+                userId, user.getName(), fcmToken != null ? fcmToken.length() : 0);
+
         user.updateFcmToken(fcmToken);
 
-        log.info("FCM 토큰 업데이트 완료: userId={}", userId);
+        log.info("✅ FCM 토큰 업데이트 완료: userId={}, userName={}", userId, user.getName());
     }
 }

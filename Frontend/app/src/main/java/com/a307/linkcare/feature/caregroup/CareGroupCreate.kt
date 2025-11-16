@@ -23,6 +23,7 @@ import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.R
 import com.a307.linkcare.feature.caregroup.domain.CareGroupCreateViewModel
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.healthgroup.toMultipart
 
 
@@ -35,7 +36,8 @@ fun CareGroupCreate(
         share: ShareOptions
     ) -> Unit = { _ -> },
     @DrawableRes avatarRes: Int? = null,
-    vm: CareGroupCreateViewModel = hiltViewModel()
+    vm: CareGroupCreateViewModel = hiltViewModel(),
+    groupvm: MyGroupsViewModel = hiltViewModel()
 ) {
     val state by vm.state
     val context = LocalContext.current
@@ -65,6 +67,9 @@ fun CareGroupCreate(
         when (state) {
             is CareGroupCreateViewModel.UiState.Success -> {
                 Toast.makeText(context, "생성 완료!", Toast.LENGTH_SHORT).show()
+
+                // 그룹 목록 새로고침
+                groupvm.loadCare()
 
                 // 그룹 생성 성공했을 때만 ShareOptions 전달
                 onClickCreate(
