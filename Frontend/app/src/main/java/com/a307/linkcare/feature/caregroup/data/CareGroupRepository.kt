@@ -5,6 +5,7 @@ import com.a307.linkcare.feature.caregroup.HealthToday
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.time.LocalDate
 import javax.inject.Inject
 
 class CareGroupRepository @Inject constructor(
@@ -60,4 +61,7 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
             null
         }
     }
+
+    suspend fun fetchWeeklyHeader(groupSeq: Long, today: LocalDate?)
+            = api.getWeeklyHeader(groupSeq, today)
 }

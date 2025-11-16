@@ -1,6 +1,9 @@
 package com.a307.linkcare.feature.caregroup.domain
 
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.caregroup.HealthToday
@@ -9,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,6 +51,20 @@ class CareGroupHomeViewModel @Inject constructor(
         Log.d("CareGroupHomeVM", "loadHealthDataForMembers called with ${userSeqs.size} members: $userSeqs")
         userSeqs.forEach { userSeq ->
             loadHealthData(userSeq)
+        }
+    }
+
+    var headerMessage by mutableStateOf<String?>(null)
+        private set
+
+    fun loadHeader(groupSeq: Long, today: LocalDate?) {
+        viewModelScope.launch {
+            try {
+                val res = repo.fetchWeeklyHeader(groupSeq, today)
+                headerMessage = res.headerMessage
+            } catch (e: Exception) {
+                headerMessage = "함께 건강해져봐요!" // fallback
+            }
         }
     }
 }

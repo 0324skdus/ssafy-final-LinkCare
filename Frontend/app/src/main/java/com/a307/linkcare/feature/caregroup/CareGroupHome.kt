@@ -30,7 +30,6 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -276,6 +275,11 @@ fun CareGroupHome(
         }
     }
 
+    val header = healthViewModel.headerMessage
+
+    LaunchedEffect(Unit) {
+        healthViewModel.loadHeader(groupSeq, today)
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -293,14 +297,16 @@ fun CareGroupHome(
     )  { _ ->
         LazyColumn(Modifier.fillMaxSize()) {
 
+            if (header != null) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = "걷기에 더 신경써볼까요?"
+                        txt = header
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+            }
 
                 item {
                     NudgeHost(
@@ -337,7 +343,6 @@ fun CareGroupHome(
                         onClick = { selectedMember = m }
                     )
 
-                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
