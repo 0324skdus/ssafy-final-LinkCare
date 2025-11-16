@@ -43,6 +43,8 @@ build/
 !src/**/build/
 gradle-app.setting
 .gradletasknamecache
+gradlew
+gradlew.bat
 
 # Android Studio
 captures/

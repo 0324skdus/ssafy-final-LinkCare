@@ -150,8 +150,8 @@ fun HealthGroupHome(
     var goalInput by rememberSaveable { mutableStateOf(if (currentGoal != null) currentGoal.toString() else "") }
     var goalError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
-        Box(modifier = modifier.fillMaxSize()) {
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { innerPadding ->
+        Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
 
             LazyColumn(Modifier.fillMaxSize()) {
 

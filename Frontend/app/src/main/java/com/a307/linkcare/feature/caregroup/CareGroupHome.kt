@@ -153,8 +153,8 @@ fun CareGroupHome(
     }
 
 
-    Scaffold { _ ->
-        Box(modifier = modifier.fillMaxSize()) {
+    Scaffold { innerPadding ->
+        Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
 
             LazyColumn(Modifier.fillMaxSize()) {
 

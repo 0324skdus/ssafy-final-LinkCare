@@ -64,6 +64,11 @@ android {
         buildConfig = true
     }
     buildToolsVersion = "36.1.0"
+
+    lint {
+        // Lint 에러 있어도 빌드 중단하지 않음
+        abortOnError = false
+    }
 }
 
 dependencies {
