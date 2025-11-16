@@ -29,6 +29,7 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*;
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.healthgroup.formatDuration
 
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
@@ -92,6 +93,7 @@ fun CareGroupHome(
    val detail by vm.detail.collectAsState()
     val membersResponse by vm.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
     val groupName by vm.groupName.collectAsState()
+    val totalStats by vm.totalActivityStats.collectAsState()
 
     val apiMembers = remember(membersResponse) {
         membersResponse.map { m ->
@@ -346,10 +348,30 @@ fun CareGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
+
+                    val summaryChips = remember(metricType, summary, totalStats) {
+                        if (metricType == MetricType.ACTIVITY) {
+                            val calories = totalStats?.totalCalories?.toInt() ?: 0
+                            val steps = totalStats?.totalSteps ?: 0
+                            val durationSec = totalStats?.totalDuration ?: 0
+                            val durationStr = formatDuration(durationSec)
+
+                            listOf(
+                                "🔥 ${calories} kcal 태웠어요",
+                                "👣 ${steps} 걸음 걸었어요",
+                                "⏱️ $durationStr 운동했어요"
+                            )
+                        } else {
+                            // 수면 탭
+                            buildSummaryChips(metricType, summary)
+                        }
+                    }
+
                     SummaryChipList(
-                        items = buildSummaryChips(metricType, summary)
+                        items = summaryChips
                     )
                 }
+
             }
 
             selectedMember?.let { m ->
