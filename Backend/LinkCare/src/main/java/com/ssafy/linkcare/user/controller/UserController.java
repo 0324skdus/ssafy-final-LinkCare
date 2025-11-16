@@ -54,6 +54,7 @@ public class UserController {
     public ResponseEntity<MyPageResponseDto> getMyPageInfo(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         MyPageResponseDto myPageInfo = userService.getMyPageInfo(userId);
+        System.out.println("메인 배경 확인(C) : " + myPageInfo.getMainBackgroundImageUrl());
         return ResponseEntity.ok(myPageInfo);
     }
 

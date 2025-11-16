@@ -52,6 +52,8 @@ public class UserService {
         if (mainBackground != null && mainBackground.getBackground() != null) {
             mainBackgroundImageUrl = s3Service.generatePresignedGetUrl(mainBackground.getBackground().getS3Key());
         }
+        System.out.println("메인 케릭터 url : " + mainCharacterImageUrl);
+        System.out.println("메인 배경 rul : " + mainBackgroundImageUrl);
 
         return MyPageResponseDto.builder()
                 .name(user.getName())
