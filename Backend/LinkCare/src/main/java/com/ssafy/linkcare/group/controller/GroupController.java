@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -351,6 +352,22 @@ public class GroupController {
 
         TotalActivityStatisticsResponse response = groupService.getGroupTotalActivityStatistics(groupSeq, startDate, endDate);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "(LocalDate) 기간별 그룹원 수면 시간, 총 수면시간, 평균 수면시간 조회",
+            description = "지정된 기간의 그룹원의 총 칼로리, 총 걸음 수, 총 운동 시간 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/sleep-statistics")
+    public ResponseEntity<GroupSleepStatisticsResponse> getGroupSleepStatistics(
+            @PathVariable Long groupSeq,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        GroupSleepStatisticsResponse response = groupService.getGroupSleepStatistics(groupSeq, startDate, endDate);
         return ResponseEntity.ok(response);
     }
 
