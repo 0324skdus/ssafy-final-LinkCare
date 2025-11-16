@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
+import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
 
 
 @HiltViewModel
@@ -75,6 +78,30 @@ class MyGroupsViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    // 그룹 이번주 운동 통계
+    private val _totalActivityStats =
+        MutableStateFlow<GroupTotalActivityStats?>(null)
+    val totalActivityStats: StateFlow<GroupTotalActivityStats?> =
+        _totalActivityStats.asStateFlow()
+
+    fun loadTotalActivityStats(
+        groupSeq: Long,
+        startDate: LocalDate,
+        endDate: LocalDate
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                repo.getTotalActivityStats(
+                    groupSeq, startDate, endDate
+                )
+            }.onSuccess {
+                _totalActivityStats.value = it
+            }.onFailure {
+                _totalActivityStats.value = null
+            }
         }
     }
 }

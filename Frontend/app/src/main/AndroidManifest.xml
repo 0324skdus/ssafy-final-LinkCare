@@ -54,5 +54,20 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="linkcare_notification_channel" />
+        <!--워치 데이터 통신용 서비스-->
+        <service
+            android:name=".feature.watch.service.WatchListenerService"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/linkcare/summary" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/linkcare/metrics" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/linkcare/session" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

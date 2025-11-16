@@ -24,6 +24,7 @@ import java.time.*
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.feature.caregroup.domain.CareWeekSummary
 import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
@@ -33,6 +34,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.healthgroup.formatDuration
+
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -137,8 +140,10 @@ fun CareGroupHome(
         }
     }
 
-    val membersResponse by groupViewModel.members.collectAsState()
+    val detail by groupViewModel.detail.collectAsState()
+    val membersResponse by groupViewModel.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
     val groupName by groupViewModel.groupName.collectAsState()
+    val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
 
     // API에서 가져온 멤버를 Member 객체로 변환
@@ -148,8 +153,8 @@ fun CareGroupHome(
             Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
             Member(
                 name = m.userName,
-                progresses = 10000,  // TODO: 실제 건강 데이터로 교체
-                goal = 30000,  // TODO: 그룹 목표로 교체
+                progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
+                goal = 30000,                        // TODO: 그룹 총 걸음수 값으로 교체
                 avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
                 bubbleText = "",
                 isLeader = m.isLeader,
@@ -158,7 +163,10 @@ fun CareGroupHome(
         }
     }
 
-    var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
@@ -168,13 +176,26 @@ fun CareGroupHome(
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(0.62f) }
-    var todayGroupProgress by remember { mutableStateOf(10234) }
-    var totalGroupGoal by remember { mutableStateOf(20000) }
+    var todayGroupPercent by remember { mutableStateOf(0.62f) }   // TODO: API 나오면 교체
+    var todayGroupProgress by remember { mutableStateOf(10234) }  // TODO
+    var totalGroupGoal by remember { mutableStateOf(20000) }      // TODO
 
     // 날짜 이동
-    val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
-    val onNextDay = { selectedDate = selectedDate.plusDays(1) }
+    val onPrevDay = {
+        selectedDate = clampDate(
+            selectedDate.minusDays(1),
+            minDate,
+            today
+        )
+    }
+
+    val onNextDay = {
+        selectedDate = clampDate(
+            selectedDate.plusDays(1),
+            minDate,
+            today
+        )
+    }
 
     // 주차 변경 시
     val year = selectedDate.year
@@ -208,7 +229,19 @@ fun CareGroupHome(
 
     // 다이얼로그는 리스트 바깥에서 remember
     val dpState = rememberDatePickerState(
-        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal()
+        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val date = epochMilliToLocalDate(utcTimeMillis)
+                // minDate ~ today 사이만 선택 가능
+                return !date.isBefore(minDate) && !date.isAfter(today)
+            }
+
+            override fun isSelectableYear(year: Int): Boolean {
+                // 연도도 같이 제한
+                return year in minDate.year..today.year
+            }
+        }
     )
 
     val taps = remember {
@@ -296,25 +329,42 @@ fun CareGroupHome(
                     )
                 }
 
-                // 멤버 리스트(선택 날짜 기준)
-                items(todayMembers, key = { it.name }) { m ->
-                    MemberRow(
+                // 멤버 리스트
+                itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                    MemberRowCare(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
-                            expandedMemberName = if (expandedMemberName == m.name) null else m.name
+                            expandedMemberName =
+                                if (expandedMemberName == m.name) null else m.name
                         },
                         onClick = { selectedMember = m }
                     )
-                    Divider(color = Color(0x11000000))
+
+                    // 마지막 아이템이 아닌 경우에만 Divider 표시
+                    if (index < todayMembers.lastIndex) {
+                        Divider(color = Color(0x11000000))
+                    }
                 }
 
                 item {
                     Spacer(Modifier.height(12.dp))
                     DatePagerRow(
                         label = "${selectedDate.year}년 ${selectedDate.monthValue}월 ${selectedDate.weekOfMonth()}주차",
-                        onPrev = { selectedDate = selectedDate.minusWeeks(1) },
-                        onNext = { selectedDate = selectedDate.plusWeeks(1) }
+                        onPrev = {
+                            selectedDate = clampDate(
+                                selectedDate.minusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        },
+                        onNext = {
+                            selectedDate = clampDate(
+                                selectedDate.plusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        }
                     )
                 }
 
@@ -323,10 +373,10 @@ fun CareGroupHome(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally 
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "${groupName.ifBlank { "케어" }} 그룹의 건강을 분석했어요",
+                            text = "${(groupName.ifBlank { "케어" })} 그룹의 건강을 분석했어요",
                             fontWeight = FontWeight.SemiBold,
                             color = black
                         )
@@ -378,8 +428,27 @@ fun CareGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
+
+                    val summaryChips = remember(metricType, summary, totalStats) {
+                        if (metricType == MetricType.ACTIVITY) {
+                            val calories = totalStats?.totalCalories?.toInt() ?: 0
+                            val steps = totalStats?.totalSteps ?: 0
+                            val durationSec = totalStats?.totalDuration ?: 0
+                            val durationStr = formatDuration(durationSec)
+
+                            listOf(
+                                "🔥 ${calories} kcal 태웠어요",
+                                "👣 ${steps} 걸음 걸었어요",
+                                "⏱️ $durationStr 운동했어요"
+                            )
+                        } else {
+                            // 수면 탭
+                            buildSummaryChips(metricType, summary)
+                        }
+                    }
+
                     SummaryChipList(
-                        items = buildSummaryChips(metricType, summary)
+                        items = summaryChips
                     )
                 }
             }
@@ -401,7 +470,6 @@ fun CareGroupHome(
                     currentUserName = currentUserName
                 )
             }
-
 
             if (showCalendar) {
                 DatePickerDialog(
@@ -573,7 +641,6 @@ private fun MetricTypeTabs(
 ) {
     val tabs = listOf(
         MetricType.ACTIVITY to "운동",
-        MetricType.BLOOD_PRESSURE to "혈압",
         MetricType.SLEEP to "수면"
     )
     TabRow(
@@ -613,3 +680,14 @@ private fun CareGroupFab(
     }
 }
 
+
+@RequiresApi(Build.VERSION_CODES.O)
+private fun clampDate(
+    date: LocalDate,
+    min: LocalDate,
+    max: LocalDate
+): LocalDate = when {
+    date.isBefore(min) -> min
+    date.isAfter(max) -> max
+    else -> date
+}
