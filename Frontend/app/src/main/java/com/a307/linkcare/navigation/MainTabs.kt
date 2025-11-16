@@ -67,13 +67,25 @@ import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.a307.linkcare.common.component.molecules.HeaderBasic
+import com.a307.linkcare.feature.customize.CustomEntity
+import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
+import com.a307.linkcare.feature.customize.CustomizeRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.mypage.Gender
 import com.a307.linkcare.feature.mypage.Profile
 import com.a307.linkcare.feature.mypage.ProfileEditScreen
+import com.a307.linkcare.feature.watch.data.DataLayerManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -419,7 +431,7 @@ fun MainTabs(
                         CareGroupHome(
                             groupSeq = selectedCareGroup!!,
                             modifier = Modifier,
-                            vm = groupvm
+//                            vm = groupvm
                         )
                     }
                 }
@@ -596,18 +608,18 @@ fun MainTabs(
                 val dummyState = StoreUiState(
                     coins = 300,
                     characterItems = listOf(
-                        StoreItem("bear1", R.drawable.char_bear_1, price = 100, owned = true),
-                        StoreItem("duck1", R.drawable.char_duck_1, price = 150, owned = false)
+                        StoreItem(1, R.drawable.char_bear_1, price = 100, owned = true),
+                        StoreItem(2, R.drawable.char_duck_1, price = 150, owned = false)
                     ),
                     backgroundItems = listOf(
-                        StoreItem("bg1", R.drawable.background_1, price = 80, owned = true),
-                        StoreItem("bg2", R.drawable.background_2, price = 120, owned = false),
-                        StoreItem("bg3", R.drawable.background_3, price = 120, owned = false),
-                        StoreItem("bg4", R.drawable.background_4, price = 120, owned = false),
-                        StoreItem("bg5", R.drawable.background_5, price = 120, owned = false),
-                        StoreItem("bg6", R.drawable.background_6, price = 120, owned = false),
-                        StoreItem("bg7", R.drawable.background_7, price = 120, owned = false),
-                        StoreItem("bg8", R.drawable.background_8, price = 120, owned = false)
+                        StoreItem(1, R.drawable.background_1, price = 80, owned = true),
+                        StoreItem(2, R.drawable.background_2, price = 120, owned = false),
+                        StoreItem(3, R.drawable.background_3, price = 120, owned = false),
+                        StoreItem(4, R.drawable.background_4, price = 120, owned = false),
+                        StoreItem(5, R.drawable.background_5, price = 120, owned = false),
+                        StoreItem(6, R.drawable.background_6, price = 120, owned = false),
+                        StoreItem(7, R.drawable.background_7, price = 120, owned = false),
+                        StoreItem(8, R.drawable.background_8, price = 120, owned = false)
                     ),
                     equippedBackground = R.drawable.background_1,
                     equippedCharacter = R.drawable.char_bear_1
@@ -621,12 +633,25 @@ fun MainTabs(
 
                 // 꾸미기
                 composable(Route.Decorate.route) {
+                    val repo: CustomizeRepository = hiltViewModel<CustomizeRepoHolderVM>().repo
+                    val context = LocalContext.current
+                    val custom by repo.customFlow.collectAsState(initial = CustomEntity(1, 1))
+
+
                     DecorateScreen(
-                        ownedCharacters = listOf(R.drawable.char_bear_1, R.drawable.char_duck_1),
-                        ownedBackgrounds = listOf(R.drawable.background_1, R.drawable.background_2),
-                        equippedCharacter = R.drawable.char_bear_1,
-                        equippedBackground = R.drawable.background_1,
-                        onApply = { _, _ -> /* TODO: 장착 처리 */ }
+                        ownedCharacters = listOf(1, 2),
+                        ownedBackgrounds = listOf(1, 2),
+                        equippedCharacter = custom.characterId,
+                        equippedBackground = custom.backgroundId,
+                        onApply = { charId, bgId ->
+                            CoroutineScope(Dispatchers.IO).launch {
+                                repo.saveCustom(charId, bgId)   // 논리 ID 저장
+                            }
+
+                            DataLayerManager.sendTheme(context, charId, bgId)  // 논리 ID 전송
+
+                            navController.goBackToMyPage()
+                        }
                     )
                 }
             }

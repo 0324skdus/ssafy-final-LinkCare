@@ -170,7 +170,7 @@ public class ExerciseService {
         User user = userRepository.findById((long) userSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
+        if (exerciseDto == null || exerciseDto.getExercises() == null || exerciseDto.getExercises().isEmpty()) {
             return;
         }
 
@@ -524,59 +524,29 @@ public class ExerciseService {
      */
     private void updateExistingExercise(Exercise exercise, ExerciseTypeDto dto, User user) {
 
-        // 세션 삭제 처리
+        // 1. 기존 세션 모두 삭제
+        exerciseSessionRepository.deleteByExercise(exercise);
+
+        // 2. Exercise 업데이트 및 저장
+        exercise.updateFromDto(dto, user);
+        exerciseRepository.save(exercise);
+
+        // 3. 새 세션 생성 및 저장
         if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
-            Set<String> sdkSessionKeys = dto.getSessions().stream()
-                    .map(session -> session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond()
-                            + "_" + session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                    .collect(Collectors.toSet());
+            List<ExerciseSession> sessions = dto.getSessions().stream()
+                    .map(session -> ExerciseSession.builder()
+                            .startTime(session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                            .endTime(session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
+                            .exerciseType(session.getExerciseType())
+                            .distance(session.getDistance())
+                            .calories(session.getCalories())
+                            .duration(session.getDuration())
+                            .exercise(exercise)
+                            .build())
+                    .toList();
 
-            List<ExerciseSession> existingSessions = exerciseSessionRepository.findByExercise(exercise);
-            Set<String> existingSessionKeys = existingSessions.stream()
-                    .map(session -> session.getStartTime() + "_" + session.getEndTime())
-                    .collect(Collectors.toSet());
-
-            Set<String> sessionToDelete = existingSessionKeys.stream()
-                    .filter(key -> !sdkSessionKeys.contains(key))
-                    .collect(Collectors.toSet());
-
-            if (!sessionToDelete.isEmpty()) {
-                existingSessions.stream()
-                        .filter(session -> sessionToDelete.contains(session.getStartTime() + "_" + session.getEndTime()))
-                        .forEach(exerciseSessionRepository::delete);
-            }
-        } else {
-            exerciseSessionRepository.deleteByExercise(exercise);
-        }
-
-        long remainingSessionCount = exerciseSessionRepository.countByExercise(exercise);
-
-        if (remainingSessionCount == 0) {
-            // 세션이 없으면 Exercise도 삭제
-            exerciseRepository.delete(exercise);
-        } else {
-            // Entity의 update 메서드 호출
-            exercise.updateFromDto(dto, user);
-
-            // 기존 엔티티 저장 (UPDATE)
-            exerciseRepository.save(exercise);
-
-            // 세션 재생성
-            if (dto.getSessions() != null && !dto.getSessions().isEmpty()) {
-                List<ExerciseSession> sessions = dto.getSessions().stream()
-                        .map(session -> ExerciseSession.builder()
-                                .startTime(session.getStartTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                                .endTime(session.getEndTime().atZone(ZoneId.systemDefault()).toEpochSecond())
-                                .exerciseType(session.getExerciseType())
-                                .distance(session.getDistance())
-                                .calories(session.getCalories())
-                                .duration(session.getDuration())
-                                .exercise(exercise)
-                                .build())
-                        .toList();
-
-                exerciseSessionRepository.saveAll(sessions);
-            }
+            exerciseSessionRepository.saveAll(sessions);
+            log.info("운동 세션 업데이트 완료 - Exercise UID: {}, Sessions: {}", dto.getUid(), sessions.size());
         }
     }
 
@@ -680,6 +650,26 @@ public class ExerciseService {
                 .collect(Collectors.toList());
     }
 
+    public List<ExerciseSessionResponse> getExerciseSessionsByDate(
+            int userSeq,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<ExerciseResponse> exercises = getExercisesByDate(userSeq, startDate, endDate);
+
+        return exercises.stream()
+                .flatMap(exercise -> exercise.getSessions().stream() // 각 운동의 세션들을 평탄화
+                .map(dto -> ExerciseSessionResponse.builder()
+                        .startTime(dto.getStartTime())
+                        .endTime(dto.getEndTime())
+                        .calories(dto.getCalories())
+                        .distance(dto.getDistance())
+                        .duration(dto.getDuration())
+                        .meanPulseRate(exercise.getAvgHeartRate())
+                        .build()))
+                .collect(Collectors.toList());
+    }
+
     private ExerciseResponse convertToExerciseTypeResponse(Exercise exercise) {
         // ExerciseSession을 ExerciseSessionDto로 변환
         List<ExerciseSessionDto> sessionDtos = exercise.getSessions().stream()
@@ -694,6 +684,7 @@ public class ExerciseService {
                 .startTime(timeStampUtil.toLocalDateTime(exercise.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(exercise.getEndTime()))
                 .exerciseType(exercise.getExerciseType())
+                .avgHeartRate(exercise.getAvgHeartRate())
                 .sessions(sessionDtos)
                 .build();
 
@@ -830,6 +821,16 @@ public class ExerciseService {
                 .startTime(timeStampUtil.toLocalDateTime(session.getStartTime()))
                 .endTime(timeStampUtil.toLocalDateTime(session.getEndTime()))
                 .exerciseType(session.getExerciseType())
+                .calories(session.getCalories())
+                .distance(session.getDistance())
+                .duration(session.getDuration())
+                .build();
+    }
+
+    private ExerciseSessionResponse convertToExerciseSessionResponse(ExerciseSessionDto session) {
+        return ExerciseSessionResponse.builder()
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
                 .calories(session.getCalories())
                 .distance(session.getDistance())
                 .duration(session.getDuration())
