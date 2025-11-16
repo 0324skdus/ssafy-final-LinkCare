@@ -1,19 +1,58 @@
 package com.a307.linkcare.feature.notification
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
+import com.a307.linkcare.feature.notification.data.NotificationEventManager
 import com.a307.linkcare.feature.notification.data.NotificationRepository
+import com.a307.linkcare.feature.notification.data.ProcessedNotificationStore
 import com.a307.linkcare.feature.notification.domain.NotificationResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val notificationEventManager: NotificationEventManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val processedStore = ProcessedNotificationStore(context)
+
+    // FCM 브로드캐스트 리시버 (백업용)
+    private val fcmReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Log.d("NotificationViewModel", "브로드캐스트 수신: ${intent?.action}")
+            // 새 알림이 왔을 때 자동으로 목록 갱신 (silent)
+            loadNotifications("GROUP", silent = true)
+        }
+    }
+
+    init {
+        // ViewModel 생성 시 리시버 등록 (백업)
+        registerFcmReceiver()
+
+        // SharedFlow 이벤트 구독 (메인 방식)
+        viewModelScope.launch {
+            notificationEventManager.newNotificationEvent.collect {
+                Log.d("NotificationViewModel", "SharedFlow 이벤트 수신 - 알림 목록 갱신")
+                loadNotifications("GROUP", silent = true)
+            }
+        }
+    }
 
     private val _notifications = MutableStateFlow<List<NotificationResponse>>(emptyList())
     val notifications: StateFlow<List<NotificationResponse>> = _notifications
@@ -24,10 +63,20 @@ class NotificationViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    // 처리된 알림 정보 (DataStore에서 로드)
+    val processedNotifications: StateFlow<Map<Long, String>> = processedStore.processedNotifications
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
     // 알림 목록 로드
-    fun loadNotifications(category: String = "GROUP") {
+    fun loadNotifications(category: String = "GROUP", silent: Boolean = false) {
         viewModelScope.launch {
-            _isLoading.value = true
+            if (!silent) {
+                _isLoading.value = true
+            }
             _errorMessage.value = null
 
             repository.getMyNotifications(category)
@@ -35,10 +84,14 @@ class NotificationViewModel @Inject constructor(
                     _notifications.value = notifications
                 }
                 .onFailure { error ->
-                    _errorMessage.value = error.message ?: "알림을 불러오는데 실패했습니다"
+                    if (!silent) {
+                        _errorMessage.value = error.message ?: "알림을 불러오는데 실패했습니다"
+                    }
                 }
 
-            _isLoading.value = false
+            if (!silent) {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -79,16 +132,84 @@ class NotificationViewModel @Inject constructor(
     }
 
     // 가입 요청 승인
-    suspend fun approveJoinRequest(requestSeq: Long): Result<Unit> {
-        return repository.approveJoinRequest(requestSeq)
+    suspend fun approveJoinRequest(requestSeq: Long, notificationId: Long, userName: String): Result<Unit> {
+        val result = repository.approveJoinRequest(requestSeq)
+        if (result.isSuccess) {
+            // 처리 결과 메시지 저장 (DataStore에 영구 저장)
+            val message = "${userName}님 신청을 수락하였습니다"
+            processedStore.addProcessedNotification(notificationId, message)
+        }
+        return result
     }
 
     // 가입 요청 거절
-    suspend fun rejectJoinRequest(requestSeq: Long): Result<Unit> {
-        return repository.rejectJoinRequest(requestSeq)
+    suspend fun rejectJoinRequest(requestSeq: Long, notificationId: Long, userName: String): Result<Unit> {
+        val result = repository.rejectJoinRequest(requestSeq)
+        if (result.isSuccess) {
+            // 처리 결과 메시지 저장 (DataStore에 영구 저장)
+            val message = "${userName}님 신청을 거절하였습니다"
+            processedStore.addProcessedNotification(notificationId, message)
+        }
+        return result
+    }
+
+    // 알림 삭제
+    fun deleteNotification(notificationId: Long) {
+        viewModelScope.launch {
+            repository.deleteNotification(notificationId)
+                .onSuccess {
+                    // 로컬 상태에서 제거
+                    _notifications.value = _notifications.value.filter {
+                        it.notificationId != notificationId
+                    }
+                    // DataStore에서도 제거
+                    processedStore.removeProcessedNotification(notificationId)
+                }
+                .onFailure { error ->
+                    _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
+                }
+        }
     }
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    // FCM 리시버 등록
+    private fun registerFcmReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(MyFirebaseMessagingService.ACTION_GROUP_JOINED)
+            addAction(MyFirebaseMessagingService.ACTION_NEW_NOTIFICATION)
+        }
+
+        try {
+            // LocalBroadcastManager로 등록 (모든 버전)
+            LocalBroadcastManager.getInstance(context).registerReceiver(fcmReceiver, filter)
+            Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 등록 완료")
+
+            // Android 13+ 에서는 글로벌 리시버도 등록
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(fcmReceiver, filter, Context.RECEIVER_EXPORTED)
+                Log.d("NotificationViewModel", "Global 리시버 등록 완료")
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationViewModel", "리시버 등록 실패: ${e.message}", e)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // ViewModel 소멸 시 리시버 등록 해제
+        try {
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(fcmReceiver)
+            Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 해제")
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.unregisterReceiver(fcmReceiver)
+                Log.d("NotificationViewModel", "Global 리시버 해제")
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationViewModel", "리시버 해제 실패: ${e.message}", e)
+        }
     }
 }
