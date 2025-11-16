@@ -99,6 +99,9 @@ fun LoginScreen(
                                 val auth: LoginResponse = res.body()!!
                                 TokenStore(context).save(auth)
 
+                                // 알림 권한 요청 (Android 13+)
+                                requestNotificationPermissionAfterLogin(activity)
+
                                 // FCM 토큰 발급 및 백엔드 전송
                                 sendFcmTokenToServer(context, auth.accessToken)
 
@@ -170,6 +173,9 @@ fun LoginScreen(
                         if (res.isSuccessful && res.body() != null) {
                             val auth: LoginResponse = res.body()!!
                             TokenStore(context).save(auth)
+
+                            // 알림 권한 요청 (Android 13+)
+                            requestNotificationPermissionAfterLogin(activity)
 
                             // FCM 토큰 발급 및 백엔드 전송
                             sendFcmTokenToServer(context, auth.accessToken)
@@ -269,6 +275,9 @@ fun LoginScreen(
                                 if (res.isSuccessful && res.body() != null) {
                                     val auth: LoginResponse = res.body()!!
                                     TokenStore(context).save(auth)
+
+                                    // 알림 권한 요청 (Android 13+)
+                                    requestNotificationPermissionAfterLogin(activity)
 
                                     // FCM 토큰 발급 및 백엔드 전송
                                     sendFcmTokenToServer(context, auth.accessToken)
@@ -393,6 +402,18 @@ private fun LoginForm(
         placeholder = "비밀번호",
         isPassword = true
     )
+}
+
+/**
+ * 로그인 성공 후 알림 권한 요청
+ * Android 13 (API 33) 이상에서만 실행됩니다
+ */
+private fun requestNotificationPermissionAfterLogin(activity: Activity) {
+    if (activity is com.a307.linkcare.MainActivity) {
+        activity.requestNotificationPermission()
+    } else {
+        Log.w("LoginScreen", "Activity is not MainActivity, cannot request notification permission")
+    }
 }
 
 /**

@@ -65,6 +65,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
                 // Retrofit 인스턴스 생성
                 val client = OkHttpClient.Builder()
+                    .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
                     .addInterceptor { chain ->
                         val request = chain.request().newBuilder()

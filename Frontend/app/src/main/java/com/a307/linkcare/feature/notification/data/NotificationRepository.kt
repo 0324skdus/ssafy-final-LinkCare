@@ -2,12 +2,15 @@ package com.a307.linkcare.feature.notification.data
 
 import com.a307.linkcare.feature.commongroup.data.GroupApi
 import com.a307.linkcare.feature.notification.domain.NotificationResponse
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import javax.inject.Inject
 
 class NotificationRepository @Inject constructor(
     private val notificationApi: NotificationApi,
     private val groupApi: GroupApi
 ) {
+    private val gson = Gson()
 
     // 알림 목록 조회
     suspend fun getMyNotifications(category: String = "ALL"): Result<List<NotificationResponse>> {
@@ -58,7 +61,8 @@ class NotificationRepository @Inject constructor(
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Failed to approve: HTTP ${response.code()}"))
+                val errorMessage = parseErrorMessage(response.errorBody()?.string())
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -72,10 +76,31 @@ class NotificationRepository @Inject constructor(
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Failed to reject: HTTP ${response.code()}"))
+                val errorMessage = parseErrorMessage(response.errorBody()?.string())
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * 서버 에러 응답에서 사용자 친화적인 메시지 추출
+     * 예: {"timestamp":"2025-11-16T10:30:00","status":400,"error":"BAD_REQUEST","message":"이미 처리된 가입 신청입니다"}
+     */
+    private fun parseErrorMessage(errorBody: String?): String {
+        return try {
+            if (errorBody.isNullOrEmpty()) {
+                return "요청 처리에 실패했습니다"
+            }
+
+            val jsonObject = gson.fromJson(errorBody, JsonObject::class.java)
+            val message = jsonObject.get("message")?.asString
+
+            // 서버에서 받은 메시지가 있으면 그대로 반환 (이미 한글로 작성됨)
+            message ?: "요청 처리에 실패했습니다"
+        } catch (e: Exception) {
+            "요청 처리에 실패했습니다"
         }
     }
 }

@@ -207,6 +207,11 @@ fun GroupList(
                                     OutlinedButton(
                                         onClick = {
                                             scope.launch {
+                                                // 읽음 처리
+                                                if (!notification.isRead) {
+                                                    viewModel.markAsRead(notification.notificationId)
+                                                }
+                                                // 거절 처리
                                                 viewModel.rejectJoinRequest(notification.relatedRequestSeq)
                                                     .onSuccess {
                                                         Toast.makeText(context, "가입 신청을 거절했습니다", Toast.LENGTH_SHORT).show()
@@ -226,6 +231,11 @@ fun GroupList(
                                     OutlinedButton(
                                         onClick = {
                                             scope.launch {
+                                                // 읽음 처리
+                                                if (!notification.isRead) {
+                                                    viewModel.markAsRead(notification.notificationId)
+                                                }
+                                                // 승인 처리
                                                 viewModel.approveJoinRequest(notification.relatedRequestSeq)
                                                     .onSuccess {
                                                         Toast.makeText(context, "가입 신청을 승인했습니다", Toast.LENGTH_SHORT).show()

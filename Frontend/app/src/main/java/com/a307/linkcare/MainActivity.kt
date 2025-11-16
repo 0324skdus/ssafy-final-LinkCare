@@ -1,6 +1,8 @@
 package com.a307.linkcare
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -8,8 +10,10 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.remember
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.a307.linkcare.common.theme.LinkCareTheme
 import com.a307.linkcare.feature.auth.data.ProfileApi
@@ -31,13 +35,24 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var tokenStore: TokenStore
 
+    // 알림 권한 요청 런처 (Android 13+)
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.i("MainActivity", "✅ 알림 권한 승인됨")
+        } else {
+            Log.w("MainActivity", "❌ 알림 권한 거부됨 - FCM 푸시 알림을 받을 수 없습니다")
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
 
-        // FCM 토큰 서버 전송
+        // FCM 토큰 서버 전송 (로그인된 경우만)
         updateFcmTokenToServer()
 
         setContent {
@@ -49,6 +64,33 @@ class MainActivity : ComponentActivity() {
 
                 AppNavGraph(initialDeepLinkToken = deepLinkToken)
             }
+        }
+    }
+
+    /**
+     * MainActivity 공개 메서드: 알림 권한 요청
+     * LoginScreen에서 로그인 성공 후 호출됩니다
+     */
+    fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    Log.i("MainActivity", "✅ 알림 권한 이미 있음")
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                    Log.i("MainActivity", "알림 권한 필요 - 사용자에게 설명 후 요청")
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    Log.i("MainActivity", "알림 권한 요청 (로그인 성공 후)")
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            Log.i("MainActivity", "Android 12 이하 - 알림 권한 자동 승인")
         }
     }
 

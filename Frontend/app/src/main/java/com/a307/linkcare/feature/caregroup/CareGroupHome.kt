@@ -237,7 +237,7 @@ fun CareGroupHome(
                 }
 
                 // 멤버 리스트
-                itemsIndexed(todayMembers, key = { _, item -> item.name }) { index, m ->
+                itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
                     MemberRow(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
