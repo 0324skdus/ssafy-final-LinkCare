@@ -1,9 +1,11 @@
 package com.ssafy.linkcare.group.controller;
 
 import com.ssafy.linkcare.ai.service.GoalGenerationService;
+import com.ssafy.linkcare.gpt.dto.WeeklyHeaderResponse;
 import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.entity.WeeklyGroupGoals;
 import com.ssafy.linkcare.group.enums.GroupType;
+import com.ssafy.linkcare.group.scheduler.GroupHeaderScheduler;
 import com.ssafy.linkcare.group.service.GroupService;
 import com.ssafy.linkcare.group.service.WeeklyStatsService;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
@@ -37,6 +39,7 @@ public class GroupController {
     private final GroupService groupService;
     private final WeeklyStatsService weeklyStatsService;
     private final GoalGenerationService goalGenerationService;
+    private final GroupHeaderScheduler groupHeaderScheduler;
 
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
@@ -506,6 +509,33 @@ public class GroupController {
 
         log.info("그룹원 권한 자동 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/weekly-header/{groupSeq}")
+    @Operation(summary = "그룹 주간 헤더 문구 조회", description = "저장된 이번 주 목표 문구를 제공합니다")
+    public ResponseEntity<WeeklyHeaderResponse> getWeeklyHeader(
+            @PathVariable Long groupSeq
+    ) {
+        log.info("=== 주간 헤더 조회 ===");
+        log.info("그룹 ID: {}", groupSeq);
+
+        WeeklyHeaderResponse response = groupService.getWeeklyHeader(groupSeq);
+
+        log.info("헤더 메시지: {}", response.getHeaderMessage());
+        log.info("생성 시간: {}", response.getGeneratedAt());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 관리자용 - 수동 재생성 API (선택사항)
+    @PostMapping("/weekly-header/{groupSeq}/regenerate")
+    @Operation(summary = "주간 헤더 강제 재생성")
+    public ResponseEntity<WeeklyHeaderResponse> regenerateWeeklyHeader(
+            @PathVariable Long groupSeq
+    ) {
+        log.info("=== 주간 헤더 수동 재생성 ===");
+        WeeklyHeaderResponse response = groupHeaderScheduler.updateGroupHeader(groupSeq);
+        return ResponseEntity.ok(response);
     }
 }
 
