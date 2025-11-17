@@ -319,7 +319,7 @@ fun CareGroupHome(
     val sleepStatistics by healthViewModel.sleepStatistics.collectAsState()
 
     LaunchedEffect(Unit) {
-        healthViewModel.loadHeader(groupSeq, today)
+        healthViewModel.loadHeader(groupSeq)
     }
 
     LaunchedEffect(metricType, selectedDate) {
@@ -352,7 +352,11 @@ fun CareGroupHome(
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = header
+                        txt = header,
+                        onClick = {
+                            healthViewModel.regenerateHeader(groupSeq)
+                            Toast.makeText(context, "문구 만드는 중...", Toast.LENGTH_SHORT).show()
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -637,11 +641,13 @@ private fun HeaderCard(
 @Composable
 fun ScreenTitleOnlyRow(
     title: String,
-    txt: String
+    txt: String,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom

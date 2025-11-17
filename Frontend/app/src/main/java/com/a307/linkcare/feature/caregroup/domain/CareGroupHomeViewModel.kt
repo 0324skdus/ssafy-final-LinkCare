@@ -57,10 +57,21 @@ class CareGroupHomeViewModel @Inject constructor(
     var headerMessage by mutableStateOf<String?>(null)
         private set
 
-    fun loadHeader(groupSeq: Long, today: LocalDate?) {
+    fun loadHeader(groupSeq: Long) {
         viewModelScope.launch {
             try {
-                val res = repo.fetchWeeklyHeader(groupSeq, today)
+                val res = repo.fetchWeeklyHeader(groupSeq)
+                headerMessage = res.headerMessage
+            } catch (e: Exception) {
+                headerMessage = "함께 건강해져봐요!" // fallback
+            }
+        }
+    }
+
+    fun regenerateHeader(groupSeq: Long) {
+        viewModelScope.launch {
+            try {
+                val res = repo.regenerateWeeklyHeader(groupSeq)
                 headerMessage = res.headerMessage
             } catch (e: Exception) {
                 headerMessage = "함께 건강해져봐요!" // fallback
