@@ -32,6 +32,8 @@ import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.common.util.painterResourceCropped
 import kotlin.math.roundToInt
 
+
+
 @Composable
 fun HealthGroupHeaderCard(
     progress: Float,
