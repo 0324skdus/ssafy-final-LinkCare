@@ -128,8 +128,8 @@ public class HeartRateService {
     public List<HeartRateResponse> getHeartRatesByPeriod(int userSeq, LocalDate startTime, LocalDate endTime) {
         User user = validateUser(userSeq);
 
-        Long startTimeTs = timeStampUtil.toTimeStamp(startTime.atStartOfDay());
-        Long endTimeTs = timeStampUtil.toTimeStamp(startTime.atStartOfDay().plusDays(1));
+        Long startTimeTs = timeStampUtil.getDateStartTimestamp(startTime);
+        Long endTimeTs = timeStampUtil.getDateEndTimestamp(endTime);
 
         log.info("(LocalDate) 특정 기간별 조회 - User: {}, Start: {}, End: {}",
                 userSeq, startTimeTs, endTimeTs);
@@ -184,8 +184,8 @@ public class HeartRateService {
     public HeartRateStaticsResponse getHeartRateStatsByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
         User user = validateUser(userSeq);
 
-        long startTimestamp = timeStampUtil.toTimestamp(startDate);
-        long endTimestamp = timeStampUtil.toTimestamp(endDate.plusDays(1));
+        long startTimestamp = timeStampUtil.getDateStartTimestamp(startDate);
+        long endTimestamp = timeStampUtil.getDateEndTimestamp(endDate);
 
         Double avgHeartRate = heartRateRepository.findAverageHeartRateByPeriod(user, startTimestamp, endTimestamp);
         Double maxHeartRate = heartRateRepository.findMaxHeartRateByPeriod(user, startTimestamp, endTimestamp);

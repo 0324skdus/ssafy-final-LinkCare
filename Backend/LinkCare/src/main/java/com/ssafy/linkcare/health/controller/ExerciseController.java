@@ -1,8 +1,10 @@
 package com.ssafy.linkcare.health.controller;
 
 
+import com.ssafy.linkcare.health.dto.ExerciseDto;
 import com.ssafy.linkcare.health.dto.ExerciseResponse;
 import com.ssafy.linkcare.health.dto.ExerciseStatisticsResponse;
+import com.ssafy.linkcare.health.dto.WatchExerciseData;
 import com.ssafy.linkcare.health.service.ExerciseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -187,8 +189,51 @@ public class ExerciseController {
                 userSeq, startDate, endDate);
 
         List<ExerciseResponse> response = exerciseService
-                .getExercisesByPeriod(userSeq, startDate, endDate);
+                .getExercisesByDate(userSeq, startDate, endDate);
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 워치 운동 데이터 저장
+     */
+    @PostMapping("/users/{userId}/watch")
+    @Operation(summary = "워치 운동 데이터 저장",
+            description = "워치에서 전송한 운동 데이터를 저장합니다")
+    public ResponseEntity<String> uploadWatchExercise(
+            @PathVariable int userId,
+            @RequestBody WatchExerciseData data) {
+
+        log.info("워치 운동 데이터 수신: userId={}, sessionId={}",
+                userId, data.getSessionId());
+
+        exerciseService.saveWatchExercise(data, userId);
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 워치 병합 포함 동기화 엔드포인트
+     */
+    @PostMapping("/exercise/sync-with-merge")
+    public ResponseEntity<Void> syncExerciseWithMerge(
+            @RequestBody ExerciseDto exerciseDto,
+            @RequestHeader("userSeq") int userSeq) {
+
+        exerciseService.saveDailyExerciseDataWithWatchMerge(exerciseDto, userSeq);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 일반 동기화 엔드포인트
+     */
+    @PostMapping("/watch/sync")
+    public ResponseEntity<Void> syncExercise(
+            @RequestBody WatchExerciseData watchExerciseData,
+            @RequestHeader("userSeq") int userSeq) {
+
+        exerciseService.saveWatchExercise(watchExerciseData, userSeq);
+        return ResponseEntity.ok().build();
+    }
+    // "/api/health/exercise/watch/sync" syncExercise
 }

@@ -1,6 +1,9 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,14 +14,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,13 +35,17 @@ import com.a307.linkcare.R
 fun HealthGroupCreate(
     navController: NavHostController,
     onClickCreate: (
-        name: String,
-        description: String,
-        maxMember: Int,
         share: ShareOptions
-    ) -> Unit = { _, _, _, _ -> },
-    @DrawableRes avatarRes: Int? = null
+    ) -> Unit = { _ -> },
+    @DrawableRes avatarRes: Int? = null,
+    vm: HealthGroupCreateViewModel = hiltViewModel(),
+    groupvm: MyGroupsViewModel = hiltViewModel()
 ) {
+    val state by vm.state
+    val context = LocalContext.current
+
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
     var name by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var maxMemberText by remember { mutableStateOf("") }
@@ -51,6 +64,38 @@ fun HealthGroupCreate(
     val requiredAllChecked = shareExercise && shareHr && shareSteps
     val canSubmit = name.isNotBlank() && maxValid && requiredAllChecked
 
+    LaunchedEffect(state) {
+        when (state) {
+            is HealthGroupCreateViewModel.UiState.Success -> {
+                Toast.makeText(context, "생성 완료!", Toast.LENGTH_SHORT).show()
+
+                // 그룹 목록 새로고침
+                groupvm.loadHealth()
+
+                // 그룹 생성 성공했을 때만 ShareOptions 전달
+                onClickCreate(
+                    ShareOptions(
+                        exercise = shareExercise,
+                        heartRate = shareHr,
+                        steps = shareSteps
+                    )
+                )
+
+                navController.popBackStack()
+            }
+
+            is HealthGroupCreateViewModel.UiState.Error -> {
+                Toast.makeText(
+                    context,
+                    "에러: ${(state as HealthGroupCreateViewModel.UiState.Error).msg}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            else -> Unit
+        }
+    }
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background) {
         LazyColumn(
             modifier = Modifier
@@ -65,7 +110,9 @@ fun HealthGroupCreate(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    GroupAvatarPicker(defaultRes = avatarRes ?: R.drawable.main_duck) {}
+                    GroupAvatarPicker(defaultRes = avatarRes ?: R.drawable.main_duck) { uri ->
+                        selectedImageUri = uri
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "그룹 사진 선택",
@@ -192,25 +239,30 @@ fun HealthGroupCreate(
             item {
                 LcBtn(
                     text = "그룹 생성하기",
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     buttonColor = main,
                     buttonTextColor = white,
                     isEnabled = canSubmit,
                     onClick = {
-                        val max = maxMember ?: 6
-                        onClickCreate(
-                            name.trim(),
-                            desc.trim(),
-                            max,
-                            ShareOptions(
-                                exercise = shareExercise,
-                                heartRate = shareHr,
-                                steps = shareSteps
-                            )
+                        val imagePart = selectedImageUri?.toMultipart(context)
+                        vm.createGroup(
+                            name = name,
+                            description = desc,
+                            capacity = maxMember ?: 6,
+                            minCalorie = kcalText.toFloatOrNull(),
+                            minStep = stepsText.toIntOrNull(),
+                            minDistance = kmText.toFloatOrNull(),
+                            minDuration = minutesText.toIntOrNull(),
+                            imagePart = imagePart
                         )
-                        navController.popBackStack()
                     }
                 )
+
+                if (state is HealthGroupCreateViewModel.UiState.Loading) {
+                    LoadingOverlay()
+                }
             }
         }
     }
@@ -223,4 +275,12 @@ private fun SectionTitle(text: String) {
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         color = black
     )
+}
+
+fun Uri.toMultipart(context: Context): MultipartBody.Part? {
+    val inputStream = context.contentResolver.openInputStream(this) ?: return null
+    val bytes = inputStream.readBytes()
+
+    val reqBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+    return MultipartBody.Part.createFormData("image", "group.jpg", reqBody)
 }

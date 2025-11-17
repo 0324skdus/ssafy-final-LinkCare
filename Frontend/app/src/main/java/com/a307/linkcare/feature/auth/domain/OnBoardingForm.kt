@@ -5,5 +5,7 @@ data class OnboardingForm(
     val birth: String = "",
     val height: Float? = null,
     val weight: Float? = null,
-    val exerciseStartYear: Int? = null
+    val exerciseStartYear: Int? = null,
+    val characterId: Long = 0L,
+    val petName: String = ""
 )

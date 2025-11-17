@@ -3,8 +3,6 @@ package com.ssafy.linkcare.shop.dto;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 @Builder
 public class ShopCharacterDto {
@@ -12,7 +10,7 @@ public class ShopCharacterDto {
     private String name;
     private String description;
     private String baseImageUrl;
-    private List<String> imageUrls;
+    private String animatedImageUrl;
     private int price;
     private boolean isUnlocked;
 }

@@ -88,26 +88,77 @@ fun MetricChartCard(
                     val w = size.width - paddingLeft - paddingRight
                     val h = size.height - paddingTop - paddingBottom
 
-                    // 값 범위
-                    val allValues = displayedSeries.flatMap { it.points } + data.avgSeries.points
-                    val minV = (allValues.minOrNull() ?: 0f)
-                    val maxV = (allValues.maxOrNull() ?: 1f)
-                    val range = (maxV - minV).takeIf { it > 0f } ?: 1f
+                    val isSleep = (unit == "분")
 
-                    // Y축 4분할 눈금 (숫자만 표기)
-                    val steps = 4
-                    repeat(steps + 1) { i ->
-                        val y = paddingTop + h - (h / steps) * i
-                        drawLine(
-                            color = Color(0x11000000),
-                            start = Offset(paddingLeft, y),
-                            end = Offset(size.width - paddingRight, y),
-                            strokeWidth = 1f
-                        )
-                        val v = minV + range / steps * i
-                        val space = 2.dp.toPx()
-                        drawContext.canvas.nativeCanvas.apply {
-                            drawText(
+                    // 모든 값 모으기 (멤버 시리즈 + 평균 시리즈)
+                    val allValuesRaw = displayedSeries.flatMap { it.points } + data.avgSeries.points
+                    val allValues = if (allValuesRaw.isEmpty()) listOf(0f) else allValuesRaw
+
+                    // ---- Y축 범위 / 눈금 계산 ----
+                    val yMin: Float
+                    val yMax: Float
+                    val ySteps: Int
+                    val valueRange: Float
+
+                    if (isSleep) {
+                        // 수면 그래프: 분 단위 값 → 최대 수면 시간 기준으로 동적 스케일
+                        val maxSleepMinutes = (allValues.maxOrNull() ?: 0f)
+                        // 최대 시간(정수) + 1시간 버퍼, 최소 6시간은 보이게
+                        val maxHours = ((maxSleepMinutes / 60f).toInt() + 1).coerceAtLeast(6)
+                        yMin = 0f
+                        yMax = (maxHours * 60).toFloat()   // 분 단위
+                        ySteps = maxHours                  // 1시간 = 60분 간격
+                        valueRange = (yMax - yMin).takeIf { it > 0f } ?: 1f
+
+                        // Y축 라인 + 라벨 (0시간, 1시간, 2시간, ...)
+                        repeat(ySteps + 1) { i ->
+                            val y = paddingTop + h - (h / ySteps) * i
+                            val minutesValue = yMin + 60f * i
+                            val hourText = "${(minutesValue / 60f).toInt()}시간"
+
+                            // 가로 보조선
+                            drawLine(
+                                color = Color(0x11000000),
+                                start = Offset(paddingLeft, y),
+                                end = Offset(size.width - paddingRight, y),
+                                strokeWidth = 1f
+                            )
+
+                            // Y축 라벨
+                            drawContext.canvas.nativeCanvas.drawText(
+                                hourText,
+                                paddingLeft - 8f,
+                                y + 6f,
+                                android.graphics.Paint().apply {
+                                    color = 0xFF666666.toInt()
+                                    textSize = 28f
+                                    textAlign = android.graphics.Paint.Align.RIGHT
+                                }
+                            )
+                        }
+                    } else {
+                        // 기존 로직: min/max 기반 4분할
+                        val minV = (allValues.minOrNull() ?: 0f)
+                        val maxV = (allValues.maxOrNull() ?: 1f)
+                        val range = (maxV - minV).takeIf { it > 0f } ?: 1f
+                        val steps = 4
+
+                        yMin = minV
+                        yMax = maxV
+                        ySteps = steps
+                        valueRange = range
+
+                        repeat(steps + 1) { i ->
+                            val y = paddingTop + h - (h / steps) * i
+                            val v = minV + range / steps * i
+
+                            drawLine(
+                                color = Color(0x11000000),
+                                start = Offset(paddingLeft, y),
+                                end = Offset(size.width - paddingRight, y),
+                                strokeWidth = 1f
+                            )
+                            drawContext.canvas.nativeCanvas.drawText(
                                 v.toInt().toString(),
                                 paddingLeft - 4f,
                                 y + 4f,
@@ -125,29 +176,29 @@ fun MetricChartCard(
                     data.xLabels.forEachIndexed { i, label ->
                         val x = paddingLeft + i * xStep
                         val y = size.height - paddingBottom / 2f
-                        val space = 2.dp.toPx()
-                        drawContext.canvas.nativeCanvas.apply {
-                            drawText(
-                                label,
-                                x,
-                                y + 20f,
-                                android.graphics.Paint().apply {
-                                    color = 0xFF666666.toInt()
-                                    textSize = 28f
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
-                            )
-                        }
+                        drawContext.canvas.nativeCanvas.drawText(
+                            label,
+                            x,
+                            y + 20f,
+                            android.graphics.Paint().apply {
+                                color = 0xFF666666.toInt()
+                                textSize = 28f
+                                textAlign = android.graphics.Paint.Align.CENTER
+                            }
+                        )
                     }
 
                     fun pt(i: Int, v: Float): Offset {
                         val x = paddingLeft + i * xStep
-                        val y = paddingTop + h - ((v - minV) / range) * h
+                        val range = if (valueRange > 0f) valueRange else 1f
+                        val ratio = (v - yMin) / range
+                        val y = paddingTop + h - (ratio * h)
                         return Offset(x, y)
                     }
 
                     // 시리즈 라인
                     displayedSeries.forEachIndexed { idx, s ->
+                        if (s.points.isEmpty()) return@forEachIndexed
                         val path = Path().apply {
                             s.points.forEachIndexed { i, v ->
                                 val p = pt(i, v)
@@ -161,23 +212,25 @@ fun MetricChartCard(
                         )
                     }
 
-                    // 평균 (점선)
-                    val avgPath = Path().apply {
-                        data.avgSeries.points.forEachIndexed { i, v ->
-                            val p = pt(i, v)
-                            if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
+                    // 평균 / 목표 라인 (점선)
+                    if (data.avgSeries.points.isNotEmpty()) {
+                        val avgPath = Path().apply {
+                            data.avgSeries.points.forEachIndexed { i, v ->
+                                val p = pt(i, v)
+                                if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
+                            }
                         }
-                    }
-                    drawPath(
-                        path = avgPath,
-                        color = Color.Black.copy(alpha = 0.6f),
-                        style = Stroke(
-                            width = 5f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round
+                        drawPath(
+                            path = avgPath,
+                            color = Color.Black.copy(alpha = 0.6f),
+                            style = Stroke(
+                                width = 5f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -214,6 +267,7 @@ private fun LegendRow(
             }
         }
         Spacer(Modifier.height(4.dp))
+        // avgSeries.name이 "목표 7시간" 같은 이름이면 여기 텍스트만 바꾸면 됨
         LegendDot(label = "평균", color = Color.Black.copy(alpha = 0.6f), dashed = true)
     }
 }

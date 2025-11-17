@@ -15,8 +15,8 @@ fun SummaryScreenState.toWorkoutSummary(): WorkoutSummary {
     return WorkoutSummary(
         sessionId = sessionId,
         avgHeartRate = averageHeartRate.toInt(),
-        calories = totalCalories.toInt(),
-        distance = totalDistance.toInt(),
-        durationSec = elapsedTime.seconds.toInt()
+        calories = totalCalories.toFloat(),
+        distance = totalDistance.toFloat(),
+        durationSec = elapsedTime.seconds
     )
 }

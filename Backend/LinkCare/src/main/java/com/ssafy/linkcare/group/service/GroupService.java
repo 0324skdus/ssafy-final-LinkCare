@@ -9,7 +9,12 @@ import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.dto.SleepDetailResponse;
+import com.ssafy.linkcare.health.dto.StepDetailResponse;
+import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
+import com.ssafy.linkcare.health.service.SleepService;
+import com.ssafy.linkcare.health.service.StepService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
@@ -37,6 +42,8 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private final S3Service s3Service;
+    private final StepService stepService;
+    private final SleepService sleepService;
     private final HealthService healthService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
@@ -47,7 +54,6 @@ public class GroupService {
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GroupHealthPermissionRepository healthPermissionRepository;
     private final GroupRequiredPermissionRepository requiredPermissionRepository;
-
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
 
@@ -124,7 +130,8 @@ public class GroupService {
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 생성자는 자동으로 멤버
         );
     }
 
@@ -204,7 +211,8 @@ public class GroupService {
                 group.getCapacity(),
                 1,  // 현재 멤버 수 (방장 1명)
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 생성자는 자동으로 멤버
         );
     }
 
@@ -297,14 +305,15 @@ public class GroupService {
                             group.getCapacity(),
                             currentMembers,
                             group.getImageUrl(),
-                            group.getCreatedAt()
+                            group.getCreatedAt(),
+                            "MEMBER"  // 내 그룹은 항상 MEMBER
                     );
                 })
                 .toList();
     }
 
     // 그룹 검색 (이름으로)
-    public List<GroupResponse> searchGroups(String keyword) {
+    public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "검색어를 입력해주세요");
         }
@@ -315,6 +324,25 @@ public class GroupService {
                 .map(group -> {
                     int currentMembers = groupMemberRepository.countByGroup(group);
 
+                    // 가입 상태 확인
+                    String joinStatus = "NONE";
+                    if (userId != null) {
+                        // 이미 멤버인지 확인
+                        boolean isMember = groupMemberRepository.existsByGroupAndUser_UserPk(group, userId);
+                        if (isMember) {
+                            joinStatus = "MEMBER";
+                        } else {
+                            // 대기 중인 신청이 있는지 확인
+                            boolean hasPendingRequest = groupJoinRequestRepository
+                                    .existsByGroup_GroupSeqAndUser_UserPkAndStatus(
+                                            group.getGroupSeq(), userId, RequestStatus.PENDING
+                                    );
+                            if (hasPendingRequest) {
+                                joinStatus = "PENDING";
+                            }
+                        }
+                    }
+
                     return new GroupResponse(
                             group.getGroupSeq(),
                             group.getGroupName(),
@@ -323,7 +351,8 @@ public class GroupService {
                             group.getCapacity(),
                             currentMembers,
                             group.getImageUrl(),
-                            group.getCreatedAt()
+                            group.getCreatedAt(),
+                            joinStatus
                     );
                 })
                 .toList();
@@ -389,9 +418,19 @@ public class GroupService {
         group.updateGroupInfo(request.groupName(), request.groupDescription());
         group.updateImageUrl(newImageUrl);
 
+        // 5. 케어 그룹인 경우 권한 업데이트 및 알림 발송
+        if (group.getType() == GroupType.CARE) {
+            updateCareGroupPermissions(group, request);
+        }
+
+        // 6. 헬스 그룹인 경우 목표 기준 업데이트
+        if (group.getType() == GroupType.HEALTH && request.goalCriteria() != null) {
+            updateHealthGroupGoalCriteria(group, request.goalCriteria());
+        }
+
         log.info("그룹 정보 수정 완료: groupSeq={}, userId={}", groupSeq, userId);
 
-        // 5. 응답 생성
+        // 6. 응답 생성
         int currentMembers = groupMemberRepository.countByGroup(group);
         return new GroupResponse(
                 group.getGroupSeq(),
@@ -401,7 +440,8 @@ public class GroupService {
                 group.getCapacity(),
                 currentMembers,
                 group.getImageUrl(),
-                group.getCreatedAt()
+                group.getCreatedAt(),
+                "MEMBER"  // 수정 권한이 있다는 것은 멤버라는 의미
         );
     }
 
@@ -526,7 +566,12 @@ public class GroupService {
                 .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
 
+        log.info("방장 찾기 완료: leaderId={}, leaderName={}", leader.getUser().getUserPk(), leader.getUser().getName());
+
         String notificationContent = user.getName() + "님이 가입 신청을 했습니다.";
+        log.info("알림 생성 시작: 방장={}에게, 신청자={}, 그룹={}",
+                leader.getUser().getName(), user.getName(), group.getGroupName());
+
         notificationService.createNotification(
                 leader.getUser(),
                 NotificationType.GROUP_JOIN_REQUEST,
@@ -536,8 +581,8 @@ public class GroupService {
                 joinRequest
         );
 
-        log.info("그룹 참가 신청 완료 ({}): userId={}, groupSeq={}, agreedPermissions=[sleep={}, water={}, bp={}, bs={}]",
-                joinMethod, user.getUserPk(), group.getGroupSeq(),
+        log.info("✅ 그룹 참가 신청 완료 ({}): 신청자userId={}, 방장userId={}, groupSeq={}, agreedPermissions=[sleep={}, water={}, bp={}, bs={}]",
+                joinMethod, user.getUserPk(), leader.getUser().getUserPk(), group.getGroupSeq(),
                 agreement.isSleepAllowed(), agreement.isWaterIntakeAllowed(),
                 agreement.isBloodPressureAllowed(), agreement.isBloodSugarAllowed());
     }
@@ -900,6 +945,96 @@ public class GroupService {
                 .toList();
     }
 
+    // 그룹원 전체 총 걸음 수, 총 칼로리, 총 운동 시간 조회
+    public TotalActivityStatisticsResponse getGroupTotalActivityStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> members = groupMemberRepository.findByGroupWithUser(group);
+
+        // 초기값
+        double totalCalories = 0.0;
+        long totalSteps = 0L;
+        long totalDuration = 0L;
+
+        // 각 멤버의 데이터 합산
+        for (GroupMember member : members) {
+            TotalActivityStatisticsResponse stats = healthService.getTotalActivityStatistics(
+                    Math.toIntExact(member.getUser().getUserPk()),
+                    startDate,
+                    endDate
+            );
+
+            if (stats != null) {
+                totalCalories += (stats.getTotalCalories() != null ? stats.getTotalCalories() : 0.0);
+                totalSteps += (stats.getTotalSteps() != null ? stats.getTotalSteps() : 0L);
+                totalDuration += (stats.getTotalDuration() != null ? stats.getTotalDuration() : 0L);
+            }
+        }
+
+        return TotalActivityStatisticsResponse.builder()
+                .totalCalories(totalCalories)
+                .totalSteps(totalSteps)
+                .totalDuration(totalDuration)
+                .build();
+    }
+
+    // 그룹원 수면 기록 조회
+    public GroupSleepStatisticsResponse getGroupSleepStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        // 2. 그룹의 모든 멤버 조회
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        // 3. 각 멤버의 수면 통계 조회
+        List<SleepDetailResponse> members = groupMembers.stream()
+                .map(groupMember -> sleepService.getSleepStatisticsForGroup(
+                        Math.toIntExact(groupMember.getUser().getUserPk()),
+                        startDate,
+                        endDate))
+                .collect(Collectors.toList());
+
+        // 4. 그룹 전체 평균 수면시간 계산
+        Long groupAvgDuration = (long) members.stream()
+                .mapToLong(SleepDetailResponse::getAverageSleepMinutes)
+                .average()
+                .orElse(0.0);
+
+
+        // 4. 응답 생성
+        return GroupSleepStatisticsResponse.builder()
+                .members(members)
+                .avgDuration(groupAvgDuration)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+    }
+
+    // 당일 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    public GroupStepStatisticsResponse getGroupStepStatistics(Long groupSeq) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        List<StepDetailResponse> responses = groupMembers.stream()
+                .map(groupMember -> {
+                    int userSeq = Math.toIntExact(groupMember.getUser().getUserPk());
+                    int steps = stepService.getTodayStepCount(userSeq);
+                    return StepDetailResponse.builder()
+                            .userSeq(userSeq)
+                            .steps(steps)
+                            .build();
+                })
+                .toList();
+
+        int totalSteps = responses.stream().mapToInt(StepDetailResponse::getSteps).sum();
+
+        return GroupStepStatisticsResponse.builder()
+                .members(responses)
+                .totalSteps(totalSteps)
+                .build();
+    }
+
+
     /*
         * GroupInvitation을 InvitationResponse로 변환
         * invitationUrl은 null로 반환 - 프론트엔드에서 자유롭게 사용
@@ -923,6 +1058,278 @@ public class GroupService {
     private Group validateGroup(Long groupSeq) {
         return groupRepository.findById(groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+    }
+
+    /*
+        * 그룹원 권한 동의 처리
+            * - 그룹원이 알림을 받고 동의 버튼을 누르면 호출
+            * - GroupHealthPermission 업데이트
+    */
+    @Transactional
+    public void agreeToGroupPermissions(Long userId, Long groupSeq, PermissionAgreementDto agreement) {
+        // 1. 사용자 및 그룹 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 그룹 멤버 확인
+        GroupMember member = groupMemberRepository.findByGroupAndUser_UserPk(group, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 3. 케어 그룹인지 확인
+        if (group.getType() != GroupType.CARE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "케어 그룹만 권한 동의가 가능합니다");
+        }
+
+        // 4. 그룹 요구 권한 조회
+        GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 5. 권한 동의 검증: 그룹이 요구하는 권한을 모두 동의했는지 확인
+        if (required.getIsSleepRequired() && !agreement.isSleepAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 수면 데이터 공유가 필수입니다");
+        }
+        if (required.getIsWaterIntakeRequired() && !agreement.isWaterIntakeAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 물 섭취량 공유가 필수입니다");
+        }
+        if (required.getIsBloodPressureRequired() && !agreement.isBloodPressureAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 혈압 데이터 공유가 필수입니다");
+        }
+        if (required.getIsBloodSugarRequired() && !agreement.isBloodSugarAllowed()) {
+            throw new CustomException(ErrorCode.PERMISSION_AGREEMENT_INVALID,
+                    "이 그룹은 혈당 데이터 공유가 필수입니다");
+        }
+
+        // 6. 기존 권한 조회 및 업데이트
+        GroupHealthPermission permission = healthPermissionRepository.findByGroupMember(member)
+                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
+
+        // 7. 새로운 권한으로 업데이트 (Builder 패턴 사용)
+        GroupHealthPermission updatedPermission = GroupHealthPermission.builder()
+                .groupMember(member)
+                // 필수 권한 (항상 true)
+                .isDailyStepAllowed(true)
+                .isHeartRateAllowed(true)
+                .isExerciseAllowed(true)
+                // 선택 권한 (사용자가 동의한 값)
+                .isSleepAllowed(agreement.isSleepAllowed())
+                .isWaterIntakeAllowed(agreement.isWaterIntakeAllowed())
+                .isBloodPressureAllowed(agreement.isBloodPressureAllowed())
+                .isBloodSugarAllowed(agreement.isBloodSugarAllowed())
+                .build();
+
+        // 기존 엔티티 삭제 후 새로 저장 (OneToOne 관계 업데이트)
+        healthPermissionRepository.delete(permission);
+        healthPermissionRepository.save(updatedPermission);
+
+        log.info("그룹원 권한 동의 처리 완료: userId={}, groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                userId, groupSeq,
+                agreement.isSleepAllowed(), agreement.isWaterIntakeAllowed(),
+                agreement.isBloodPressureAllowed(), agreement.isBloodSugarAllowed());
+    }
+
+    /*
+        * 케어 그룹 권한 자동 동의 (그룹 요구사항에 맞춰 자동으로 동의)
+        * - 권한 변경 알림 받은 후 간편하게 "동의" 버튼만 누르면 호출되는 API
+        * - 그룹이 요구하는 모든 선택 권한을 자동으로 true로 설정
+    */
+    @Transactional
+    public void autoAgreeToGroupPermissions(Long userId, Long groupSeq) {
+        // 1. 사용자 및 그룹 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 그룹 멤버 확인
+        GroupMember member = groupMemberRepository.findByGroupAndUser_UserPk(group, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 3. 케어 그룹인지 확인
+        if (group.getType() != GroupType.CARE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "케어 그룹만 권한 동의가 가능합니다");
+        }
+
+        // 4. 그룹 요구 권한 조회
+        GroupRequiredPermission required = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 5. 기존 권한 조회
+        GroupHealthPermission permission = healthPermissionRepository.findByGroupMember(member)
+                .orElseThrow(() -> new CustomException(ErrorCode.HEALTH_PERMISSION_NOT_FOUND));
+
+        // 6. 기존 권한을 그대로 수정 (delete + save 대신 update 사용)
+        // - 필수 권한: 항상 true
+        // - 선택 권한: 그룹이 요구하면 true, 요구 안 하면 기존 값 유지
+        permission.updatePermissions(
+                true,  // isDailyStepAllowed
+                true,  // isHeartRateAllowed
+                true,  // isExerciseAllowed
+                required.getIsSleepRequired() ? true : permission.getIsSleepAllowed(),
+                required.getIsWaterIntakeRequired() ? true : permission.getIsWaterIntakeAllowed(),
+                required.getIsBloodPressureRequired() ? true : permission.getIsBloodPressureAllowed(),
+                required.getIsBloodSugarRequired() ? true : permission.getIsBloodSugarAllowed()
+        );
+
+        log.info("그룹원 권한 자동 동의 처리 완료: userId={}, groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                userId, groupSeq,
+                permission.getIsSleepAllowed(), permission.getIsWaterIntakeAllowed(),
+                permission.getIsBloodPressureAllowed(), permission.getIsBloodSugarAllowed());
+    }
+
+    /*
+        * 케어 그룹 권한 업데이트 및 알림 발송
+            * - GroupRequiredPermission 업데이트
+            * - 변경사항 감지 (true↔false 변경된 항목)
+            * - 모든 그룹원에게 알림 발송
+    */
+    private void updateCareGroupPermissions(Group group, UpdateGroupRequest request) {
+        // 1. 기존 권한 조회
+        GroupRequiredPermission requiredPermission = requiredPermissionRepository.findByGroup(group)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_REQUIRED_PERMISSION_NOT_FOUND));
+
+        // 2. 변경사항 감지
+        boolean sleepChanged = false;
+        boolean waterIntakeChanged = false;
+        boolean bloodPressureChanged = false;
+        boolean bloodSugarChanged = false;
+
+        boolean sleepRequiredNow = false;
+        boolean waterIntakeRequiredNow = false;
+        boolean bloodPressureRequiredNow = false;
+        boolean bloodSugarRequiredNow = false;
+
+        // 수면
+        if (request.isSleepRequired() != null && !request.isSleepRequired().equals(requiredPermission.getIsSleepRequired())) {
+            sleepChanged = true;
+            sleepRequiredNow = request.isSleepRequired();
+        }
+
+        // 물 섭취량
+        if (request.isWaterIntakeRequired() != null && !request.isWaterIntakeRequired().equals(requiredPermission.getIsWaterIntakeRequired())) {
+            waterIntakeChanged = true;
+            waterIntakeRequiredNow = request.isWaterIntakeRequired();
+        }
+
+        // 혈압
+        if (request.isBloodPressureRequired() != null && !request.isBloodPressureRequired().equals(requiredPermission.getIsBloodPressureRequired())) {
+            bloodPressureChanged = true;
+            bloodPressureRequiredNow = request.isBloodPressureRequired();
+        }
+
+        // 혈당
+        if (request.isBloodSugarRequired() != null && !request.isBloodSugarRequired().equals(requiredPermission.getIsBloodSugarRequired())) {
+            bloodSugarChanged = true;
+            bloodSugarRequiredNow = request.isBloodSugarRequired();
+        }
+
+        // 3. 변경사항이 있으면 업데이트 및 알림 발송
+        if (sleepChanged || waterIntakeChanged || bloodPressureChanged || bloodSugarChanged) {
+            // 3-1. GroupRequiredPermission 업데이트 (Builder 사용)
+            GroupRequiredPermission updatedPermission = GroupRequiredPermission.builder()
+                    .group(group)
+                    .isSleepRequired(request.isSleepRequired() != null ? request.isSleepRequired() : requiredPermission.getIsSleepRequired())
+                    .isWaterIntakeRequired(request.isWaterIntakeRequired() != null ? request.isWaterIntakeRequired() : requiredPermission.getIsWaterIntakeRequired())
+                    .isBloodPressureRequired(request.isBloodPressureRequired() != null ? request.isBloodPressureRequired() : requiredPermission.getIsBloodPressureRequired())
+                    .isBloodSugarRequired(request.isBloodSugarRequired() != null ? request.isBloodSugarRequired() : requiredPermission.getIsBloodSugarRequired())
+                    .build();
+
+            // 기존 엔티티 삭제 후 새로 저장 (@MapsId 사용으로 인해)
+            requiredPermissionRepository.delete(requiredPermission);
+            requiredPermissionRepository.save(updatedPermission);
+
+            // 3-2. 알림 메시지 생성
+            StringBuilder notificationMessage = new StringBuilder("그룹 권한 설정이 변경되었습니다.\n");
+
+            if (sleepChanged) {
+                if (sleepRequiredNow) {
+                    notificationMessage.append("수면 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("수면 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (waterIntakeChanged) {
+                if (waterIntakeRequiredNow) {
+                    notificationMessage.append("물 섭취량 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("물 섭취량 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (bloodPressureChanged) {
+                if (bloodPressureRequiredNow) {
+                    notificationMessage.append("혈압 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("혈압 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            if (bloodSugarChanged) {
+                if (bloodSugarRequiredNow) {
+                    notificationMessage.append("혈당 데이터 공유가 필수로 변경되었습니다. 동의해주세요.\n");
+                } else {
+                    notificationMessage.append("혈당 데이터 공유가 선택으로 변경되었습니다.\n");
+                }
+            }
+
+            // 3-3. 모든 그룹원에게 알림 발송 (방장 제외)
+            List<GroupMember> members = groupMemberRepository.findByGroupWithUser(group);
+
+            for (GroupMember member : members) {
+                if (!member.getIsLeader()) {  // 방장은 제외
+                    notificationService.createNotification(
+                            member.getUser(),
+                            NotificationType.GROUP_PERMISSION_CHANGED,
+                            group.getGroupName(),
+                            notificationMessage.toString(),
+                            group,
+                            null
+                    );
+                }
+            }
+
+            log.info("케어 그룹 권한 업데이트 완료 및 알림 발송: groupSeq={}, sleep={}, water={}, bp={}, bs={}",
+                    group.getGroupSeq(), sleepChanged, waterIntakeChanged, bloodPressureChanged, bloodSugarChanged);
+        }
+    }
+
+    /*
+        * 헬스 그룹 목표 기준 업데이트 (private 메서드)
+            * - 기존 목표 기준이 있으면 업데이트
+            * - 없으면 새로 생성
+    */
+    private void updateHealthGroupGoalCriteria(Group group, GoalCriteriaDto criteria) {
+        Optional<GroupGoalCriteria> existingCriteria = goalCriteriaRepository.findByGroup(group);
+
+        if (existingCriteria.isPresent()) {
+            // 기존 목표 기준 업데이트
+            GroupGoalCriteria goalCriteria = existingCriteria.get();
+            goalCriteria.updateGoalCriteria(
+                    criteria.minCalorie(),
+                    criteria.minStep(),
+                    criteria.minDistance(),
+                    criteria.minDuration()
+            );
+            log.info("헬스 그룹 목표 기준 업데이트 완료: groupSeq={}", group.getGroupSeq());
+        } else {
+            // 새로운 목표 기준 생성
+            GroupGoalCriteria newCriteria = GroupGoalCriteria.builder()
+                    .group(group)
+                    .minCalorie(criteria.minCalorie())
+                    .minStep(criteria.minStep())
+                    .minDistance(criteria.minDistance())
+                    .minDuration(criteria.minDuration())
+                    .build();
+            goalCriteriaRepository.save(newCriteria);
+            log.info("헬스 그룹 목표 기준 생성 완료: groupSeq={}", group.getGroupSeq());
+        }
     }
 
 }

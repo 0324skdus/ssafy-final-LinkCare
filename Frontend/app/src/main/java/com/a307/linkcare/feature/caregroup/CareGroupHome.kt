@@ -2,6 +2,7 @@
 
 package com.a307.linkcare.feature.caregroup
 
+import android.app.Activity
 import android.os.Build
 import androidx.annotation.*
 import androidx.compose.foundation.layout.*
@@ -23,10 +24,24 @@ import java.time.*
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.feature.caregroup.domain.CareWeekSummary
 import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.caregroup.data.*;
+import com.a307.linkcare.feature.caregroup.data.*
+import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.healthgroup.formatDuration
+
+import android.util.Log
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -34,41 +49,44 @@ fun sampleHealthToday(m: Member): HealthToday =
             val hour = (7..21).random()
             val minute = listOf("00", "15", "30", "45").random()
             BloodPressure(
-                time = String.format("%02d:%s", hour, minute),
-                sys = (110..135).random(),
-                dia = (70..88).random()
+                startTime = String.format("2025-01-15T%02d:%s:00", hour, minute),
+                systolic = (110..135).random().toFloat(),
+                diastolic = (70..88).random().toFloat()
             )
-        }.sortedBy { it.time },
+        }.sortedBy { it.startTime },
 
         // 💧 음수량
-        waterLogs = List((3..6).random()) {
+        waterIntakes = List((3..6).random()) {
             val hour = (8..22).random()
             val minute = listOf("00", "30").random()
-            WaterLog(
-                time = String.format("%02d:%s", hour, minute),
-                amountMl = listOf(150, 200, 250, 300).random()
+            WaterIntake(
+                startTime = String.format("2025-01-15T%02d:%s:00", hour, minute),
+                amount = listOf(150f, 200f, 250f, 300f).random()
             )
-        }.sortedBy { it.time },
+        }.sortedBy { it.startTime },
         waterGoalMl = 2000,
 
         // 😴 수면
-        sleepSessions = listOf(
-            SleepSession("23:30", "06:50")
+        sleeps = listOf(
+            Sleep(startTime = "2025-01-14T23:30:00", endTime = "2025-01-15T06:50:00", duration = 440)
         ) + if ((0..1).random() == 1) {
-            listOf(SleepSession("13:20", "14:10")) // 낮잠 있을 수도 있음
+            listOf(Sleep(startTime = "2025-01-15T13:20:00", endTime = "2025-01-15T14:10:00", duration = 50)) // 낮잠
         } else emptyList(),
 
         // 🏃 운동
-        activitySessions = List((1..3).random()) { idx ->
-            ActivitySession(
-                sessionId = "${System.currentTimeMillis()}_$idx",
-                avgHeartRate = listOf(98, 110, 121, 130).random(),
-                calories = listOf(180, 240, 300).random(),
-                distance = listOf(1200, 1500, 2000).random(),  // meter
-                durationSec = listOf(480, 600, 900).random(),
-                timestamp = System.currentTimeMillis() - (idx * 60 * 60 * 1000)
-            )
-        }
+        dailyActivitySummary = DailyActivitySummary(
+            exercises = List((1..3).random()) { idx ->
+                ExerciseSession(
+                    startTime = "2025-01-15T${String.format("%02d", 7 + idx * 2)}:00:00",
+                    endTime = "2025-01-15T${String.format("%02d", 7 + idx * 2 + 1)}:00:00",
+                    distance = listOf(1200f, 1500f, 2000f).random(),  // meter
+                    calories = listOf(180f, 240f, 300f).random(),
+                    meanPulseRate = listOf(98f, 110f, 121f, 130f).random(),
+                    duration = listOf(480L, 600L, 900L).random()
+                )
+            },
+            steps = (5000..12000).random()
+        )
     )
 
 /* ---------- 날짜 유틸 ---------- */
@@ -78,21 +96,77 @@ enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CareGroupHome(
-    membersAll: List<Member>,
-    modifier: Modifier = Modifier
+    healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
+    groupSeq: Long,
+    modifier: Modifier = Modifier,
+    groupViewModel: MyGroupsViewModel = hiltViewModel(),
+    healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
+    syncViewModel: HealthSyncViewModel = hiltViewModel()
 ) {
-    // 데모 데이터
-    val members = remember {
-        listOf(
-            Member("김싸피(나)", 10001, 30000, R.drawable.char_bear_1, "컨디션 좋아요!", isLeader = true),
-            Member("김아이", 13001, 30000, R.drawable.char_bear_2, "오늘은 좀 피곤해요"),
-            Member("김에이", 15000, 30000, R.drawable.char_bear_3, "잘 걸었다!"),
-            Member("김삼성", 11000, 30000, R.drawable.char_duck_1, "저녁 산책 완료 🐾")
-        )
-    }
-    val leader = remember(members) { members.first { it.isLeader } }
+    val context = LocalContext.current
+    val activity = context as Activity
 
-    var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 화면 들어올 때 한 번 권한 상태 체크
+    LaunchedEffect(Unit) {
+        healthPermissionViewModel.checkPermissions()
+    }
+
+    // 그룹 상세 정보 로드
+    LaunchedEffect(groupSeq) {
+        groupViewModel.loadGroupDetail(groupSeq)
+    }
+
+//    val context = LocalContext.current
+    val currentUserName = remember {
+        com.a307.linkcare.feature.auth.data.TokenStore(context).getName() ?: "나"
+    }
+
+    // 동기화 상태 관찰
+    val syncState by syncViewModel.syncState.collectAsState()
+
+    // 동기화 완료 시 토스트 표시
+    LaunchedEffect(syncState) {
+        when (syncState) {
+            is SyncState.Success -> {
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+            }
+            is SyncState.Error -> {
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
+    val detail by groupViewModel.detail.collectAsState()
+    val membersResponse by groupViewModel.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
+    val groupName by groupViewModel.groupName.collectAsState()
+    val totalStats by groupViewModel.totalActivityStats.collectAsState()
+    val healthData by healthViewModel.healthData.collectAsState()
+
+    // API에서 가져온 멤버를 Member 객체로 변환
+    val members = remember(membersResponse) {
+        Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
+        membersResponse.map { m ->
+            Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+            Member(
+                name = m.userName,
+                progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
+                goal = 30000,                        // TODO: 그룹 총 걸음수 값으로 교체
+                avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
+                bubbleText = "",
+                isLeader = m.isLeader,
+                userPk = m.userSeq
+            )
+        }
+    }
+
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
@@ -102,34 +176,72 @@ fun CareGroupHome(
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(0.62f) }
-    var todayGroupProgress by remember { mutableStateOf(10234) }
-    var totalGroupGoal by remember { mutableStateOf(20000) }
+    var todayGroupPercent by remember { mutableStateOf(0.62f) }   // TODO: API 나오면 교체
+    var todayGroupProgress by remember { mutableStateOf(10234) }  // TODO
+    var totalGroupGoal by remember { mutableStateOf(20000) }      // TODO
 
     // 날짜 이동
-    val onPrevDay = { selectedDate = selectedDate.minusDays(1) }
-    val onNextDay = { selectedDate = selectedDate.plusDays(1) }
+    val onPrevDay = {
+        selectedDate = clampDate(
+            selectedDate.minusDays(1),
+            minDate,
+            today
+        )
+    }
+
+    val onNextDay = {
+        selectedDate = clampDate(
+            selectedDate.plusDays(1),
+            minDate,
+            today
+        )
+    }
 
     // 주차 변경 시
     val year = selectedDate.year
     val month = selectedDate.monthValue
     val wom = selectedDate.weekOfMonth()
-    LaunchedEffect(year, month, wom) {
+    LaunchedEffect(year, month, wom, members) {
         val start = selectedDate.startOfWeek()
         val end = selectedDate.endOfWeek()
-        // TODO API 교체
-        weekMembers = membersAll.ifEmpty { members }
+        // TODO: 주차별 데이터 필터링이 필요하면 여기서 처리
+        weekMembers = members
     }
 
     // 날짜 변경 시
     LaunchedEffect(selectedDate, weekMembers) {
-        // TODO API 교체
-        todayMembers = weekMembers.ifEmpty { members }
+        // TODO: 날짜별 데이터 필터링이 필요하면 여기서 처리
+        todayMembers = weekMembers
+    }
+
+    // 멤버 건강 데이터 로드
+    LaunchedEffect(todayMembers) {
+        val userPks = todayMembers.mapNotNull {
+            if (it.userPk > 0) it.userPk.toInt() else null
+        }
+        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
+        if (userPks.isNotEmpty()) {
+            healthViewModel.loadHealthDataForMembers(userPks)
+        } else {
+            Log.d("CareGroupHome", "No valid userPks to load health data")
+        }
     }
 
     // 다이얼로그는 리스트 바깥에서 remember
     val dpState = rememberDatePickerState(
-        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal()
+        initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val date = epochMilliToLocalDate(utcTimeMillis)
+                // minDate ~ today 사이만 선택 가능
+                return !date.isBefore(minDate) && !date.isAfter(today)
+            }
+
+            override fun isSelectableYear(year: Int): Boolean {
+                // 연도도 같이 제한
+                return year in minDate.year..today.year
+            }
+        }
     )
 
     val taps = remember {
@@ -148,24 +260,65 @@ fun CareGroupHome(
     }
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
-    val todayHealthByName = remember(selectedDate, todayMembers) {
-        todayMembers.associate { m -> m.name to sampleHealthToday(m) }
+    val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
+        Log.d("CareGroupHome", "healthData size = ${healthData.size}, keys = ${healthData.keys}")
+        todayMembers.associate { m ->
+            Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
+            val health = if (m.userPk > 0) {
+                val apiData = healthData[m.userPk.toInt()]
+                Log.d("CareGroupHome", "API data for ${m.name}: ${if (apiData != null) "FOUND" else "NOT FOUND"}")
+                apiData ?: sampleHealthToday(m)
+            } else {
+                Log.d("CareGroupHome", "userPk is 0 for ${m.name}, using dummy data")
+                sampleHealthToday(m)
+            }
+            m.name to health
+        }
+    }
+
+    val header = healthViewModel.headerMessage
+
+    val sleepStatistics by healthViewModel.sleepStatistics.collectAsState()
+
+    LaunchedEffect(Unit) {
+        healthViewModel.loadHeader(groupSeq, today)
+    }
+
+    LaunchedEffect(metricType, selectedDate) {
+        if (metricType == MetricType.SLEEP) {
+            val start = selectedDate.startOfWeek()
+            val end = selectedDate.endOfWeek()
+            healthViewModel.loadSleepStatistics(groupSeq, start, end)
+        }
     }
 
 
-    Scaffold { _ ->
-        Box(modifier = modifier.fillMaxSize()) {
+    Scaffold(
+        floatingActionButton = {
+            CareGroupFab(
+                permissionState = permissionState,
+                onRequestPermission = {
+                    healthPermissionViewModel.requestPermissions(activity)
+                },
+                onSync = {
+                    syncViewModel.syncTodayData()
+                    Toast.makeText(context, "건강 데이터 동기화 중...", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    )  { _ ->
+        LazyColumn(Modifier.fillMaxSize()) {
 
-            LazyColumn(Modifier.fillMaxSize()) {
-
+            if (header != null) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = "걷기에 더 신경써볼까요?"
+                        txt = header
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+            }
 
                 item {
                     NudgeHost(
@@ -190,25 +343,41 @@ fun CareGroupHome(
                     )
                 }
 
-                // 멤버 리스트(선택 날짜 기준)
-                items(todayMembers, key = { it.name }) { m ->
-                    MemberRow(
+                // 멤버 리스트
+                itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                    MemberRowCare(
                         m = m,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
-                            expandedMemberName = if (expandedMemberName == m.name) null else m.name
+                            expandedMemberName =
+                                if (expandedMemberName == m.name) null else m.name
                         },
                         onClick = { selectedMember = m }
                     )
-                    Divider(color = Color(0x11000000))
+
+                    if (index < todayMembers.lastIndex) {
+                        Divider(color = Color(0x11000000))
+                    }
                 }
 
                 item {
                     Spacer(Modifier.height(12.dp))
                     DatePagerRow(
                         label = "${selectedDate.year}년 ${selectedDate.monthValue}월 ${selectedDate.weekOfMonth()}주차",
-                        onPrev = { selectedDate = selectedDate.minusWeeks(1) },
-                        onNext = { selectedDate = selectedDate.plusWeeks(1) }
+                        onPrev = {
+                            selectedDate = clampDate(
+                                selectedDate.minusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        },
+                        onNext = {
+                            selectedDate = clampDate(
+                                selectedDate.plusWeeks(1),
+                                minDate,
+                                today
+                            )
+                        }
                     )
                 }
 
@@ -217,10 +386,10 @@ fun CareGroupHome(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally 
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "만수무강 그룹의 건강을 분석했어요",
+                            text = "${(groupName.ifBlank { "케어" })} 그룹의 건강을 분석했어요",
                             fontWeight = FontWeight.SemiBold,
                             color = black
                         )
@@ -251,8 +420,13 @@ fun CareGroupHome(
                     // 혈압/수면: 멤버별 라인 + 전체 평균 라인
                     item {
                         Spacer(Modifier.height(6.dp))
-                        val chartData = remember(selectedDate, weekMembers, metricType) {
-                            buildWeeklyChartData(metricType, selectedDate, weekMembers)
+                        val chartData = remember(selectedDate, weekMembers, metricType, sleepStatistics) {
+                            buildWeeklyChartData(
+                                type = metricType,
+                                anchorDate = selectedDate,
+                                members = weekMembers,
+                                sleepStats = sleepStatistics
+                            )
                         }
                         MetricChartCard(
                             title = when (metricType) {
@@ -272,17 +446,50 @@ fun CareGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
+
+                    val summaryChips = remember(metricType, summary, totalStats, sleepStatistics, members) {
+                        if (metricType == MetricType.ACTIVITY) {
+                            val calories = totalStats?.totalCalories?.toInt() ?: 0
+                            val steps = totalStats?.totalSteps ?: 0
+                            val durationSec = totalStats?.totalDuration ?: 0
+                            val durationStr = formatDuration(durationSec)
+
+                            listOf(
+                                "🔥 ${calories} kcal 태웠어요",
+                                "👣 ${steps} 걸음 걸었어요",
+                                "⏱️ $durationStr 운동했어요"
+                            )
+                        } else {
+                            buildSummaryChips(
+                                type = metricType,
+                                s = summary,
+                                sleepStats = sleepStatistics,
+                                members = members
+                            )
+                        }
+                    }
+
                     SummaryChipList(
-                        items = buildSummaryChips(metricType, summary)
+                        items = summaryChips
                     )
                 }
             }
 
             selectedMember?.let { m ->
+
+                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
+                LaunchedEffect(m.userPk) {
+                    if (m.userPk > 0) {
+                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
+                        healthViewModel.loadHealthData(m.userPk.toInt())
+                    }
+                }
+
                 CareMemberDetail(
                     member = m,
                     today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    onDismiss = { selectedMember = null },
+                    currentUserName = currentUserName
                 )
             }
 
@@ -308,7 +515,6 @@ fun CareGroupHome(
             }
         }
     }
-}
 
 /* ---------- 컴포넌트 ---------- */
 @Composable
@@ -404,7 +610,8 @@ fun ScreenTitleOnlyRow(
 }
 
 // 요약칩 텍스트를 만들어주는 함수
-fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when (type) {
+fun buildSummaryChips(type: MetricType, s: CareWeekSummary, sleepStats: SleepStatisticsResponse?,
+                      members: List<Member>): List<String> = when (type) {
     MetricType.ACTIVITY -> listOfNotNull(
         s.calories?.let { "🔥 ${it} kcal 태웠어요" },
         s.steps?.let { "👣 ${it} 걸음 걸었어요" },
@@ -418,11 +625,21 @@ fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when
         s.eveningBp?.let { (sys, dia) -> "🌇 저녁 ${sys}/${dia} mmHg" }
     )
 
-    MetricType.SLEEP -> listOfNotNull(
-        s.sleepMinutes?.let { "😴 총 수면 ${it}분" },
-        s.deepMinutes?.let { "🌙 깊은 수면 ${it}분" },
-        s.sleepScore?.let { "⭐ 수면 점수 ${it}점" }
+    MetricType.SLEEP -> buildSleepSummaryMessages(
+        stats = sleepStats,
+        members = members
     )
+}
+
+fun formatMinutesToHourMin(totalMinutes: Int): String {
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
+        hours > 0 -> "${hours}시간"
+        else -> "${minutes}분"
+    }
 }
 
 // 날짜+타입에 맞는 요약 더미 데이터
@@ -456,7 +673,6 @@ private fun MetricTypeTabs(
 ) {
     val tabs = listOf(
         MetricType.ACTIVITY to "운동",
-        MetricType.BLOOD_PRESSURE to "혈압",
         MetricType.SLEEP to "수면"
     )
     TabRow(
@@ -473,3 +689,83 @@ private fun MetricTypeTabs(
         }
     }
 }
+
+@Composable
+private fun CareGroupFab(
+    permissionState: HealthPermissionViewModel.State,
+    onRequestPermission: () -> Unit,
+    onSync: () -> Unit
+) {
+    FloatingActionButton(
+        onClick = {
+            when (permissionState) {
+                HealthPermissionViewModel.State.Granted -> onSync()
+                HealthPermissionViewModel.State.NeedPermission -> onRequestPermission()
+                is HealthPermissionViewModel.State.Error -> onRequestPermission()
+                HealthPermissionViewModel.State.Idle -> onRequestPermission()
+            }
+        },
+        containerColor = main,
+        contentColor = white
+    ) {
+        Icon(Icons.Default.Refresh, contentDescription = "동기화")
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+private fun clampDate(
+    date: LocalDate,
+    min: LocalDate,
+    max: LocalDate
+): LocalDate = when {
+    date.isBefore(min) -> min
+    date.isAfter(max) -> max
+    else -> date
+}
+
+fun buildSleepSummaryMessages(
+    stats: SleepStatisticsResponse?,
+    members: List<Member>
+): List<String> {
+    if (stats == null) return emptyList()
+
+    val nameByUserSeq = members.associateBy({ it.userPk }, { it.name })
+
+    val allSleepMinutes: List<Int> = stats.members.flatMap { m ->
+        m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+    }
+
+    val avgMinutes = if (allSleepMinutes.isNotEmpty()) {
+        allSleepMinutes.average().toInt()
+    } else 0
+
+    val avgLine = "😴 평균 수면 ${formatMinutesToHourMin(avgMinutes)}"
+
+    data class MemberAvg(val userSeq: Long, val avgMinutes: Int)
+
+    val memberAverages: List<MemberAvg> = stats.members.map { m ->
+        val mins = m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+
+        val avg = if (mins.isNotEmpty()) mins.average().toInt() else 0
+        MemberAvg(userSeq = m.userSeq, avgMinutes = avg)
+    }
+
+    val ranked = memberAverages.sortedByDescending { it.avgMinutes }
+
+    val rankLines = ranked
+        .mapIndexed { index, mAvg ->
+            val name = nameByUserSeq[mAvg.userSeq] ?: "멤버${index + 1}"
+            val sleepText = formatMinutesToHourMin(mAvg.avgMinutes)
+            "${index + 1}위 $name · $sleepText"
+        }
+
+    return listOf(avgLine) + rankLines
+}
+
+
+fun msToMinutes(ms: Long): Int = (ms / 60000L).toInt()

@@ -86,7 +86,7 @@ public class WaterIntakeService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 목표 x 음수량 x
-        if(waterIntakeDto.getGoal() == 0 &&(waterIntakeDto.getWaterIntakes() == null || waterIntakeDto.getWaterIntakes().isEmpty())) {
+        if(waterIntakeDto == null || waterIntakeDto.getGoal() == 0 &&(waterIntakeDto.getWaterIntakes() == null || waterIntakeDto.getWaterIntakes().isEmpty())) {
             return;
         }
 
@@ -172,6 +172,27 @@ public class WaterIntakeService {
 
         List<WaterIntake> waterIntakes = waterIntakeRepository
                 .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, threeWeeksAgo, now);
+
+        return waterIntakes.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 기간별 물 섭취 데이터 조회
+     * @param userSeq 사용자 시퀀스
+     * @return WaterIntakeGroupedResponse 리스트
+     */
+    public List<WaterIntakeResponse> getWaterIntakeByDate(int userSeq, LocalDate startDate, LocalDate endDate) {
+        User user = validateUser(userSeq);
+
+        Long startDateTs = timeStampUtil.getDateStartTimestamp(startDate);
+        Long endDateTs = timeStampUtil.getDateEndTimestamp(endDate);
+
+        log.info("기간별 물 섭취 데이터 조회 - User: {}", userSeq);
+
+        List<WaterIntake> waterIntakes = waterIntakeRepository
+                .findByUserAndStartTimeBetweenOrderByStartTimeDesc(user, startDateTs, endDateTs);
 
         return waterIntakes.stream()
                 .map(this::convertToResponse)
@@ -340,6 +361,7 @@ public class WaterIntakeService {
 //                .uid(waterIntake.getUid())
                 .startTime(timeStampUtil.toLocalDateTime(waterIntake.getStartTime()))
                 .amount(waterIntake.getAmount())
+                .goal(waterIntake.getGoal())
                 .build();
     }
 }

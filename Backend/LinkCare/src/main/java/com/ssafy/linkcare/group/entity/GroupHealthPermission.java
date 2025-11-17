@@ -92,4 +92,21 @@ public class GroupHealthPermission {
         this.isBloodPressureAllowed = isBloodPressureAllowed != null ? isBloodPressureAllowed : false;
         this.isBloodSugarAllowed = isBloodSugarAllowed != null ? isBloodSugarAllowed : false;
     }
+
+    // 권한 업데이트 메서드
+    public void updatePermissions(Boolean isDailyStepAllowed,
+                                  Boolean isHeartRateAllowed,
+                                  Boolean isExerciseAllowed,
+                                  Boolean isSleepAllowed,
+                                  Boolean isWaterIntakeAllowed,
+                                  Boolean isBloodPressureAllowed,
+                                  Boolean isBloodSugarAllowed) {
+        this.isDailyStepAllowed = isDailyStepAllowed;
+        this.isHeartRateAllowed = isHeartRateAllowed;
+        this.isExerciseAllowed = isExerciseAllowed;
+        this.isSleepAllowed = isSleepAllowed;
+        this.isWaterIntakeAllowed = isWaterIntakeAllowed;
+        this.isBloodPressureAllowed = isBloodPressureAllowed;
+        this.isBloodSugarAllowed = isBloodSugarAllowed;
+    }
 }

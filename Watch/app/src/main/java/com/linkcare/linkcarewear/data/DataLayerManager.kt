@@ -66,9 +66,9 @@ object DataLayerManager {
         val dataMap = PutDataMapRequest.create("/linkcare/summary").apply {
             dataMap.putLong("sessionId", summary.sessionId)
             dataMap.putInt("avgHeartRate", summary.avgHeartRate)
-            dataMap.putInt("calories", summary.calories)
-            dataMap.putInt("distance", summary.distance)
-            dataMap.putInt("durationSec", summary.durationSec)
+            dataMap.putFloat("calories", summary.calories)
+            dataMap.putFloat("distance", summary.distance)
+            dataMap.putLong("durationSec", summary.durationSec)
             dataMap.putLong("startTimestamp", summary.startTimestamp)
             dataMap.putLong("endTimestamp", summary.endTimestamp)
         }
