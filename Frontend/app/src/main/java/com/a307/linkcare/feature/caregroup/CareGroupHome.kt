@@ -452,8 +452,8 @@ fun CareGroupHome(
                         ProgressSummaryCard(
                             title = "활동 요약",
                             members = todayMembers,
-                            totalSteps = stepUiState.goal,
-                            totalGoal = stepUiState.goal,
+//                            totalSteps = stepUiState.goal,
+//                            totalGoal = stepUiState.goal,
                             modifier = Modifier
                         )
                     }
