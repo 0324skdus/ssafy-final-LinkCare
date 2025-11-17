@@ -65,6 +65,20 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
         }
     }
 
+    suspend fun getDailyHealthDetailByDate(userSeq: Int, date: LocalDate): HealthToday? {
+        return try {
+            val response = api.getDailyHealthDetailByDate(userSeq, date)
+            if (response.isSuccessful) {
+                response.body()?.toHealthToday()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     suspend fun fetchWeeklyHeader(groupSeq: Long)
             = api.getWeeklyHeader(groupSeq)
 
