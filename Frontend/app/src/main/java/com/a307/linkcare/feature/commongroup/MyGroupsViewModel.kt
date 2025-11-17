@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.time.LocalDate
 
 
@@ -26,6 +28,18 @@ class MyGroupsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val myUserSeq: Long? = tokenStore.getUserPk()
+
+    // 그룹 목록 새로고침 이벤트
+    private val _refreshEvent = MutableSharedFlow<Unit>(replay = 0)
+    val refreshEvent = _refreshEvent.asSharedFlow()
+
+    // 그룹 신청 후 호출되는 함수
+    fun notifyGroupApplicationSubmitted() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "그룹 신청 이벤트 발행")
+            _refreshEvent.emit(Unit)
+        }
+    }
 
     private val _careGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val careGroups: StateFlow<List<MyGroupResponse>> = _careGroups
