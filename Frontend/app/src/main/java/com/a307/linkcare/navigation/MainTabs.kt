@@ -94,6 +94,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.feature.mypage.MyPageEditViewModel
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -571,7 +575,7 @@ fun MainTabs(
             navigation(route = Route.MyPage.route, startDestination = Route.MyPageMain.route) {
                 // MyPage 홈
                 composable(Route.MyPageMain.route) {
-                    val myPageViewModel: MyPageViewModel = viewModel()
+                    val myPageViewModel: MyPageViewModel = hiltViewModel()
                     val apiState by myPageViewModel.apiState.collectAsState()
                     val context = LocalContext.current
 
@@ -615,17 +619,43 @@ fun MainTabs(
 
                 // 편집
                 composable(Route.EditProfile.route) {
-                    ProfileEditScreen(
-                        initial = Profile(
-                            name = "싸피",
-                            gender = Gender.FEMALE,
-                            heightCm = 162,
-                            weightKg = 53,
-                            birthDate = "2022-11-11"
-                        ),
-                        onSave = { /** updated -> viewModel.saveProfile(updated)*/ },
-                        onBack = { navController.popBackStack() }
-                    )
+                    val viewModel: MyPageEditViewModel = hiltViewModel()
+                    val uiState = viewModel.uiState
+
+                    when (uiState) {
+                        is MyPageEditViewModel.UiState.Loading -> {
+                            // 로딩 UI
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = main)
+                            }
+                        }
+
+                        is MyPageEditViewModel.UiState.Error -> {
+                            // 에러 UI (간단 예시)
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = uiState.message, color = Color.Red)
+                            }
+                        }
+
+                        is MyPageEditViewModel.UiState.Success -> {
+                            ProfileEditScreen(
+                                initial = uiState.profile,
+                                onSave = { updated ->
+                                    viewModel.saveProfile(updated) {
+                                        // 저장 성공 시 뒤로 가기
+                                        navController.popBackStack()
+                                    }
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
 
                 // 그룹 조회

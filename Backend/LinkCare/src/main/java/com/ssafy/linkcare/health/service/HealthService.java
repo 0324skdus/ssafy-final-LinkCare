@@ -94,6 +94,7 @@ public class HealthService {
     public HealthStaticsResponse getHealthStaticsData(int userSeq, LocalDate startDate, LocalDate endDate) {
         return HealthStaticsResponse.builder()
                 .activitySummaryStats(activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate))
+                .bloodPressureStats(bloodPressureService.getBloodPressureStatsByPeriod(userSeq,startDate,endDate))
                 .exerciseStats(exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate))
                 .heartRateStats(heartRateService.getHeartRateStatsByDate(userSeq, startDate, endDate))
                 .stepStats(stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate))
