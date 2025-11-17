@@ -147,8 +147,17 @@ fun CareGroupHome(
     val groupName by groupViewModel.groupName.collectAsState()
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
+    val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
 
-    val members = remember(membersResponse, stepUiState) {
+    // 멤버 변경 시 health feedback 로드
+    LaunchedEffect(membersResponse) {
+        if (membersResponse.isNotEmpty()) {
+            val userSeqs = membersResponse.map { it.userSeq.toInt() }
+            healthViewModel.loadHealthFeedbackForMembers(userSeqs)
+        }
+    }
+
+    val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
         Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
 
         // 🔹 /step-statistics에서 가져온 값들
@@ -172,6 +181,11 @@ fun CareGroupHome(
 
             val goal = if (hasStats) totalSteps else 0
 
+            // 건강 피드백 가져오기
+            val feedback = healthFeedbackMap[m.userSeq.toInt()]
+            val status = feedback?.status?.name ?: "GOOD"
+            val summary = feedback?.summary ?: "활동이 안정적이에요."
+
             Member(
                 name = m.userName,
                 progresses = steps,
@@ -179,7 +193,9 @@ fun CareGroupHome(
                 avatarRes = R.drawable.char_bear_1,   // TODO: m.mainCharacterBaseImageUrl 매핑
                 bubbleText = "",
                 isLeader = m.isLeader,
-                userPk = m.userSeq
+                userPk = m.userSeq,
+                status = status,
+                summary = summary
             )
         }
     }

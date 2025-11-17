@@ -88,6 +88,8 @@ fun MemberRowCare(
                 "PERFECT" -> "완벽"
                 "GOOD" -> "양호"
                 "CAUTION" -> "주의"
+                "ANALYZING" -> "분석 중"
+                "UNKNOWN" -> "알 수 없음"
                 else -> m.status
             }?.let {
                 Text(
@@ -97,6 +99,8 @@ fun MemberRowCare(
                         "PERFECT" -> point
                         "GOOD" -> main
                         "CAUTION" -> Color(0xFFFFA000)
+                        "ANALYZING" -> Color(0xFF888888)
+                        "UNKNOWN" -> Color(0xFF888888)
                         else -> main
                     }
                 )
