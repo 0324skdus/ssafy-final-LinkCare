@@ -1526,7 +1526,13 @@ public class GroupService {
             throw new CustomException(ErrorCode.CANNOT_KICK_LEADER);
         }
 
-        // 5. 그룹원 삭제
+        // 5. 연관된 GroupHealthPermission 먼저 삭제 (외래 키 제약 조건 위반 방지)
+        healthPermissionRepository.findByGroupMember(targetMember).ifPresent(permission -> {
+            healthPermissionRepository.delete(permission);
+            log.info("그룹원의 건강 권한 삭제 완료: permissionSeq={}", permission.getPermissionSeq());
+        });
+
+        // 6. 그룹원 삭제
         groupMemberRepository.delete(targetMember);
 
         log.info("그룹원 내보내기 완료: groupSeq={}, kickedUser={}", groupSeq, targetUserSeq);
