@@ -144,6 +144,24 @@ public class NotificationService {
     }
 
     /*
+        * 알림 삭제
+    */
+    @Transactional
+    public void deleteNotification(Long userId, Long notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+        // 본인의 알림인지 확인
+        if (!notification.getUser().getUserPk().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "본인의 알림만 삭제할 수 있습니다");
+        }
+
+        notificationRepository.delete(notification);
+
+        log.info("알림 삭제: userId={}, notificationId={}", userId, notificationId);
+    }
+
+    /*
         * Notification -> NotificationResponse 변환
     */
     private NotificationResponse toNotificationResponse(Notification notification) {

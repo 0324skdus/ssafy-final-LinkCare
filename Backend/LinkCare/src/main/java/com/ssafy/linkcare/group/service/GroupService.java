@@ -10,6 +10,7 @@ import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.event.GroupMemberChangedEvent;
 import com.ssafy.linkcare.group.repository.*;
+import com.ssafy.linkcare.group.scheduler.GroupHeaderScheduler;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
 import com.ssafy.linkcare.health.dto.SleepDetailResponse;
 import com.ssafy.linkcare.health.dto.StepDetailResponse;
@@ -33,10 +34,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -58,8 +57,12 @@ public class GroupService {
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GroupHealthPermissionRepository healthPermissionRepository;
     private final GroupRequiredPermissionRepository requiredPermissionRepository;
+    private final GroupHeaderScheduler groupHeaderScheduler;
 
     private final ApplicationEventPublisher eventPublisher;
+
+    // 마지막 재생성 시간 캐시
+    private final Map<Long, LocalDateTime> lastRegenerateTime = new ConcurrentHashMap<>();
 
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
@@ -954,6 +957,32 @@ public class GroupService {
                 .headerMessage(group.getWeeklyHeaderMessage())
                 .generatedAt(group.getHeaderGeneratedAt())
                 .build();
+    }
+
+    /**
+     * 헤더 수동 재생성 (30초 중복 방지)
+     */
+    public WeeklyHeaderResponse regenerateWeeklyHeader(Long groupSeq) {
+        log.info("헤더 재생성 요청: 그룹={}", groupSeq);
+
+        // 30초 이내 재생성 요청 차단
+        LocalDateTime lastTime = lastRegenerateTime.get(groupSeq);
+        if (lastTime != null && lastTime.isAfter(LocalDateTime.now().minusSeconds(30))) {
+            long secondsLeft = 30 - java.time.Duration.between(lastTime, LocalDateTime.now()).getSeconds();
+            log.warn("그룹 {} - 30초 이내 재생성 요청 차단, 남은 시간: {}초", groupSeq, secondsLeft);
+
+            throw new CustomException(ErrorCode.TOO_MANY_REQUESTS);
+        }
+
+        // 재생성 실행
+        log.info("그룹 {} 헤더 재생성 시작", groupSeq);
+        WeeklyHeaderResponse response = groupHeaderScheduler.updateGroupHeader(groupSeq);
+
+        // 마지막 재생성 시간 기록
+        lastRegenerateTime.put(groupSeq, LocalDateTime.now());
+        log.info("그룹 {} 헤더 재생성 완료", groupSeq);
+
+        return response;
     }
 
     // 그룹 건강 요약 데이터 반환
