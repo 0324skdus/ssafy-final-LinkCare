@@ -68,7 +68,7 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    // 💤 수면 통계 저장 (StateFlow)
+    // 수면 통계 저장 (StateFlow)
     private val _sleepStatistics = MutableStateFlow<SleepStatisticsResponse?>(null)
     val sleepStatistics: StateFlow<SleepStatisticsResponse?> = _sleepStatistics
 
@@ -80,6 +80,36 @@ class CareGroupHomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 _sleepStatistics.value = null
             }
+        }
+    }
+
+    private val _stepUiState = MutableStateFlow(GroupStepUiState())
+    val stepUiState: StateFlow<GroupStepUiState> = _stepUiState
+
+    fun loadGroupStepStatistics(groupSeq: Long) {
+        _stepUiState.value = _stepUiState.value.copy(isLoading = true, error = null)
+
+        viewModelScope.launch {
+            val result = repo.getGroupStepStatistics(groupSeq)
+
+            result
+                .onSuccess { dto ->
+                    val goal = dto.totalSteps
+                    val progresses = dto.members.map { it.steps }
+
+                    _stepUiState.value = GroupStepUiState(
+                        isLoading = false,
+                        goal = goal,
+                        progresses = progresses,
+                        members = dto.members
+                    )
+                }
+                .onFailure { e ->
+                    _stepUiState.value = _stepUiState.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "알 수 없는 오류"
+                    )
+                }
         }
     }
 }

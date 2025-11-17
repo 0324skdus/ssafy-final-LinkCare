@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.HealthToday
+import com.a307.linkcare.feature.caregroup.domain.GroupStepStatisticsResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -67,4 +68,22 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
 
     suspend fun fetchWeeklySleepStatistics(groupSeq: Long, startDate: LocalDate, endDate: LocalDate)
             = api.getWeeklySleepStatistics(groupSeq, startDate, endDate)
+
+    suspend fun getGroupStepStatistics(groupSeq: Long): Result<GroupStepStatisticsResponse> {
+        return try {
+            val res = api.getGroupStepStatistics(groupSeq)
+            if (res.isSuccessful) {
+                val body = res.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(IllegalStateException("Empty body"))
+                }
+            } else {
+                Result.failure(IllegalStateException("HTTP ${res.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

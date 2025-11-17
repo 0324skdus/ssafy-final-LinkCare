@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,8 +38,9 @@ private fun fmt(n: Int): String = NumberFormat.getInstance().format(n)
 // Member 리스트 → 카드 렌더링용 요약 리스트로 변환
 fun toSummaries(members: List<Member>): List<ProgressSummary> =
     members.mapIndexed { i, m ->
+        val percentInt = (m.percent * 100).toInt()
         ProgressSummary(
-            label = "${m.name} · ${fmt(m.goal)} 중 ${fmt(m.progresses)}",
+            label = "${m.name} · ${fmt(m.progresses)} 걸음 (${percentInt}%)",
             progress = m.percent,
             color = palette[i % palette.size]
         )
@@ -70,8 +72,20 @@ fun ProgressSummaryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val goalText = remember(members, totalGoal) {
+                    val goal = totalGoal ?: totalSteps ?: members.firstOrNull()?.goal
+                    goal?.let { fmt(it) }
+                }
                 Column(Modifier.padding(2.dp)) {
                     Text("운동량", fontWeight = FontWeight.SemiBold, color = black)
+                    goalText?.let {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "총 ${it} 걸음",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7280)
+                        )
+                    }
                 }
                 // 달성 뱃지 (필요 시 주석해제)
 //                Row(verticalAlignment = Alignment.CenterVertically) {
