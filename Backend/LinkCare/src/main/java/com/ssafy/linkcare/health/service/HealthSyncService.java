@@ -10,8 +10,11 @@ import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cglib.core.Local;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,8 @@ public class HealthSyncService {
 
     // 데일리 데이터 동기화 (매일 1회)
     public void syncDailyHealthData(DailyHealthData dto, int userSeq) {
+        LocalDate date = LocalDate.now();
+
         activitySummaryService.saveDailyActivitySummaryData(dto.getActivitySummary(), userSeq);
         bloodPressureService.saveDailyBloodPressureData(dto.getBloodPressure(), userSeq);
         exerciseService.saveDailyExerciseData(dto.getExercise(), userSeq);
@@ -44,7 +49,7 @@ public class HealthSyncService {
         // 마지막 동기화 시간 업데이트
         updateUserLastSyncTime(userSeq);
 
-        userHealthFeedbackService.generateFeedbackAsync(userSeq);
+        userHealthFeedbackService.generateFeedbackAsync(userSeq, date);
 
     }
 
