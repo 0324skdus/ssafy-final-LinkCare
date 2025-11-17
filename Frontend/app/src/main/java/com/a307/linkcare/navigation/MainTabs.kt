@@ -478,7 +478,8 @@ fun MainTabs(
                                         if (careSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(careSearchQuery)
                                         }
-                                        groupvm.loadCare() // 케어 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -547,7 +548,8 @@ fun MainTabs(
                                         if (healthSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(healthSearchQuery)
                                         }
-                                        groupvm.loadHealth() // 헬스 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
