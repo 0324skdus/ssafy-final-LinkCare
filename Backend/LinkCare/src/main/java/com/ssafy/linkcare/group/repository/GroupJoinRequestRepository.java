@@ -13,6 +13,9 @@ import java.util.Optional;
 @Repository
 public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinRequest, Long> {
 
+    // 특정 그룹의 모든 신청 목록 조회
+    List<GroupJoinRequest> findByGroup(Group group);
+
     // 특정 그룹의 신청 목록 조회 (상태별)
     List<GroupJoinRequest> findByGroupAndStatus(Group group, RequestStatus status);
 
@@ -30,4 +33,7 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
 
     // 특정 그룹에 특정 사용자가 특정 상태의 신청이 있는지 확인 (userId로)
     boolean existsByGroup_GroupSeqAndUser_UserPkAndStatus(Long groupSeq, Long userPk, RequestStatus status);
+
+    // 특정 사용자의 특정 상태 신청 목록 조회 (신청 목록 탭용)
+    List<GroupJoinRequest> findByUser_UserPkAndStatus(Long userPk, RequestStatus status);
 }

@@ -330,10 +330,13 @@ fun MainTabs(
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = careGroups[selectedIndexCare].groupSeq
-                                                navController.navigate(
-                                                    Route.EditCareGroup.withArgs(currentId.toString())
-                                                )
+                                                if (careGroups.isNotEmpty()) {
+                                                    val currentId =
+                                                        careGroups[selectedIndexCare].groupSeq
+                                                    navController.navigate(
+                                                        Route.EditCareGroup.withArgs(currentId.toString())
+                                                    )
+                                                }
                                             }
                                         )
                                         DropdownMenuItem(
@@ -375,10 +378,13 @@ fun MainTabs(
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = healthGroups[selectedIndexHealth].groupSeq
-                                                navController.navigate(
-                                                    Route.EditHealthGroup.withArgs(currentId.toString())
-                                                )
+                                                if (healthGroups.isNotEmpty()) {
+                                                    val currentId =
+                                                        healthGroups[selectedIndexHealth].groupSeq
+                                                    navController.navigate(
+                                                        Route.EditHealthGroup.withArgs(currentId.toString())
+                                                    )
+                                                }
                                             }
                                         )
                                         DropdownMenuItem(
@@ -437,6 +443,7 @@ fun MainTabs(
                         MainWithNoGroup(
                             navController = navController,
                             onCreateGroupClick = { navController.navigate(Route.CreateCareGroup.route) },
+                            onExploreGroupClick = { navController.navigate(Route.CareSearch) },
                             currentTab = "care"
                         )
                     } else {
@@ -471,7 +478,8 @@ fun MainTabs(
                                         if (careSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(careSearchQuery)
                                         }
-                                        groupvm.loadCare() // 케어 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -482,7 +490,7 @@ fun MainTabs(
                 }
 
                 composable(Route.CreateCareGroup.route) {
-                    CareGroupCreate(navController = navController)
+                    CareGroupCreate(navController = navController, groupvm = groupvm)
                 }
 
                 composable(
@@ -493,7 +501,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     CareGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedCareGroup = null
+                            selectedIndexCare = 0
+                        }
                     )
                 }
             }
@@ -505,6 +518,7 @@ fun MainTabs(
                         MainWithNoGroup(
                             navController = navController,
                             onCreateGroupClick = { navController.navigate(Route.CreateHealthGroup.route) },
+                            onExploreGroupClick = { navController.navigate(Route.HealthSearch) },
                             currentTab = "health"
                         )
                     } else {
@@ -539,7 +553,8 @@ fun MainTabs(
                                         if (healthSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(healthSearchQuery)
                                         }
-                                        groupvm.loadHealth() // 헬스 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -550,7 +565,7 @@ fun MainTabs(
                 }
 
                 composable(Route.CreateHealthGroup.route) {
-                    HealthGroupCreate(navController = navController)
+                    HealthGroupCreate(navController = navController, groupvm = groupvm)
                 }
 
                 composable(
@@ -561,7 +576,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     HealthGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedHealthGroup = null
+                            selectedIndexHealth = 0
+                        }
                     )
                 }
             }

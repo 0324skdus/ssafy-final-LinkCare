@@ -39,7 +39,7 @@ fun HealthGroupCreate(
     ) -> Unit = { _ -> },
     @DrawableRes avatarRes: Int? = null,
     vm: HealthGroupCreateViewModel = hiltViewModel(),
-    groupvm: MyGroupsViewModel = hiltViewModel()
+    groupvm: MyGroupsViewModel
 ) {
     val state by vm.state
     val context = LocalContext.current
