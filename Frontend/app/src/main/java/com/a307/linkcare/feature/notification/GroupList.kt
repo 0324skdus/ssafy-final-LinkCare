@@ -50,6 +50,11 @@ fun GroupList(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val processedNotifications by viewModel.processedNotifications.collectAsState()
 
+    // 디버깅: notifications 변경 감지
+    LaunchedEffect(notifications.size) {
+        android.util.Log.d("GroupList", "📋 UI 재구성: ${notifications.size}개 알림")
+    }
+
     // 알림 로드
     LaunchedEffect(Unit) {
         viewModel.loadNotifications("GROUP")
@@ -95,7 +100,7 @@ fun GroupList(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    items(items = notifications, key = { it.notificationId }) { notification ->
+                    items(items = notifications) { notification ->
                         // 로컬 상태로 처리 여부 관리
                         var isProcessed by remember(notification.notificationId) {
                             mutableStateOf(processedNotifications[notification.notificationId] != null)

@@ -55,10 +55,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         fun exerciseReader(): ExerciseReader
         fun stepReader(): StepReader
         fun activitySummaryReader(): ActivitySummaryReader
+        fun notificationEventManager(): NotificationEventManager
     }
 
-    @Inject
-    lateinit var notificationEventManager: NotificationEventManager
+    private lateinit var notificationEventManager: NotificationEventManager
 
     companion object {
         private const val TAG = "FCMService"
@@ -103,6 +103,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         exerciseReader = entryPoint.exerciseReader()
         stepReader = entryPoint.stepReader()
         activitySummaryReader = entryPoint.activitySummaryReader()
+        notificationEventManager = entryPoint.notificationEventManager()
+        Log.d(TAG, "NotificationEventManager 초기화 완료")
     }
 
     // 새로운 FCM 토큰이 생성되었을 때 호출됨
@@ -218,9 +220,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendNewNotificationBroadcast() {
         // SharedFlow를 사용한 이벤트 전송
-        serviceScope.launch {
-            notificationEventManager.notifyNewNotification()
-            Log.d(TAG, "새 알림 이벤트 전송 (SharedFlow)")
+        try {
+            if (::notificationEventManager.isInitialized) {
+                serviceScope.launch {
+                    notificationEventManager.notifyNewNotification()
+                    Log.d(TAG, "새 알림 이벤트 전송 (SharedFlow)")
+                }
+            } else {
+                Log.w(TAG, "NotificationEventManager가 초기화되지 않음")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "SharedFlow 이벤트 전송 실패: ${e.message}", e)
         }
 
         // 기존 브로드캐스트도 유지 (호환성)
@@ -234,9 +244,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendGroupJoinedBroadcast(groupType: String?) {
         // SharedFlow를 사용한 이벤트 전송
-        serviceScope.launch {
-            notificationEventManager.notifyNewNotification()
-            Log.d(TAG, "그룹 가입 이벤트 전송 (SharedFlow): $groupType")
+        try {
+            if (::notificationEventManager.isInitialized) {
+                serviceScope.launch {
+                    notificationEventManager.notifyNewNotification()
+                    Log.d(TAG, "그룹 가입 이벤트 전송 (SharedFlow): $groupType")
+                }
+            } else {
+                Log.w(TAG, "NotificationEventManager가 초기화되지 않음")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "SharedFlow 이벤트 전송 실패: ${e.message}", e)
         }
 
         // 기존 브로드캐스트도 유지 (호환성)
