@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,7 @@ import com.a307.linkcare.common.component.atoms.Avatar
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.R
+import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
@@ -127,8 +129,11 @@ fun MemberRowCare(
             )
         } else {
             Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier.size(30.dp)
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp),
+                colorFilter = ColorFilter.tint(gray)
             )
         }
     }
