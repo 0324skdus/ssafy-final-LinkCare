@@ -88,6 +88,7 @@ fun CareGroupEdit(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val memberActionState by viewModel.memberActionState.collectAsState()
     val context = LocalContext.current
 
     // Load group detail when screen opens
@@ -98,13 +99,42 @@ fun CareGroupEdit(
     // 위임하기 핸들러
     val onDelegate: (Long) -> Unit = { memberUserSeq ->
         viewModel.delegateLeader(groupSeq, memberUserSeq)
-        Toast.makeText(context, "그룹장을 위임했습니다", Toast.LENGTH_SHORT).show()
     }
 
     // 내보내기 핸들러
     val onKick: (Long) -> Unit = { memberUserSeq ->
         viewModel.kickMember(groupSeq, memberUserSeq)
-        Toast.makeText(context, "그룹원을 내보냈습니다", Toast.LENGTH_SHORT).show()
+    }
+
+    // Handle member action state
+    LaunchedEffect(memberActionState) {
+        when (memberActionState) {
+            is CareGroupEditViewModel.MemberActionState.DelegateSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.DelegateSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is CareGroupEditViewModel.MemberActionState.KickSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.KickSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is CareGroupEditViewModel.MemberActionState.Error -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.Error).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            else -> {}
+        }
     }
 
     // Handle update success
