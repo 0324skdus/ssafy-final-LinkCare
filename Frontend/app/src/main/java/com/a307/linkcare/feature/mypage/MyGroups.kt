@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,12 +84,36 @@ fun MyGroups (
     val carePendingGroups by viewModel.carePendingGroups.collectAsState()
     val healthPendingGroups by viewModel.healthPendingGroups.collectAsState()
 
-    // 데이터 로드
+    // 주기적 자동 새로고침 (10초마다)
     LaunchedEffect(Unit) {
+        while (true) {
+            delay(10000) // 10초마다
+            android.util.Log.d("MyGroups", "주기적 자동 새로고침 시작")
+            viewModel.loadCare()
+            viewModel.loadHealth()
+            viewModel.loadCarePending()
+            viewModel.loadHealthPending()
+        }
+    }
+
+    // 데이터 로드 - 화면이 표시될 때마다 새로고침
+    LaunchedEffect(key1 = navController.currentBackStackEntry) {
+        android.util.Log.d("MyGroups", "화면 진입 - 데이터 새로고침 시작")
         viewModel.loadCare()
         viewModel.loadHealth()
         viewModel.loadCarePending()
         viewModel.loadHealthPending()
+    }
+
+    // SharedFlow 이벤트 구독 - 그룹 신청 시 실시간 업데이트
+    LaunchedEffect(Unit) {
+        viewModel.refreshEvent.collect {
+            android.util.Log.d("MyGroups", "그룹 신청 이벤트 수신 - 목록 새로고침")
+            viewModel.loadCare()
+            viewModel.loadHealth()
+            viewModel.loadCarePending()
+            viewModel.loadHealthPending()
+        }
     }
 
     // MEMBER 상태 그룹 (내 그룹)

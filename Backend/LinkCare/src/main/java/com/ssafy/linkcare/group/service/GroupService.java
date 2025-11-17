@@ -227,7 +227,7 @@ public class GroupService {
     }
 
     // 그룹 상세 조회 (멤버, 목표 기준, 권한 포함)
-    public GroupDetailResponse getGroupDetail(Long groupSeq) {
+    public GroupDetailResponse getGroupDetail(Long groupSeq, Long currentUserSeq) {
         Group group = groupRepository.findById(groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
@@ -289,7 +289,8 @@ public class GroupService {
                 group.getImageUrl(),
                 group.getCreatedAt(),
                 finalGoalCriteria,
-                memberDtos
+                memberDtos,
+                currentUserSeq  // 현재 사용자 ID 추가
         );
     }
 

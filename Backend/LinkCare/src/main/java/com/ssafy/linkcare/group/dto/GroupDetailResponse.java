@@ -20,7 +20,8 @@ public record GroupDetailResponse(
         String imageUrl,
         LocalDateTime createdAt,
         GoalCriteriaDto goalCriteria,  // HEALTH 그룹인 경우에만 존재 (nullable)
-        List<MemberDto> members
+        List<MemberDto> members,
+        Long currentUserSeq  // 현재 로그인한 사용자의 userSeq
 ) {
     // 멤버 정보 (Nested Record)
     public record MemberDto(

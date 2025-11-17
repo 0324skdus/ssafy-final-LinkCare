@@ -163,10 +163,12 @@ public class GroupController {
     @GetMapping("/{groupSeq}")
     @Operation(summary = "그룹 상세 조회", description = "그룹의 상세 정보와 멤버 목록을 조회합니다")
     public ResponseEntity<GroupDetailResponse> getGroupDetail(
+            Authentication authentication,
             @PathVariable Long groupSeq) {
 
-        log.info("그룹 상세 조회 요청: groupSeq={}", groupSeq);
-        GroupDetailResponse response = groupService.getGroupDetail(groupSeq);
+        Long userId = Long.parseLong(authentication.getName());
+        log.info("그룹 상세 조회 요청: groupSeq={}, userId={}", groupSeq, userId);
+        GroupDetailResponse response = groupService.getGroupDetail(groupSeq, userId);
         return ResponseEntity.ok(response);
     }
 

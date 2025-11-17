@@ -183,7 +183,8 @@ private fun RenderHealthGroupEditForm(
 ) {
     val context = LocalContext.current
     val groupSeq = groupDetail.groupSeq
-    val isLeader = groupDetail.members.find { it.isLeader }?.userSeq == groupDetail.members.firstOrNull()?.userSeq // TODO: check current user
+    // 현재 로그인한 사용자가 그룹장인지 확인
+    val isLeader = groupDetail.members.find { it.userSeq == groupDetail.currentUserSeq }?.isLeader ?: false
 
     // ---- 내부 상태: 초기값 프리필 ----
     var name by remember { mutableStateOf(groupDetail.groupName) }
