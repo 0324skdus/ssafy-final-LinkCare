@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 @Slf4j
 public class UserHealthFeedbackService {
 
@@ -101,6 +100,9 @@ public class UserHealthFeedbackService {
                         String.valueOf(gptResponse.getStatus()),
                         gptResponse.getSummary()
                 );
+
+                feedbackRepository.save(feedback);  // 명시적 save
+                feedbackRepository.flush();  // 즉시 DB 반영
             }
 
             log.info("사용자 {} 건강 피드백 생성 완료", userSeq);
