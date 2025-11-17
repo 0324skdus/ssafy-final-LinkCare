@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.auth
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.auth.data.ProfileRepository
 import com.a307.linkcare.feature.auth.domain.OnboardingForm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

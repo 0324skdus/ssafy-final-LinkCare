@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.auth.data
 
 import com.a307.linkcare.feature.auth.domain.UpdateCharacterRequest
+import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
 import com.a307.linkcare.feature.auth.domain.UpdateProfileRequest
 import retrofit2.Response
 import okhttp3.ResponseBody
@@ -21,5 +22,10 @@ interface ProfileApi {
     suspend fun selectInitial(
         @Query("characterId") characterId: Long,
         @Query("petName") petName: String
+    ): Response<Void>
+
+    @PUT("/api/users/fcm-token")
+    suspend fun updateFcmToken(
+        @Body body: UpdateFcmTokenRequest
     ): Response<Void>
 }

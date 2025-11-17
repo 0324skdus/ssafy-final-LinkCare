@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.androidx.compose.ui.unit)
     implementation(libs.volley)
+    implementation(libs.play.services.wearable)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -118,6 +119,7 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
@@ -141,6 +143,9 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation("com.google.dagger:hilt-android:2.57.1")
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
+
+    // LocalBroadcastManager for FCM notification events
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     implementation(files("libs/samsung-health-data-api-1.0.0.aar"))
     implementation("androidx.health.connect:connect-client:1.1.0-alpha07")

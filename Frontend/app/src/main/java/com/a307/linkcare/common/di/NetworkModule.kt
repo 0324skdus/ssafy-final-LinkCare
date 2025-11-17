@@ -3,6 +3,13 @@ package com.a307.linkcare.common.di
 import android.content.Context
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
+import com.a307.linkcare.feature.notification.data.NotificationApi
+import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
+import com.a307.linkcare.sdk.health.data.remote.HealthApiService
+import com.a307.linkcare.sdk.health.data.serializer.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.samsung.android.sdk.health.data.device.DeviceType
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,6 +22,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -53,12 +62,22 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit =
+    fun provideGson(): Gson =
+        GsonBuilder()
+            .registerTypeAdapter(DeviceType::class.java, DeviceTypeSerializer())
+            .registerTypeAdapter(ZoneOffset::class.java, ZoneOffsetSerializer())
+            .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeSerializer())
+            .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeDeserializer())
+            .create()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient, gson: Gson): Retrofit =
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
             .addConverterFactory(ScalarsConverterFactory.create())
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
 
     @Provides
@@ -75,5 +94,19 @@ object NetworkModule {
     @Singleton
     fun provideCharacterApi(retrofit: Retrofit): CharacterApi =
         retrofit.create(CharacterApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNotificationApi(retrofit: Retrofit): NotificationApi =
+        retrofit.create(NotificationApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHealthApiService(retrofit: Retrofit): HealthApiService =
+        retrofit.create(HealthApiService::class.java)
+    @Provides
+    @Singleton
+    fun provideWorkoutApi(retrofit: Retrofit): WorkoutApi =
+        retrofit.create(WorkoutApi::class.java)
 
 }

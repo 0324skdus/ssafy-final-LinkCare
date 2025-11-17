@@ -88,7 +88,9 @@ fun HeaderDropDown(
                                 }
                             )
                         }
-                        Divider()
+                        if (visibleItems.isNotEmpty()) {
+                            Divider()
+                        }
                         DropdownMenuItem(
                             text = { Text("+ 그룹 추가하기", color = MaterialTheme.colorScheme.primary) },
                             onClick = { expanded = false; onAddClick() }

@@ -54,7 +54,7 @@ fun rememberCroppedPainter(@DrawableRes resId: Int?): Painter? {
 enum class StoreTab { CHARACTER, BACKGROUND }
 
 data class StoreItem(
-    val id: String,
+    val id: Int,//리소스Id에서 임의지정 아이디로 변경하기위함
     @DrawableRes val resId: Int,
     val price: Int,
     val owned: Boolean
@@ -64,8 +64,8 @@ data class StoreUiState(
     val coins: Int,
     val characterItems: List<StoreItem>,
     val backgroundItems: List<StoreItem>,
-    @DrawableRes val equippedBackground: Int,
-    @DrawableRes val equippedCharacter: Int,
+    val equippedBackground: Int,
+    val equippedCharacter: Int,
 )
 
 /* --------- 상점 화면 --------- */

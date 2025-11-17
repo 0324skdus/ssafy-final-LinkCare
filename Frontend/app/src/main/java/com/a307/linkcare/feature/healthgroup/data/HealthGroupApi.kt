@@ -1,23 +1,31 @@
 package com.a307.linkcare.feature.healthgroup.data
 
-import com.a307.linkcare.feature.commongroup.domain.Member
-import java.time.LocalDate
+import com.a307.linkcare.feature.healthgroup.domain.HealthGroupResponse
+import retrofit2.Response
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.Header
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.Part
 
-object HealthGroupApi {
-    suspend fun getWeekData(
-        year: Int,
-        month: Int,
-        weekOfMonth: Int,
-        start: LocalDate,
-        end: LocalDate
-    ): List<Member> {
-        // 서버에선 start~end(일~토) 범위를 쓰는 게 안전
-        // TODO: 실제 통신
-        return emptyList()
-    }
 
-    suspend fun getDayData(date: LocalDate): List<Member> {
-        // TODO: 실제 통신
-        return emptyList()
-    }
+interface HealthGroupApi {
+
+    @Multipart
+    @POST("/api/groups/health")
+    suspend fun createHealthGroup(
+        @Header("Authorization") token: String,
+
+        @Part("groupName") groupName: RequestBody,
+        @Part("groupDescription") description: RequestBody,
+        @Part("capacity") capacity: RequestBody,
+        @Part("minCalorie") minCalorie: RequestBody?,
+        @Part("minStep") minStep: RequestBody?,
+        @Part("minDistance") minDistance: RequestBody?,
+        @Part("minDuration") minDuration: RequestBody?,
+
+        // multipart image (optional)
+        @Part image: MultipartBody.Part?
+    ): Response<HealthGroupResponse>
 }

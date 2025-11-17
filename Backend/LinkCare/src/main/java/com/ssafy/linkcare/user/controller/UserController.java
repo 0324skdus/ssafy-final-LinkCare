@@ -2,6 +2,7 @@ package com.ssafy.linkcare.user.controller;
 
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.user.dto.MyPageResponseDto;
 import com.ssafy.linkcare.user.dto.ProfileUpdateRequest;
 import com.ssafy.linkcare.user.dto.UpdateFcmTokenRequest;
 import com.ssafy.linkcare.user.dto.UserProfileResponse;
@@ -11,13 +12,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -43,6 +42,20 @@ public class UserController {
         Long userPk = Long.parseLong(authentication.getName());
         userService.completeInitialSetup(userPk, characterId, petName);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "마이페이지 정보 조회", description = "현재 로그인한 사용자의 마이페이지 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "마이페이지 정보 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @GetMapping("/mypage")
+    public ResponseEntity<MyPageResponseDto> getMyPageInfo(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        MyPageResponseDto myPageInfo = userService.getMyPageInfo(userId);
+        System.out.println("메인 배경 확인(C) : " + myPageInfo.getMainBackgroundImageUrl());
+        return ResponseEntity.ok(myPageInfo);
     }
 
     /*
