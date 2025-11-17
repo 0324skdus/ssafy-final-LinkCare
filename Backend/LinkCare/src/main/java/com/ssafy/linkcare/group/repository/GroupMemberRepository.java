@@ -57,5 +57,5 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "WHERE gm.group = :group")
     List<GroupMember> findMembersWithDetailsByGroup(@Param("group") Group group);
 
-    Optional<GroupMember> findByUserIdAndGroupId(Long userId, Long groupSeq);
+    Optional<GroupMember> findByUser_UserPkAndGroup_GroupSeq(Long userPk, Long groupSeq);
 }

@@ -319,7 +319,7 @@ public class GroupService {
 
     @Transactional
     public MyGroupDetailResponseDto getGroupDetails(Long userId, Long groupSeq) {
-        GroupMember groupMember = groupMemberRepository.findByUserIdAndGroupId(userId, groupSeq)
+        GroupMember groupMember = groupMemberRepository.findByUser_UserPkAndGroup_GroupSeq(userId, groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
         boolean isLeader = groupMember.getIsLeader();
 
