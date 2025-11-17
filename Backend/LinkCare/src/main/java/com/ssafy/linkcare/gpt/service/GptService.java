@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -228,11 +229,11 @@ public class GptService {
                 }
             }
 
-            return new HealthSummaryResponse(summary, status);
+            return new HealthSummaryResponse(summary, status, LocalDateTime.now());
 
         } catch (Exception e) {
             log.error("GPT 응답 파싱 실패: {}", response, e);
-            return new HealthSummaryResponse("건강 데이터를 분석했습니다.", HealthSummaryResponse.HealthStatus.GOOD);
+            return new HealthSummaryResponse("(더미) 건강 데이터 분석 오류 발생.", HealthSummaryResponse.HealthStatus.GOOD, LocalDateTime.now());
         }
     }
 
