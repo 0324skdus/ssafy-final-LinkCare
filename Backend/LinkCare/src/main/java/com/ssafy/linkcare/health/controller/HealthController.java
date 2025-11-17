@@ -2,6 +2,7 @@ package com.ssafy.linkcare.health.controller;
 
 import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.service.HealthService;
+import com.ssafy.linkcare.health.service.HealthSyncService;
 import com.ssafy.linkcare.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 public class HealthController {
 
     private final HealthService healthService;
+    private final HealthSyncService healthSyncService;
 
     // 일별 데이터 동기화
     @PostMapping("/users/{userId}/daily")
@@ -27,7 +29,7 @@ public class HealthController {
 
         System.out.println("받은 데이터: " + data.toString());
 
-        healthService.syncDailyHealthData(data, userId);
+        healthSyncService.syncDailyHealthData(data, userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("성공", HttpStatus.OK.value(), data)
