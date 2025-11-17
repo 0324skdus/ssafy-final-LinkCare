@@ -36,10 +36,14 @@ interface CareGroupApi {
         @Path("userSeq") userSeq: Int
     ): Response<DailyHealthDetailResponse>
 
-    @GET("/api/health/gpt/weekly-header/{groupSeq}")
+    @GET("/api/groups/weekly-header/{groupSeq}")
     suspend fun getWeeklyHeader(
-        @Path("groupSeq") groupSeq: Long,
-        @Query("today") today: LocalDate?
+        @Path("groupSeq") groupSeq: Long
+    ): WeeklyHeaderResponse
+
+    @POST("/api/groups/weekly-header/{groupSeq}/regenerate")
+    suspend fun regenerateWeeklyHeader(
+        @Path("groupSeq") groupSeq: Long
     ): WeeklyHeaderResponse
 
     @GET("/api/groups/{groupSeq}/sleep-statistics")
