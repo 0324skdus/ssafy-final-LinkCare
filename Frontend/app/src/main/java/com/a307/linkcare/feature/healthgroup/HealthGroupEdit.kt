@@ -241,7 +241,8 @@ private fun RenderHealthGroupEditForm(
                 ) {
 
                     GroupAvatarPicker(
-                        defaultRes = R.drawable.main_duck, // TODO: load from groupDetail.imageUrl
+                        defaultRes = R.drawable.main_duck,
+                        imageUrl = groupDetail.imageUrl,
                         onImagePicked = { uri ->
                             if (isLeader) {
                                 selectedImageUri = uri
@@ -349,8 +350,9 @@ private fun RenderHealthGroupEditForm(
                     GroupMember(
                         id = member.userSeq,
                         name = member.userName,
-                        avatarRes = null, // TODO: load from URL
-                        isLeader = member.isLeader
+                        avatarRes = null,
+                        isLeader = member.isLeader,
+                        avatarUrl = member.mainCharacterBaseImageUrl
                     )
                 },
                 key = { index, m -> m.id }
@@ -542,7 +544,10 @@ private fun MemberRow(
             ) {
                 // 아바타
                 Box(modifier = Modifier.size(44.dp)) {
-                    GroupAvatarChip(avatarRes = member.avatarRes ?: R.drawable.main_duck)
+                    GroupAvatarChip(
+                        avatarRes = member.avatarRes ?: R.drawable.main_duck,
+                        avatarUrl = member.avatarUrl
+                    )
                 }
 
                 Spacer(Modifier.width(10.dp))
@@ -594,13 +599,21 @@ private fun MemberRow(
 
 /** 아바타 간단 칩 */
 @Composable
-private fun GroupAvatarChip(@DrawableRes avatarRes: Int) {
+private fun GroupAvatarChip(
+    @DrawableRes avatarRes: Int,
+    avatarUrl: String? = null
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .height(40.dp)
             .background(Color.Transparent)
     ) {
-        GroupAvatarPickerEdit(defaultRes = avatarRes, onImagePicked = {}, enabled = false)
+        GroupAvatarPickerEdit(
+            defaultRes = avatarRes,
+            onImagePicked = {},
+            enabled = false,
+            imageUrl = avatarUrl
+        )
     }
 }
