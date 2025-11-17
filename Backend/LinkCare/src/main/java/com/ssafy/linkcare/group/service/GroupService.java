@@ -351,6 +351,7 @@ public class GroupService {
                     return GroupMemberProfileDto.builder()
                             .userId(user.getUserPk())
                             .userName(user.getName())
+                            .petName(user.getPetName())
                             .mainCharacterImageUrl(characterUrl)
                             .mainBackgroundImageUrl(backgroundUrl)
                             .build();

@@ -8,6 +8,7 @@ import lombok.Data;
 public class GroupMemberProfileDto {
     private Long userId;
     private String userName;
+    private String petName;
     private String mainCharacterImageUrl;
     private String mainBackgroundImageUrl;
 }
