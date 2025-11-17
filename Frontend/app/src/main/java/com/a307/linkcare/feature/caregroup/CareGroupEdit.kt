@@ -82,7 +82,6 @@ fun CareGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: CareGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    onLeave: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
@@ -106,6 +105,16 @@ fun CareGroupEdit(
         viewModel.kickMember(groupSeq, memberUserSeq)
     }
 
+    // 탈퇴하기 핸들러
+    val onLeave: () -> Unit = {
+        viewModel.leaveGroup(groupSeq)
+    }
+
+    // 그룹 삭제 핸들러
+    val onDelete: () -> Unit = {
+        viewModel.deleteGroup(groupSeq)
+    }
+
     // Handle member action state
     LaunchedEffect(memberActionState) {
         when (memberActionState) {
@@ -124,6 +133,24 @@ fun CareGroupEdit(
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetMemberActionState()
+            }
+            is CareGroupEditViewModel.MemberActionState.LeaveSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.LeaveSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                navController.popBackStack()
+            }
+            is CareGroupEditViewModel.MemberActionState.DeleteSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.DeleteSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                navController.popBackStack()
             }
             is CareGroupEditViewModel.MemberActionState.Error -> {
                 Toast.makeText(
@@ -195,6 +222,7 @@ fun CareGroupEdit(
                 onDelegate = onDelegate,
                 onKick = onKick,
                 onLeave = onLeave,
+                onDelete = onDelete,
                 onCopyInvite = onCopyInvite,
                 onBack = onBack
             )
@@ -211,6 +239,7 @@ private fun RenderCareGroupEditForm(
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,
+    onDelete: () -> Unit,
     onCopyInvite: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -440,34 +469,49 @@ private fun RenderCareGroupEditForm(
             // 하단 버튼
             item {
                 if (isLeader) {
-                    // 그룹장: [수정하기] 단일 버튼
-                    LcBtn(
-                        text = "수정하기",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        buttonColor = main,
-                        buttonTextColor = white,
-                        isEnabled = canSubmit && updateState !is CareGroupEditViewModel.UpdateState.Loading,
-                        onClick = {
-                            val imageAction = if (selectedImageUri != null) "update" else "keep"
-                            val imageFile = selectedImageUri?.let { uri ->
-                                uriToFile(context, uri)
-                            }
+                    // 그룹장: [수정하기]/[그룹 삭제하기]
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LcBtn(
+                            text = "수정하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = main,
+                            buttonTextColor = white,
+                            isEnabled = canSubmit && updateState !is CareGroupEditViewModel.UpdateState.Loading,
+                            onClick = {
+                                val imageAction = if (selectedImageUri != null) "update" else "keep"
+                                val imageFile = selectedImageUri?.let { uri ->
+                                    uriToFile(context, uri)
+                                }
 
-                            viewModel.updateGroup(
-                                groupSeq = groupSeq,
-                                groupName = name.trim(),
-                                groupDescription = desc.trim(),
-                                imageAction = imageAction,
-                                imageFile = imageFile,
-                                isSleepRequired = shareSleep,
-                                isWaterIntakeRequired = shareWater,
-                                isBloodPressureRequired = shareBp,
-                                isBloodSugarRequired = shareSugar
-                            )
-                        }
-                    )
+                                viewModel.updateGroup(
+                                    groupSeq = groupSeq,
+                                    groupName = name.trim(),
+                                    groupDescription = desc.trim(),
+                                    imageAction = imageAction,
+                                    imageFile = imageFile,
+                                    isSleepRequired = shareSleep,
+                                    isWaterIntakeRequired = shareWater,
+                                    isBloodPressureRequired = shareBp,
+                                    isBloodSugarRequired = shareSugar
+                                )
+                            }
+                        )
+                        LcBtn(
+                            text = "그룹 삭제하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = Color(0xFFFF6B6B),
+                            buttonTextColor = white,
+                            isEnabled = true,
+                            onClick = onDelete
+                        )
+                    }
                 } else {
                     // 일반 구성원: [돌아가기]/[탈퇴하기]
                     Row(

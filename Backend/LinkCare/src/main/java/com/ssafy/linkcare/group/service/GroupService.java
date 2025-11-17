@@ -1616,7 +1616,18 @@ public class GroupService {
             goalCriteriaRepository.delete(criteria);
         });
 
-        // 6. 그룹 삭제
+        // 6. 초대 링크들 삭제
+        List<GroupInvitation> invitations = invitationRepository.findByGroup(group);
+        invitationRepository.deleteAll(invitations);
+
+        // 7. 가입 신청들 삭제
+        List<GroupJoinRequest> joinRequests = groupJoinRequestRepository.findByGroup(group);
+        groupJoinRequestRepository.deleteAll(joinRequests);
+
+        // 8. 그룹 삭제
         groupRepository.delete(group);
+
+        log.info("그룹 완전 삭제 완료: groupSeq={}, members={}, invitations={}, joinRequests={}",
+                group.getGroupSeq(), members.size(), invitations.size(), joinRequests.size());
     }
 }
