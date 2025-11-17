@@ -26,12 +26,16 @@ class CareGroupHomeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    fun loadHealthData(userSeq: Int) {
+    fun loadHealthData(userSeq: Int, date: LocalDate? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                Log.d("CareGroupHomeVM", "Loading health data for userSeq=$userSeq")
-                val data = repo.getDailyHealthDetail(userSeq)
+                Log.d("CareGroupHomeVM", "Loading health data for userSeq=$userSeq, date=$date")
+                val data = if (date != null) {
+                    repo.getDailyHealthDetailByDate(userSeq, date)
+                } else {
+                    repo.getDailyHealthDetail(userSeq)
+                }
                 if (data != null) {
                     Log.d("CareGroupHomeVM", "Received health data for userSeq=$userSeq")
                     _healthData.value = _healthData.value + (userSeq to data)
@@ -47,10 +51,10 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    fun loadHealthDataForMembers(userSeqs: List<Int>) {
-        Log.d("CareGroupHomeVM", "loadHealthDataForMembers called with ${userSeqs.size} members: $userSeqs")
+    fun loadHealthDataForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
+        Log.d("CareGroupHomeVM", "loadHealthDataForMembers called with ${userSeqs.size} members, date=$date")
         userSeqs.forEach { userSeq ->
-            loadHealthData(userSeq)
+            loadHealthData(userSeq, date)
         }
     }
 
