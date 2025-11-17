@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.caregroup.data
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.domain.GroupStepStatisticsResponse
+import com.a307.linkcare.feature.caregroup.domain.HealthSummaryResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -11,6 +12,7 @@ import javax.inject.Inject
 
 class CareGroupRepository @Inject constructor(
     private val api: CareGroupApi,
+    private val healthFeedbackApi: HealthFeedbackApi,
     private val tokenStore: TokenStore
 ) {
 
@@ -84,6 +86,20 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun getHealthFeedback(userSeq: Int): HealthSummaryResponse? {
+        return try {
+            val response = healthFeedbackApi.getHealthFeedback(userSeq)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }
