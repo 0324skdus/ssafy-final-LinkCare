@@ -58,6 +58,7 @@ public class GroupService {
     private final GroupHealthPermissionRepository healthPermissionRepository;
     private final GroupRequiredPermissionRepository requiredPermissionRepository;
     private final GroupHeaderScheduler groupHeaderScheduler;
+    private final com.ssafy.linkcare.notification.repository.NotificationRepository notificationRepository;
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -1624,10 +1625,15 @@ public class GroupService {
         List<GroupJoinRequest> joinRequests = groupJoinRequestRepository.findByGroup(group);
         groupJoinRequestRepository.deleteAll(joinRequests);
 
-        // 8. 그룹 삭제
+        // 8. 알림들 삭제 (그룹과 연관된 모든 알림)
+        List<com.ssafy.linkcare.notification.entity.Notification> notifications =
+            notificationRepository.findByRelatedGroupSeq(group.getGroupSeq());
+        notificationRepository.deleteAll(notifications);
+
+        // 9. 그룹 삭제
         groupRepository.delete(group);
 
-        log.info("그룹 완전 삭제 완료: groupSeq={}, members={}, invitations={}, joinRequests={}",
-                group.getGroupSeq(), members.size(), invitations.size(), joinRequests.size());
+        log.info("그룹 완전 삭제 완료: groupSeq={}, members={}, invitations={}, joinRequests={}, notifications={}",
+                group.getGroupSeq(), members.size(), invitations.size(), joinRequests.size(), notifications.size());
     }
 }
