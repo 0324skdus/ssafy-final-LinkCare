@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -13,6 +14,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SleepDetailResponse {
-    private Long totalDuration;
-    private Map<LocalDate, Long> dailySleeps;
+    private Integer userSeq;
+    private List<Long> dailySleepMinutes;  // 기간 내 일별 수면시간
+    private Long averageSleepMinutes;      // 평균
+    private Long totalSleepMinutes;        // 총합 (정렬 기준)
 }

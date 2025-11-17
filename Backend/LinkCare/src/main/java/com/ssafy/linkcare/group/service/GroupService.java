@@ -9,8 +9,10 @@ import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
+import com.ssafy.linkcare.health.dto.SleepDetailResponse;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
+import com.ssafy.linkcare.health.service.SleepService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private final S3Service s3Service;
+    private final SleepService sleepService;
     private final HealthService healthService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
@@ -48,7 +51,6 @@ public class GroupService {
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GroupHealthPermissionRepository healthPermissionRepository;
     private final GroupRequiredPermissionRepository requiredPermissionRepository;
-
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
 
@@ -970,6 +972,37 @@ public class GroupService {
                 .totalCalories(totalCalories)
                 .totalSteps(totalSteps)
                 .totalDuration(totalDuration)
+                .build();
+    }
+
+    // 그룹원 수면 기록 조회
+    public GroupSleepStatisticsResponse getGroupSleepStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        // 2. 그룹의 모든 멤버 조회
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        // 3. 각 멤버의 수면 통계 조회
+        List<SleepDetailResponse> members = groupMembers.stream()
+                .map(groupMember -> sleepService.getSleepStatisticsForGroup(
+                        Math.toIntExact(groupMember.getUser().getUserPk()),
+                        startDate,
+                        endDate))
+                .collect(Collectors.toList());
+
+        // 4. 그룹 전체 평균 수면시간 계산
+        Long groupAvgDuration = (long) members.stream()
+                .mapToLong(SleepDetailResponse::getAverageSleepMinutes)
+                .average()
+                .orElse(0.0);
+
+
+        // 4. 응답 생성
+        return GroupSleepStatisticsResponse.builder()
+                .members(members)
+                .avgDuration(groupAvgDuration)
+                .startDate(startDate)
+                .endDate(endDate)
                 .build();
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
 import com.a307.linkcare.feature.notification.data.NotificationApi
+import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
 import com.a307.linkcare.sdk.health.data.serializer.*
 import com.google.gson.Gson
@@ -103,5 +104,9 @@ object NetworkModule {
     @Singleton
     fun provideHealthApiService(retrofit: Retrofit): HealthApiService =
         retrofit.create(HealthApiService::class.java)
+    @Provides
+    @Singleton
+    fun provideWorkoutApi(retrofit: Retrofit): WorkoutApi =
+        retrofit.create(WorkoutApi::class.java)
 
 }
