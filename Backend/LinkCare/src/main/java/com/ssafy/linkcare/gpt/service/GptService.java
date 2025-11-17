@@ -202,7 +202,7 @@ public class GptService {
 
         String response = getChatCompletion(groupHealthDataText, systemPrompt);
 
-        return new WeeklyHeaderResponse(response.trim());
+        return new WeeklyHeaderResponse(response.trim(), LocalDateTime.now());
     }
 
     /**

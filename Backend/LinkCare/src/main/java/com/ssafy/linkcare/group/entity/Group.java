@@ -10,6 +10,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /*
@@ -64,6 +66,13 @@ public class Group {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // ===== AI 생성 주간 헤더 필드 =====
+    @Column(name = "weekly_header_message", columnDefinition = "TEXT")
+    private String weeklyHeaderMessage;
+
+    @Column(name = "header_generated_at")
+    private LocalDateTime headerGeneratedAt;
+
     @Builder
     public Group(String groupName, String groupDescription, GroupType type, Integer capacity, String imageUrl) {
         this.groupName = groupName;
@@ -80,5 +89,36 @@ public class Group {
     public void updateGroupInfo(String groupName, String groupDescription) {
         this.groupName = groupName;
         this.groupDescription = groupDescription;
+    }
+
+    public void updateWeeklyHeader(
+            String message,
+            LocalDateTime generatedAt
+    ) {
+        this.weeklyHeaderMessage = message;
+        this.headerGeneratedAt = generatedAt;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        // 신규 그룹 기본 헤더 설정
+        this.weeklyHeaderMessage = "함께 건강해져봐요! 💪";
+        this.headerGeneratedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 그룹이 생성된 주인지 확인
+     */
+    public boolean isCreatedThisWeek() {
+        if (this.createdAt == null) {
+            return false;
+        }
+
+        LocalDate createdDate = this.createdAt.toLocalDate();
+        LocalDate thisWeekMonday = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate thisWeekSunday = thisWeekMonday.plusDays(6);
+
+        return !createdDate.isBefore(thisWeekMonday) && !createdDate.isAfter(thisWeekSunday);
     }
 }
