@@ -30,7 +30,6 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -40,6 +39,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 fun sampleHealthToday(m: Member): HealthToday =
@@ -276,6 +276,22 @@ fun CareGroupHome(
         }
     }
 
+    val header = healthViewModel.headerMessage
+
+    val sleepStatistics by healthViewModel.sleepStatistics.collectAsState()
+
+    LaunchedEffect(Unit) {
+        healthViewModel.loadHeader(groupSeq, today)
+    }
+
+    LaunchedEffect(metricType, selectedDate) {
+        if (metricType == MetricType.SLEEP) {
+            val start = selectedDate.startOfWeek()
+            val end = selectedDate.endOfWeek()
+            healthViewModel.loadSleepStatistics(groupSeq, start, end)
+        }
+    }
+
 
     Scaffold(
         floatingActionButton = {
@@ -293,14 +309,16 @@ fun CareGroupHome(
     )  { _ ->
         LazyColumn(Modifier.fillMaxSize()) {
 
+            if (header != null) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = "걷기에 더 신경써볼까요?"
+                        txt = header
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+            }
 
                 item {
                     NudgeHost(
@@ -337,7 +355,6 @@ fun CareGroupHome(
                         onClick = { selectedMember = m }
                     )
 
-                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
@@ -403,8 +420,13 @@ fun CareGroupHome(
                     // 혈압/수면: 멤버별 라인 + 전체 평균 라인
                     item {
                         Spacer(Modifier.height(6.dp))
-                        val chartData = remember(selectedDate, weekMembers, metricType) {
-                            buildWeeklyChartData(metricType, selectedDate, weekMembers)
+                        val chartData = remember(selectedDate, weekMembers, metricType, sleepStatistics) {
+                            buildWeeklyChartData(
+                                type = metricType,
+                                anchorDate = selectedDate,
+                                members = weekMembers,
+                                sleepStats = sleepStatistics
+                            )
                         }
                         MetricChartCard(
                             title = when (metricType) {
@@ -425,7 +447,7 @@ fun CareGroupHome(
                 item {
                     Spacer(Modifier.height(8.dp))
 
-                    val summaryChips = remember(metricType, summary, totalStats) {
+                    val summaryChips = remember(metricType, summary, totalStats, sleepStatistics, members) {
                         if (metricType == MetricType.ACTIVITY) {
                             val calories = totalStats?.totalCalories?.toInt() ?: 0
                             val steps = totalStats?.totalSteps ?: 0
@@ -438,8 +460,12 @@ fun CareGroupHome(
                                 "⏱️ $durationStr 운동했어요"
                             )
                         } else {
-                            // 수면 탭
-                            buildSummaryChips(metricType, summary)
+                            buildSummaryChips(
+                                type = metricType,
+                                s = summary,
+                                sleepStats = sleepStatistics,
+                                members = members
+                            )
                         }
                     }
 
@@ -584,7 +610,8 @@ fun ScreenTitleOnlyRow(
 }
 
 // 요약칩 텍스트를 만들어주는 함수
-fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when (type) {
+fun buildSummaryChips(type: MetricType, s: CareWeekSummary, sleepStats: SleepStatisticsResponse?,
+                      members: List<Member>): List<String> = when (type) {
     MetricType.ACTIVITY -> listOfNotNull(
         s.calories?.let { "🔥 ${it} kcal 태웠어요" },
         s.steps?.let { "👣 ${it} 걸음 걸었어요" },
@@ -598,11 +625,21 @@ fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when
         s.eveningBp?.let { (sys, dia) -> "🌇 저녁 ${sys}/${dia} mmHg" }
     )
 
-    MetricType.SLEEP -> listOfNotNull(
-        s.sleepMinutes?.let { "😴 총 수면 ${it}분" },
-        s.deepMinutes?.let { "🌙 깊은 수면 ${it}분" },
-        s.sleepScore?.let { "⭐ 수면 점수 ${it}점" }
+    MetricType.SLEEP -> buildSleepSummaryMessages(
+        stats = sleepStats,
+        members = members
     )
+}
+
+fun formatMinutesToHourMin(totalMinutes: Int): String {
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
+        hours > 0 -> "${hours}시간"
+        else -> "${minutes}분"
+    }
 }
 
 // 날짜+타입에 맞는 요약 더미 데이터
@@ -686,3 +723,49 @@ private fun clampDate(
     date.isAfter(max) -> max
     else -> date
 }
+
+fun buildSleepSummaryMessages(
+    stats: SleepStatisticsResponse?,
+    members: List<Member>
+): List<String> {
+    if (stats == null) return emptyList()
+
+    val nameByUserSeq = members.associateBy({ it.userPk }, { it.name })
+
+    val allSleepMinutes: List<Int> = stats.members.flatMap { m ->
+        m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+    }
+
+    val avgMinutes = if (allSleepMinutes.isNotEmpty()) {
+        allSleepMinutes.average().toInt()
+    } else 0
+
+    val avgLine = "😴 평균 수면 ${formatMinutesToHourMin(avgMinutes)}"
+
+    data class MemberAvg(val userSeq: Long, val avgMinutes: Int)
+
+    val memberAverages: List<MemberAvg> = stats.members.map { m ->
+        val mins = m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+
+        val avg = if (mins.isNotEmpty()) mins.average().toInt() else 0
+        MemberAvg(userSeq = m.userSeq, avgMinutes = avg)
+    }
+
+    val ranked = memberAverages.sortedByDescending { it.avgMinutes }
+
+    val rankLines = ranked
+        .mapIndexed { index, mAvg ->
+            val name = nameByUserSeq[mAvg.userSeq] ?: "멤버${index + 1}"
+            val sleepText = formatMinutesToHourMin(mAvg.avgMinutes)
+            "${index + 1}위 $name · $sleepText"
+        }
+
+    return listOf(avgLine) + rankLines
+}
+
+
+fun msToMinutes(ms: Long): Int = (ms / 60000L).toInt()
