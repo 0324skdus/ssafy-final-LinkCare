@@ -641,8 +641,8 @@ private fun getSleepSummary(sleeps: List<Sleep>): String {
 
 private fun getSleepStatus(sleeps: List<Sleep>): String? {
     if (sleeps.isEmpty()) return null
-    val totalMin = sleeps.sumOf { it.duration }
-    val hours = totalMin / 60f
+    val totalMillis = sleeps.sumOf { it.duration }
+    val hours = totalMillis / 3600000f  // 밀리초 → 시간 (1000 * 60 * 60)
     return when {
         hours >= 7 && hours <= 9 -> "적정"
         hours < 7 -> "부족"
