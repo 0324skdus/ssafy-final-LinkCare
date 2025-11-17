@@ -131,7 +131,6 @@ public class GroupController {
         List<GroupResponse> response = groupService.getMyGroups(userId, type);
         return ResponseEntity.ok(response);
     }
-
     // 내가 신청한 그룹 목록 조회
     @GetMapping("/my-pending")
     @Operation(summary = "내가 신청한 그룹 목록 조회", description = "승인 대기 중인 내 신청 목록을 조회합니다. type 파라미터로 HEALTH/CARE 필터링 가능")
@@ -228,10 +227,10 @@ public class GroupController {
     })
     @GetMapping("/{groupSeq}/details")
     public ResponseEntity<MyGroupDetailResponseDto> getGroupDetails(
-            @PathVariable Long groupSeq) {
+            Authentication authentication, @PathVariable Long groupSeq) {
+        Long userId = Long.valueOf(authentication.getName());
+        MyGroupDetailResponseDto response = groupService.getGroupDetails(userId, groupSeq);
 
-        log.info("그룹 상세 정보 조회 (멤버 프로필 포함) 요청: groupSeq={}", groupSeq);
-        MyGroupDetailResponseDto response = groupService.getGroupDetails(groupSeq);
         return ResponseEntity.ok(response);
     }
 
