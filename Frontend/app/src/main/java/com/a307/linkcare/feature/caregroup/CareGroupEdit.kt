@@ -82,6 +82,8 @@ fun CareGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: CareGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
@@ -141,7 +143,15 @@ fun CareGroupEdit(
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetMemberActionState()
-                navController.popBackStack()
+                // 그룹 목록 새로고침 후 care 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadCare()
+                    onGroupDeleted()
+                    navController.navigate("care/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             }
             is CareGroupEditViewModel.MemberActionState.DeleteSuccess -> {
                 Toast.makeText(
@@ -150,7 +160,15 @@ fun CareGroupEdit(
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetMemberActionState()
-                navController.popBackStack()
+                // 그룹 목록 새로고침 후 care 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadCare()
+                    onGroupDeleted()
+                    navController.navigate("care/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             }
             is CareGroupEditViewModel.MemberActionState.Error -> {
                 Toast.makeText(

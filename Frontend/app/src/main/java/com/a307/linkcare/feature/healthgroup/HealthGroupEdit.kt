@@ -89,6 +89,8 @@ fun HealthGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: HealthGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
@@ -148,7 +150,15 @@ fun HealthGroupEdit(
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetMemberActionState()
-                navController.popBackStack()
+                // 그룹 목록 새로고침 후 health 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadHealth()
+                    onGroupDeleted()
+                    navController.navigate("health/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             }
             is HealthGroupEditViewModel.MemberActionState.DeleteSuccess -> {
                 Toast.makeText(
@@ -157,7 +167,15 @@ fun HealthGroupEdit(
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetMemberActionState()
-                navController.popBackStack()
+                // 그룹 목록 새로고침 후 health 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadHealth()
+                    onGroupDeleted()
+                    navController.navigate("health/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             }
             is HealthGroupEditViewModel.MemberActionState.Error -> {
                 Toast.makeText(
