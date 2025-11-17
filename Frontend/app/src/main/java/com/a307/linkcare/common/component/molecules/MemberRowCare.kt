@@ -28,7 +28,8 @@ fun MemberRowCare(
     m: Member,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isSelf: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -87,6 +88,8 @@ fun MemberRowCare(
                 "PERFECT" -> "완벽"
                 "GOOD" -> "양호"
                 "CAUTION" -> "주의"
+                "ANALYZING" -> "분석 중"
+                "UNKNOWN" -> "알 수 없음"
                 else -> m.status
             }?.let {
                 Text(
@@ -96,6 +99,8 @@ fun MemberRowCare(
                         "PERFECT" -> point
                         "GOOD" -> main
                         "CAUTION" -> Color(0xFFFFA000)
+                        "ANALYZING" -> Color(0xFF888888)
+                        "UNKNOWN" -> Color(0xFF888888)
                         else -> main
                     }
                 )
@@ -113,11 +118,18 @@ fun MemberRowCare(
                 )
             }
         }
-        Spacer(Modifier.width(8.dp))
-        Image(
-            painter = painterResource(R.drawable.tap),
-            contentDescription = null,
-            modifier = Modifier.size(30.dp)
-        )
+        if (!isSelf) {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp)
+            )
+        } else {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.size(30.dp)
+            )
+        }
     }
 }

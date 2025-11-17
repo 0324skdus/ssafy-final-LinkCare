@@ -4,9 +4,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.data.RetrofitClient
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 sealed interface MyPageApiState {
     object Loading : MyPageApiState
@@ -14,7 +16,8 @@ sealed interface MyPageApiState {
     data class Error(val message: String) : MyPageApiState
 }
 
-class MyPageViewModel : ViewModel() {
+@HiltViewModel
+class MyPageViewModel @Inject constructor() : ViewModel() {
 
     private val _apiState = MutableStateFlow<MyPageApiState>(MyPageApiState.Loading)
     val apiState: StateFlow<MyPageApiState> = _apiState

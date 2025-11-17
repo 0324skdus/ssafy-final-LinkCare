@@ -61,9 +61,13 @@ class NotificationRepository @Inject constructor(
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Failed to delete notification: HTTP ${response.code()}"))
+                val errorMessage = parseErrorMessage(response.errorBody()?.string())
+                    ?: "알림 삭제 실패: HTTP ${response.code()}"
+                android.util.Log.e("NotificationRepository", "삭제 실패: $errorMessage (HTTP ${response.code()})")
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
+            android.util.Log.e("NotificationRepository", "삭제 예외: ${e.message}", e)
             Result.failure(e)
         }
     }
