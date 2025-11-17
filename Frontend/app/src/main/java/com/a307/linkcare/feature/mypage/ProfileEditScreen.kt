@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,10 +30,19 @@ enum class Gender { MALE, FEMALE }
 data class Profile(
     val name: String,
     val gender: Gender,
-    val birthDate: String,
+    val birthDate: String,   // yyyy-MM-dd
     val heightCm: Int,
     val weightKg: Int
 )
+
+fun MyProfileResponse.toProfile(): Profile =
+    Profile(
+        name = name,
+        gender = if (gender == "남") Gender.MALE else Gender.FEMALE,
+        birthDate = birth,
+        heightCm = height.toInt(),
+        weightKg = weight.toInt()
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,11 +52,12 @@ fun ProfileEditScreen(
     onBack: () -> Unit,
     @DrawableRes illustrationRes: Int = R.drawable.ic_launcher_foreground
 ) {
-    var name by rememberSaveable { mutableStateOf(initial.name) }
+    // ----- 상태 (name은 read-only 이라 상태 X) -----
     var gender by rememberSaveable { mutableStateOf(initial.gender) }
     var height by rememberSaveable { mutableStateOf(initial.heightCm.toString()) }
     var weight by rememberSaveable { mutableStateOf(initial.weightKg.toString()) }
 
+    // 생년월일 파싱
     val (initY, initM, initD) = remember(initial.birthDate) {
         val p = initial.birthDate.split("-")
         Triple(p.getOrNull(0) ?: "", p.getOrNull(1) ?: "", p.getOrNull(2) ?: "")
@@ -54,25 +66,29 @@ fun ProfileEditScreen(
     var month by rememberSaveable { mutableStateOf(initM) }
     var day by rememberSaveable { mutableStateOf(initD) }
 
+    // ----- 유효성 검사 -----
     val heightInt = height.toIntOrNull()
     val weightInt = weight.toIntOrNull()
-    val validName = name.isNotBlank()
+
     val validBirth = isValidDate(year, month, day)
     val validHeight = heightInt != null && heightInt in 50..250
     val validWeight = weightInt != null && weightInt in 20..300
 
     val newBirthDate = "${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}"
-    val isChanged = name != initial.name ||
-            gender != initial.gender ||
-            newBirthDate != initial.birthDate ||
-            heightInt != initial.heightCm ||
-            weightInt != initial.weightKg
 
-    val isValid = validName && validBirth && validHeight && validWeight
+    val isChanged =
+        gender != initial.gender ||
+                newBirthDate != initial.birthDate ||
+                heightInt != initial.heightCm ||
+                weightInt != initial.weightKg
+
+    val isValid = validBirth && validHeight && validWeight
 
     Scaffold(
         containerColor = white,
         contentColor = black,
+        topBar = {
+        },
         bottomBar = {
             Box(Modifier.padding(16.dp)) {
                 LcBtn(
@@ -80,7 +96,7 @@ fun ProfileEditScreen(
                     onClick = {
                         onSave(
                             Profile(
-                                name = name.trim(),
+                                name = initial.name,
                                 gender = gender,
                                 birthDate = newBirthDate,
                                 heightCm = heightInt ?: initial.heightCm,
@@ -98,8 +114,6 @@ fun ProfileEditScreen(
     ) { _ ->
         Column(
             modifier = Modifier
-                .imePadding()
-                .navigationBarsPadding()
                 .fillMaxSize()
         ) {
             Column(
@@ -109,14 +123,26 @@ fun ProfileEditScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // ----- 이름 (조회 전용) -----
                 Text("이름", color = black, style = MaterialTheme.typography.labelLarge)
-                LcInputField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "이름을 입력하세요",
-                )
-                if (!validName) AssistiveText("이름을 입력해주세요.")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF3F4F6))
+                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = initial.name,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        color = black,
+                        fontSize = 14.sp
+                    )
+                }
 
+                // ----- 성별 -----
                 Text("성별", color = black, style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GenderChip(
@@ -131,6 +157,7 @@ fun ProfileEditScreen(
                     )
                 }
 
+                // ----- 생년월일 -----
                 Text("생년월일", color = black, style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -158,6 +185,7 @@ fun ProfileEditScreen(
                 }
                 if (!validBirth) AssistiveText("올바른 생년월일(yyyy-MM-dd)을 입력하세요.")
 
+                // ----- 키 -----
                 Text("키 (cm)", color = black, style = MaterialTheme.typography.labelLarge)
                 UnitInputField(
                     value = height,
@@ -167,6 +195,7 @@ fun ProfileEditScreen(
                 )
                 if (!validHeight) AssistiveText("키는 50~250cm 사이로 입력하세요.")
 
+                // ----- 몸무게 -----
                 Text("몸무게 (kg)", color = black, style = MaterialTheme.typography.labelLarge)
                 UnitInputField(
                     value = weight,
@@ -284,8 +313,8 @@ private fun isValidDate(y: String, m: String, d: String): Boolean {
     if (yy !in 1900..nowYear) return false
     if (mm !in 1..12) return false
     val maxDay = when (mm) {
-        1,3,5,7,8,10,12 -> 31
-        4,6,9,11 -> 30
+        1, 3, 5, 7, 8, 10, 12 -> 31
+        4, 6, 9, 11 -> 30
         2 -> if ((yy % 400 == 0) || (yy % 4 == 0 && yy % 100 != 0)) 29 else 28
         else -> 31
     }
