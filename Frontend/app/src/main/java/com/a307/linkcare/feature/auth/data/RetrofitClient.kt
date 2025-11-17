@@ -2,9 +2,9 @@ package com.a307.linkcare.feature.auth.data
 
 import android.content.Context
 import com.kakao.sdk.network.ApiFactory.loggingInterceptor
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
@@ -15,6 +15,11 @@ object RetrofitClient {
 
     fun createOkHttpClient(context: Context): OkHttpClient {
         val tokenStore = TokenStore(context)
+
+
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
 
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -40,7 +45,9 @@ object RetrofitClient {
             .build()
 
         authApi = retrofit.create(AuthApi::class.java)
+        userApi = retrofit.create(UserApi::class.java)
     }
 
     lateinit var authApi: AuthApi
+    lateinit var userApi: UserApi
 }

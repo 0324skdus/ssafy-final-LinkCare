@@ -98,6 +98,10 @@ fun CareMemberDetail(
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp
 ) {
+    val isSelf = remember(member.name, currentUserName) {
+        member.name == currentUserName
+    }
+
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -143,7 +147,7 @@ fun CareMemberDetail(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "${currentUserName}님의 오늘의 건강 정보",
+                                    "${member.name}님의 오늘의 건강 정보",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = white.copy(alpha = 0.9f)
                                 )
@@ -316,13 +320,12 @@ fun CareMemberDetail(
                             }
                         }
                     }
-
-                    Spacer(Modifier.height(8.dp))
                 }
 
                 var showLetter by remember { mutableStateOf(false) }
                 // 편지쓰기 버튼
                 Button(
+                    enabled = !isSelf,
                     onClick = { showLetter = true },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -638,8 +641,8 @@ private fun getSleepSummary(sleeps: List<Sleep>): String {
 
 private fun getSleepStatus(sleeps: List<Sleep>): String? {
     if (sleeps.isEmpty()) return null
-    val totalMin = sleeps.sumOf { it.duration }
-    val hours = totalMin / 60f
+    val totalMillis = sleeps.sumOf { it.duration }
+    val hours = totalMillis / 3600000f  // 밀리초 → 시간 (1000 * 60 * 60)
     return when {
         hours >= 7 && hours <= 9 -> "적정"
         hours < 7 -> "부족"

@@ -6,19 +6,26 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -27,6 +34,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -58,7 +66,8 @@ import com.a307.linkcare.feature.healthgroup.HealthGroupHome
 import com.a307.linkcare.feature.mypage.DecorateScreen
 import com.a307.linkcare.feature.mypage.MyGroups
 import com.a307.linkcare.feature.mypage.MyPage
-import com.a307.linkcare.feature.mypage.MyPageUiState
+import com.a307.linkcare.feature.mypage.MyPageApiState
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.feature.mypage.StoreItem
 import com.a307.linkcare.feature.mypage.StoreScreen
 import com.a307.linkcare.feature.mypage.StoreUiState
@@ -76,7 +85,6 @@ import com.a307.linkcare.feature.customize.CustomEntity
 import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
 import com.a307.linkcare.feature.customize.CustomizeRepository
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.mypage.Gender
 import com.a307.linkcare.feature.mypage.Profile
@@ -86,6 +94,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.feature.mypage.MyPageEditViewModel
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -563,40 +575,87 @@ fun MainTabs(
             navigation(route = Route.MyPage.route, startDestination = Route.MyPageMain.route) {
                 // MyPage 홈
                 composable(Route.MyPageMain.route) {
-                    MyPage(
-                        state = MyPageUiState(
-                            nickname = "김싸피",
-                            coinLabel = "보유 코인 300",
-                            groupCountLabel = "그룹 조회",
-                            avatarRes = R.drawable.char_bear_1,
-                            avatarBgRes = R.drawable.background_1
-                        ),
-                        onGroupsClick = { navController.navigate(Route.MyGroups.route) },
-                        onEditClick = { navController.navigate(Route.EditProfile.route) },
-                        onStoreClick = { navController.navigate(Route.Store.route) },
-                        onDecorateClick = { navController.navigate(Route.Decorate.route) },
-                        onLogout = {
-                            rootNavController.navigate(Route.Login.route) {
-                                popUpTo(rootNavController.graph.id) { inclusive = true }
-                                launchSingleTop = true
+                    val myPageViewModel: MyPageViewModel = hiltViewModel()
+                    val apiState by myPageViewModel.apiState.collectAsState()
+                    val context = LocalContext.current
+
+                    when (val state = apiState) {
+                        is MyPageApiState.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
                             }
                         }
-                    )
+
+                        is MyPageApiState.Success -> {
+                            MyPage(
+                                state = state.uiState,
+                                onGroupsClick = { navController.navigate(Route.MyGroups.route) },
+                                onEditClick = { navController.navigate(Route.EditProfile.route) },
+                                onStoreClick = { navController.navigate(Route.Store.route) },
+                                onDecorateClick = { navController.navigate(Route.Decorate.route) },
+                                onLogout = {
+                                    rootNavController.navigate(Route.Login.route) {
+                                        popUpTo(rootNavController.graph.id) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+
+                        is MyPageApiState.Error -> {
+                            Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "데이터를 불러오는데 실패했습니다.")
+                            }
+                        }
+                    }
                 }
 
                 // 편집
                 composable(Route.EditProfile.route) {
-                    ProfileEditScreen(
-                        initial = Profile(
-                            name = "싸피",
-                            gender = Gender.FEMALE,
-                            heightCm = 162,
-                            weightKg = 53,
-                            birthDate = "2022-11-11"
-                        ),
-                        onSave = { /** updated -> viewModel.saveProfile(updated)*/ },
-                        onBack = { navController.popBackStack() }
-                    )
+                    val viewModel: MyPageEditViewModel = hiltViewModel()
+                    val uiState = viewModel.uiState
+
+                    when (uiState) {
+                        is MyPageEditViewModel.UiState.Loading -> {
+                            // 로딩 UI
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = main)
+                            }
+                        }
+
+                        is MyPageEditViewModel.UiState.Error -> {
+                            // 에러 UI (간단 예시)
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = uiState.message, color = Color.Red)
+                            }
+                        }
+
+                        is MyPageEditViewModel.UiState.Success -> {
+                            ProfileEditScreen(
+                                initial = uiState.profile,
+                                onSave = { updated ->
+                                    viewModel.saveProfile(updated) {
+                                        // 저장 성공 시 뒤로 가기
+                                        navController.popBackStack()
+                                    }
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
 
                 // 그룹 조회

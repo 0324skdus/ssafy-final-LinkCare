@@ -3,24 +3,30 @@ package com.ssafy.linkcare.group.service;
 import com.ssafy.linkcare.character.entity.UserCharacter;
 import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
+import com.ssafy.linkcare.gpt.dto.WeeklyHeaderResponse;
 import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.entity.*;
 import com.ssafy.linkcare.group.enums.GroupType;
 import com.ssafy.linkcare.group.enums.RequestStatus;
+import com.ssafy.linkcare.group.event.GroupMemberChangedEvent;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
 import com.ssafy.linkcare.health.dto.SleepDetailResponse;
+import com.ssafy.linkcare.health.dto.StepDetailResponse;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.health.service.SleepService;
+import com.ssafy.linkcare.health.service.StepService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +46,7 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private final S3Service s3Service;
+    private final StepService stepService;
     private final SleepService sleepService;
     private final HealthService healthService;
     private final UserRepository userRepository;
@@ -51,6 +58,9 @@ public class GroupService {
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GroupHealthPermissionRepository healthPermissionRepository;
     private final GroupRequiredPermissionRepository requiredPermissionRepository;
+
+    private final ApplicationEventPublisher eventPublisher;
+
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
 
@@ -867,8 +877,17 @@ public class GroupService {
                 null
         );
 
-        log.info("참가 신청 승인 완료: requestSeq={}, userId={}, groupSeq={}",
-                requestSeq, newUser.getUserPk(), group.getGroupSeq());
+        // 이벤트 발행
+        log.info("그룹원 추가 이벤트 발행 시작: 그룹={}, 유저={}",
+                joinRequest.getUser().getUserPk(), joinRequest.getGroup().getGroupSeq());
+
+        eventPublisher.publishEvent(
+                new GroupMemberChangedEvent(
+                        joinRequest.getGroup().getGroupSeq(),
+                        "ADDED",
+                        joinRequest.getUser().getUserPk()
+                )
+        );
     }
 
     /*
@@ -915,6 +934,26 @@ public class GroupService {
 
         log.info("참가 신청 거절 완료: requestSeq={}, userId={}, groupSeq={}",
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());
+    }
+
+    /**
+     * 저장된 주간 헤더 조회
+     */
+    public WeeklyHeaderResponse getWeeklyHeader(Long groupSeq) {
+        Group group = validateGroup(groupSeq);
+
+        // 헤더가 아직 생성되지 않았으면 기본 메시지
+        if (group.getWeeklyHeaderMessage() == null) {
+            return WeeklyHeaderResponse.builder()
+                    .headerMessage("이번 주도 함께 달려봐요! 💪")
+                    .generatedAt(LocalDateTime.now())
+                    .build();
+        }
+
+        return WeeklyHeaderResponse.builder()
+                .headerMessage(group.getWeeklyHeaderMessage())
+                .generatedAt(group.getHeaderGeneratedAt())
+                .build();
     }
 
     // 그룹 건강 요약 데이터 반환
@@ -1003,6 +1042,31 @@ public class GroupService {
                 .avgDuration(groupAvgDuration)
                 .startDate(startDate)
                 .endDate(endDate)
+                .build();
+    }
+
+    // 당일 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    public GroupStepStatisticsResponse getGroupStepStatistics(Long groupSeq) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        List<StepDetailResponse> responses = groupMembers.stream()
+                .map(groupMember -> {
+                    int userSeq = Math.toIntExact(groupMember.getUser().getUserPk());
+                    int steps = stepService.getTodayStepCount(userSeq);
+                    return StepDetailResponse.builder()
+                            .userSeq(userSeq)
+                            .steps(steps)
+                            .build();
+                })
+                .toList();
+
+        int totalSteps = responses.stream().mapToInt(StepDetailResponse::getSteps).sum();
+
+        return GroupStepStatisticsResponse.builder()
+                .members(responses)
+                .totalSteps(totalSteps)
                 .build();
     }
 

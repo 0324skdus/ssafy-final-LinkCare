@@ -1,0 +1,70 @@
+package com.a307.linkcare.feature.mypage
+
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.auth.data.RetrofitClient
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class MyPageEditViewModel @Inject constructor(
+    private val repo: MyPageRepository
+) : ViewModel() {
+
+    sealed class UiState {
+        object Loading : UiState()
+        data class Success(val profile: Profile) : UiState()
+        data class Error(val message: String) : UiState()
+    }
+
+    var uiState by mutableStateOf<UiState>(UiState.Loading)
+        private set
+
+    init {
+        loadMyProfile()
+    }
+
+    fun loadMyProfile() {
+        viewModelScope.launch {
+            runCatching {
+                repo.getMyProfile() // suspend fun getMyProfile(): MyProfileResponse
+            }.onSuccess { response ->
+                uiState = UiState.Success(response.toProfile())
+            }.onFailure { e ->
+                uiState = UiState.Error(e.message ?: "프로필을 불러오지 못했습니다.")
+            }
+        }
+    }
+
+    fun saveProfile(updated: Profile, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching {
+                // PUT /api/users/profile 요청용 DTO
+                val req = UpdateProfileRequest(
+                    birth = updated.birthDate,
+                    height = updated.heightCm,
+                    weight = updated.weightKg,
+                    gender = when (updated.gender) {
+                        Gender.MALE -> "남"
+                        Gender.FEMALE -> "여"
+                    },
+                    exerciseStartYear = null  // 항상 null (네가 말한 조건)
+                )
+                repo.updateProfile(req) // suspend fun updateProfile(req: UpdateProfileRequest)
+            }.onSuccess {
+                onSuccess()
+                // 저장 후 다시 조회하고 싶으면:
+                // loadMyProfile()
+            }.onFailure { e ->
+                // 에러 처리 (스낵바, 토스트 등은 UI에서)
+            }
+        }
+    }
+}

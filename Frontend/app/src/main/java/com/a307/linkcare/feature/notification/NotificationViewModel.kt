@@ -42,16 +42,21 @@ class NotificationViewModel @Inject constructor(
     }
 
     init {
+        Log.d("NotificationViewModel", "ViewModel 초기화 시작")
+
         // ViewModel 생성 시 리시버 등록 (백업)
         registerFcmReceiver()
 
         // SharedFlow 이벤트 구독 (메인 방식)
         viewModelScope.launch {
+            Log.d("NotificationViewModel", "SharedFlow 구독 시작")
             notificationEventManager.newNotificationEvent.collect {
-                Log.d("NotificationViewModel", "SharedFlow 이벤트 수신 - 알림 목록 갱신")
+                Log.d("NotificationViewModel", "✅ SharedFlow 이벤트 수신! - 알림 목록 갱신 호출")
                 loadNotifications("GROUP", silent = true)
             }
         }
+
+        Log.d("NotificationViewModel", "ViewModel 초기화 완료")
     }
 
     private val _notifications = MutableStateFlow<List<NotificationResponse>>(emptyList())
@@ -74,6 +79,8 @@ class NotificationViewModel @Inject constructor(
     // 알림 목록 로드
     fun loadNotifications(category: String = "GROUP", silent: Boolean = false) {
         viewModelScope.launch {
+            Log.d("NotificationViewModel", "loadNotifications 시작 (silent=$silent, category=$category)")
+
             if (!silent) {
                 _isLoading.value = true
             }
@@ -81,9 +88,12 @@ class NotificationViewModel @Inject constructor(
 
             repository.getMyNotifications(category)
                 .onSuccess { notifications ->
+                    Log.d("NotificationViewModel", "✅ API 성공: ${notifications.size}개 알림 받음")
                     _notifications.value = notifications
+                    Log.d("NotificationViewModel", "StateFlow 업데이트 완료")
                 }
                 .onFailure { error ->
+                    Log.e("NotificationViewModel", "❌ API 실패: ${error.message}", error)
                     if (!silent) {
                         _errorMessage.value = error.message ?: "알림을 불러오는데 실패했습니다"
                     }
@@ -92,6 +102,8 @@ class NotificationViewModel @Inject constructor(
             if (!silent) {
                 _isLoading.value = false
             }
+
+            Log.d("NotificationViewModel", "loadNotifications 완료")
         }
     }
 
@@ -154,20 +166,26 @@ class NotificationViewModel @Inject constructor(
     }
 
     // 알림 삭제
-    fun deleteNotification(notificationId: Long) {
-        viewModelScope.launch {
-            repository.deleteNotification(notificationId)
-                .onSuccess {
-                    // 로컬 상태에서 제거
-                    _notifications.value = _notifications.value.filter {
-                        it.notificationId != notificationId
-                    }
-                    // DataStore에서도 제거
-                    processedStore.removeProcessedNotification(notificationId)
+    suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        return try {
+            val result = repository.deleteNotification(notificationId)
+            result.onSuccess {
+                Log.d("NotificationViewModel", "✅ 알림 삭제 성공: $notificationId")
+                // 로컬 상태에서 제거
+                _notifications.value = _notifications.value.filter {
+                    it.notificationId != notificationId
                 }
-                .onFailure { error ->
-                    _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
-                }
+                // DataStore에서도 제거
+                processedStore.removeProcessedNotification(notificationId)
+            }.onFailure { error ->
+                Log.e("NotificationViewModel", "❌ 알림 삭제 실패: ${error.message}", error)
+                _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("NotificationViewModel", "❌ 알림 삭제 예외: ${e.message}", e)
+            _errorMessage.value = e.message ?: "알림 삭제 중 오류가 발생했습니다"
+            Result.failure(e)
         }
     }
 

@@ -32,6 +32,8 @@ import com.a307.linkcare.feature.notification.domain.NotificationType
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -49,6 +51,11 @@ fun GroupList(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val processedNotifications by viewModel.processedNotifications.collectAsState()
+
+    // 디버깅: notifications 변경 감지
+    LaunchedEffect(notifications.size) {
+        android.util.Log.d("GroupList", "📋 UI 재구성: ${notifications.size}개 알림")
+    }
 
     // 알림 로드
     LaunchedEffect(Unit) {
@@ -95,7 +102,10 @@ fun GroupList(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    items(items = notifications, key = { it.notificationId }) { notification ->
+                    items(
+                        items = notifications,
+                        key = { it.notificationId }
+                    ) { notification ->
                         // 로컬 상태로 처리 여부 관리
                         var isProcessed by remember(notification.notificationId) {
                             mutableStateOf(processedNotifications[notification.notificationId] != null)
@@ -113,23 +123,45 @@ fun GroupList(
                             notification.content
                         }
 
+                        // 삭제 처리 여부를 추적하는 로컬 상태
+                        var isDismissed by remember { mutableStateOf(false) }
+
                         // 스와이프로 삭제
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
-                                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteNotification(notification.notificationId)
-                                    Toast.makeText(context, "알림을 삭제했습니다", Toast.LENGTH_SHORT).show()
-                                    true
+                                if (dismissValue == SwipeToDismissBoxValue.EndToStart && !isDismissed) {
+                                    isDismissed = true
+                                    scope.launch {
+                                        try {
+                                            android.util.Log.d("GroupList", "알림 삭제 시도: ${notification.notificationId}")
+                                            val result = viewModel.deleteNotification(notification.notificationId)
+                                            result.onSuccess {
+                                                android.util.Log.d("GroupList", "알림 삭제 성공")
+                                                Toast.makeText(context, "알림을 삭제했습니다", Toast.LENGTH_SHORT).show()
+                                            }.onFailure { error ->
+                                                android.util.Log.e("GroupList", "알림 삭제 실패: ${error.message}", error)
+                                                Toast.makeText(context, "삭제 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                isDismissed = false
+                                            }
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("GroupList", "알림 삭제 예외: ${e.message}", e)
+                                            Toast.makeText(context, "삭제 중 오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            isDismissed = false
+                                        }
+                                    }
+                                    true // 스와이프 완료 허용
                                 } else {
                                     false
                                 }
-                            }
+                            },
+                            positionalThreshold = { it * 0.5f }
                         )
 
                         SwipeToDismissBox(
                             state = dismissState,
                             backgroundContent = {
-                                val color = when (dismissState.dismissDirection) {
+                                // currentValue를 사용하여 실제 스와이프 상태 확인
+                                val color = when (dismissState.currentValue) {
                                     SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF6B6B)
                                     else -> Color.Transparent
                                 }
@@ -140,7 +172,7 @@ fun GroupList(
                                         .padding(horizontal = 20.dp),
                                     contentAlignment = Alignment.CenterEnd
                                 ) {
-                                    if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
                                             contentDescription = "삭제",
@@ -199,15 +231,24 @@ fun GroupList(
 
                                 Spacer(Modifier.width(12.dp))
 
-                                // 시간 파싱 (ISO 형식 가정)
+                                // 시간 파싱 및 한국 시간대로 변환
                                 val timeText = try {
-                                    val dateTime = LocalDateTime.parse(
-                                        notification.createdAt,
-                                        DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                                    )
+                                    // UTC 시간으로 파싱
+                                    val utcDateTime = if (notification.createdAt.endsWith("Z")) {
+                                        ZonedDateTime.parse(notification.createdAt)
+                                    } else {
+                                        LocalDateTime.parse(
+                                            notification.createdAt,
+                                            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                                        ).atZone(ZoneId.of("UTC"))
+                                    }
+
+                                    // 한국 시간대(Asia/Seoul)로 변환
+                                    val kstDateTime = utcDateTime.withZoneSameInstant(ZoneId.of("Asia/Seoul"))
                                     val displayFormatter = DateTimeFormatter.ofPattern("MM.dd HH:mm")
-                                    dateTime.format(displayFormatter)
+                                    kstDateTime.format(displayFormatter)
                                 } catch (e: Exception) {
+                                    android.util.Log.e("GroupList", "시간 파싱 실패: ${notification.createdAt}", e)
                                     notification.createdAt.take(16)
                                 }
 
@@ -292,7 +333,7 @@ fun GroupList(
                                 }
                             }
 
-                            Divider(color = Color.LightGray.copy(alpha = 0.4f))
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                             }
                         }
                     }

@@ -3,9 +3,7 @@
 package com.a307.linkcare.feature.mypage
 
 import android.content.Context
-import android.util.Log
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,6 +18,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,19 +26,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.painterResourceCropped
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.a307.linkcare.R
+import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -52,8 +51,8 @@ data class MyPageUiState(
     val nickname: String,
     val coinLabel: String,
     val groupCountLabel: String,
-    @DrawableRes val avatarRes: Int,
-    @DrawableRes val avatarBgRes: Int? = null
+    val avatarUrl: String?,
+    val avatarBgUrl: String? = null
 )
 
 @Composable
@@ -125,6 +124,11 @@ private fun ProfileCard(
     modifier: Modifier = Modifier,
     onEditClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
+    val imageSize = remember(density) { with(density) { 120.dp.toPx().toInt() } }
+
     Surface(
         modifier = modifier,
         color = white,
@@ -166,23 +170,26 @@ private fun ProfileCard(
             ) {
                 // 아바타 + 배경
                 Box(
-                    modifier = Modifier.size(84.dp),
+                    modifier = Modifier.size(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    state.avatarBgRes?.let {
-                        Image(
-                            painter = painterResource(it),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    Image(
-                        painter = painterResourceCropped(state.avatarRes),
+                    AsyncImage(
+                        model = state.avatarBgUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(state.avatarUrl)
+                            .crossfade(true)
+                            .size(imageSize)
+                            .transformations(CropTransparentTransformation())
+                            .build(),
                         contentDescription = "avatar",
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(75.dp),
                         contentScale = ContentScale.Fit
                     )
                 }

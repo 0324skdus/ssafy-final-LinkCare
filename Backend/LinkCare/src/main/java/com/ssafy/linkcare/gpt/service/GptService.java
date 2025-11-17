@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -120,7 +121,7 @@ public class GptService {
                 
                 3. 친근하고 격려하는 말투 (존댓말, 이모티콘 금지)
                 
-                4. 한줄평은 30자 이내
+                4. 한줄평은 10자 이내
                 
                 응답 형식:
                 한줄평: [기록된 데이터 기반 조언]
@@ -201,7 +202,7 @@ public class GptService {
 
         String response = getChatCompletion(groupHealthDataText, systemPrompt);
 
-        return new WeeklyHeaderResponse(response.trim());
+        return new WeeklyHeaderResponse(response.trim(), LocalDateTime.now());
     }
 
     /**
@@ -228,11 +229,11 @@ public class GptService {
                 }
             }
 
-            return new HealthSummaryResponse(summary, status);
+            return new HealthSummaryResponse(summary, status, LocalDateTime.now());
 
         } catch (Exception e) {
             log.error("GPT 응답 파싱 실패: {}", response, e);
-            return new HealthSummaryResponse("건강 데이터를 분석했습니다.", HealthSummaryResponse.HealthStatus.GOOD);
+            return new HealthSummaryResponse("(더미) 건강 데이터 분석 오류 발생.", HealthSummaryResponse.HealthStatus.GOOD, LocalDateTime.now());
         }
     }
 
