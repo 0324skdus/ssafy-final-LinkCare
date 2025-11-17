@@ -36,6 +36,12 @@ interface CareGroupApi {
         @Path("userSeq") userSeq: Int
     ): Response<DailyHealthDetailResponse>
 
+    @GET("/api/health/{userSeq}/health/daily/{date}")
+    suspend fun getDailyHealthDetailByDate(
+        @Path("userSeq") userSeq: Int,
+        @Path("date") date: LocalDate
+    ): Response<DailyHealthDetailResponse>
+
     @GET("/api/groups/weekly-header/{groupSeq}")
     suspend fun getWeeklyHeader(
         @Path("groupSeq") groupSeq: Long

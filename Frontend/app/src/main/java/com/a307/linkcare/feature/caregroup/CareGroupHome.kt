@@ -252,14 +252,14 @@ fun CareGroupHome(
         todayMembers = weekMembers
     }
 
-    // 멤버 건강 데이터 로드
-    LaunchedEffect(todayMembers) {
+    // 멤버 건강 데이터 로드 (선택된 날짜 기준)
+    LaunchedEffect(todayMembers, selectedDate) {
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }
-        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
+        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members on date $selectedDate")
         if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -528,11 +528,11 @@ fun CareGroupHome(
 
             selectedMember?.let { m ->
 
-                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
-                LaunchedEffect(m.userPk) {
+                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드 (선택된 날짜 기준)
+                LaunchedEffect(m.userPk, selectedDate) {
                     if (m.userPk > 0) {
-                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
-                        healthViewModel.loadHealthData(m.userPk.toInt())
+                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}, date=$selectedDate")
+                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
                     }
                 }
 
