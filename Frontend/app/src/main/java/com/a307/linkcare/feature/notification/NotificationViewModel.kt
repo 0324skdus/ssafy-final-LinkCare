@@ -166,20 +166,26 @@ class NotificationViewModel @Inject constructor(
     }
 
     // 알림 삭제
-    fun deleteNotification(notificationId: Long) {
-        viewModelScope.launch {
-            repository.deleteNotification(notificationId)
-                .onSuccess {
-                    // 로컬 상태에서 제거
-                    _notifications.value = _notifications.value.filter {
-                        it.notificationId != notificationId
-                    }
-                    // DataStore에서도 제거
-                    processedStore.removeProcessedNotification(notificationId)
+    suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        return try {
+            val result = repository.deleteNotification(notificationId)
+            result.onSuccess {
+                Log.d("NotificationViewModel", "✅ 알림 삭제 성공: $notificationId")
+                // 로컬 상태에서 제거
+                _notifications.value = _notifications.value.filter {
+                    it.notificationId != notificationId
                 }
-                .onFailure { error ->
-                    _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
-                }
+                // DataStore에서도 제거
+                processedStore.removeProcessedNotification(notificationId)
+            }.onFailure { error ->
+                Log.e("NotificationViewModel", "❌ 알림 삭제 실패: ${error.message}", error)
+                _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("NotificationViewModel", "❌ 알림 삭제 예외: ${e.message}", e)
+            _errorMessage.value = e.message ?: "알림 삭제 중 오류가 발생했습니다"
+            Result.failure(e)
         }
     }
 
