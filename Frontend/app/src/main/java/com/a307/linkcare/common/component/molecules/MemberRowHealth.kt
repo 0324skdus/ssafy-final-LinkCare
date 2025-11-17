@@ -101,7 +101,7 @@ fun MemberRowHealth(
                 append(progressText)   // 원래 크기 유지
 
                 pushStyle(SpanStyle(fontSize = 12.sp))  // unit만 크기 줄이기
-                append(unit)
+                append(" "+unit)
                 pop()
 
                 append(" 달성")        // 다시 원래 크기
