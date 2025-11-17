@@ -8,7 +8,7 @@ import retrofit2.http.POST
 
 interface WorkoutApi {
 
-    @POST("api/health/watch/sync")
+    @POST("api/health/exercise/watch/sync")
     suspend fun uploadSummary(
         @Body body: WorkoutSummaryRequest,
         @Header("userSeq") userSeq: Int

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.time.LocalDate
 
 
@@ -27,11 +29,29 @@ class MyGroupsViewModel @Inject constructor(
 
     val myUserSeq: Long? = tokenStore.getUserPk()
 
+    // 그룹 목록 새로고침 이벤트
+    private val _refreshEvent = MutableSharedFlow<Unit>(replay = 0)
+    val refreshEvent = _refreshEvent.asSharedFlow()
+
+    // 그룹 신청 후 호출되는 함수
+    fun notifyGroupApplicationSubmitted() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "그룹 신청 이벤트 발행")
+            _refreshEvent.emit(Unit)
+        }
+    }
+
     private val _careGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val careGroups: StateFlow<List<MyGroupResponse>> = _careGroups
 
     private val _healthGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val healthGroups: StateFlow<List<MyGroupResponse>> = _healthGroups
+
+    private val _carePendingGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
+    val carePendingGroups: StateFlow<List<MyGroupResponse>> = _carePendingGroups
+
+    private val _healthPendingGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
+    val healthPendingGroups: StateFlow<List<MyGroupResponse>> = _healthPendingGroups
 
     fun loadCare() {
         viewModelScope.launch {
@@ -48,6 +68,24 @@ class MyGroupsViewModel @Inject constructor(
             val groups = repo.getMyGroups("HEALTH")
             _healthGroups.value = groups
             android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 완료: ${groups.size}개")
+        }
+    }
+
+    fun loadCarePending() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "케어 신청 그룹 목록 로드 시작")
+            val groups = repo.getMyPendingGroups("CARE")
+            _carePendingGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "케어 신청 그룹 목록 로드 완료: ${groups.size}개")
+        }
+    }
+
+    fun loadHealthPending() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "헬스 신청 그룹 목록 로드 시작")
+            val groups = repo.getMyPendingGroups("HEALTH")
+            _healthPendingGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "헬스 신청 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 

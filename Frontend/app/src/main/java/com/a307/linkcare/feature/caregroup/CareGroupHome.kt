@@ -30,6 +30,7 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -200,7 +201,6 @@ fun CareGroupHome(
         }
     }
 
-
     // 날짜/리스트 상태
     val today = remember { LocalDate.now() }
     val minDate = remember { today.minusYears(1) }   // 1년 전
@@ -252,14 +252,14 @@ fun CareGroupHome(
         todayMembers = weekMembers
     }
 
-    // 멤버 건강 데이터 로드
-    LaunchedEffect(todayMembers) {
+    // 멤버 건강 데이터 로드 (선택된 날짜 기준)
+    LaunchedEffect(todayMembers, selectedDate) {
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }
-        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
+        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members on date $selectedDate")
         if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -319,7 +319,7 @@ fun CareGroupHome(
     val sleepStatistics by healthViewModel.sleepStatistics.collectAsState()
 
     LaunchedEffect(Unit) {
-        healthViewModel.loadHeader(groupSeq, today)
+        healthViewModel.loadHeader(groupSeq)
     }
 
     LaunchedEffect(metricType, selectedDate) {
@@ -352,7 +352,11 @@ fun CareGroupHome(
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = header
+                        txt = header,
+                        onClick = {
+                            healthViewModel.regenerateHeader(groupSeq)
+                            Toast.makeText(context, "문구 만드는 중...", Toast.LENGTH_SHORT).show()
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -394,6 +398,7 @@ fun CareGroupHome(
                         isSelf = (m.name == currentUserName)
                     )
 
+                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
@@ -449,9 +454,10 @@ fun CareGroupHome(
                     item {
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
+                            title = "활동 요약",
                             members = todayMembers,
-                            totalSteps = stepUiState.goal,
-                            totalGoal = stepUiState.goal,
+//                            totalSteps = stepUiState.goal,
+//                            totalGoal = stepUiState.goal,
                             modifier = Modifier
                         )
                     }
@@ -522,11 +528,11 @@ fun CareGroupHome(
 
             selectedMember?.let { m ->
 
-                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
-                LaunchedEffect(m.userPk) {
+                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드 (선택된 날짜 기준)
+                LaunchedEffect(m.userPk, selectedDate) {
                     if (m.userPk > 0) {
-                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
-                        healthViewModel.loadHealthData(m.userPk.toInt())
+                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}, date=$selectedDate")
+                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
                     }
                 }
 
@@ -637,11 +643,13 @@ private fun HeaderCard(
 @Composable
 fun ScreenTitleOnlyRow(
     title: String,
-    txt: String
+    txt: String,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom

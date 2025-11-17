@@ -32,4 +32,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             @Param("user") User user,
             @Param("types") List<NotificationType> types
     );
+
+    // 특정 그룹의 모든 알림 조회
+    @Query("SELECT n FROM Notification n WHERE n.relatedGroup.groupSeq = :groupSeq")
+    List<Notification> findByRelatedGroupSeq(@Param("groupSeq") Long groupSeq);
 }

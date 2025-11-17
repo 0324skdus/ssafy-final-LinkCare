@@ -89,19 +89,104 @@ fun HealthGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: HealthGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    onDelegate: (memberId: Long) -> Unit = {},
-    onKick: (memberId: Long) -> Unit = {},
-    onLeave: () -> Unit = {},
+    groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val memberActionState by viewModel.memberActionState.collectAsState()
     val context = LocalContext.current
 
     // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
         viewModel.loadGroupDetail(groupSeq)
+    }
+
+    // 위임하기 핸들러
+    val onDelegate: (Long) -> Unit = { memberUserSeq ->
+        viewModel.delegateLeader(groupSeq, memberUserSeq)
+    }
+
+    // 내보내기 핸들러
+    val onKick: (Long) -> Unit = { memberUserSeq ->
+        viewModel.kickMember(groupSeq, memberUserSeq)
+    }
+
+    // 탈퇴하기 핸들러
+    val onLeave: () -> Unit = {
+        viewModel.leaveGroup(groupSeq)
+    }
+
+    // 그룹 삭제 핸들러
+    val onDelete: () -> Unit = {
+        viewModel.deleteGroup(groupSeq)
+    }
+
+    // Handle member action state
+    LaunchedEffect(memberActionState) {
+        when (memberActionState) {
+            is HealthGroupEditViewModel.MemberActionState.DelegateSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as HealthGroupEditViewModel.MemberActionState.DelegateSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is HealthGroupEditViewModel.MemberActionState.KickSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as HealthGroupEditViewModel.MemberActionState.KickSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is HealthGroupEditViewModel.MemberActionState.LeaveSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as HealthGroupEditViewModel.MemberActionState.LeaveSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                // 그룹 목록 새로고침 후 health 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadHealth()
+                    onGroupDeleted()
+                    navController.navigate("health/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            is HealthGroupEditViewModel.MemberActionState.DeleteSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as HealthGroupEditViewModel.MemberActionState.DeleteSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                // 그룹 목록 새로고침 후 health 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadHealth()
+                    onGroupDeleted()
+                    navController.navigate("health/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            is HealthGroupEditViewModel.MemberActionState.Error -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as HealthGroupEditViewModel.MemberActionState.Error).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            else -> {}
+        }
     }
 
     // Handle update success
@@ -162,6 +247,7 @@ fun HealthGroupEdit(
                 onDelegate = onDelegate,
                 onKick = onKick,
                 onLeave = onLeave,
+                onDelete = onDelete,
                 onCopyInvite = onCopyInvite,
                 onBack = onBack
             )
@@ -178,12 +264,14 @@ private fun RenderHealthGroupEditForm(
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,
+    onDelete: () -> Unit,
     onCopyInvite: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val groupSeq = groupDetail.groupSeq
-    val isLeader = groupDetail.members.find { it.isLeader }?.userSeq == groupDetail.members.firstOrNull()?.userSeq // TODO: check current user
+    // 현재 로그인한 사용자가 그룹장인지 확인
+    val isLeader = groupDetail.members.find { it.userSeq == groupDetail.currentUserSeq }?.isLeader ?: false
 
     // ---- 내부 상태: 초기값 프리필 ----
     var name by remember { mutableStateOf(groupDetail.groupName) }
@@ -416,34 +504,49 @@ private fun RenderHealthGroupEditForm(
             // 하단 버튼
             item {
                 if (isLeader) {
-                    // 그룹장: [수정하기] 단일 버튼
-                    LcBtn(
-                        text = "수정하기",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        buttonColor = main,
-                        buttonTextColor = white,
-                        isEnabled = canSubmit && updateState !is HealthGroupEditViewModel.UpdateState.Loading,
-                        onClick = {
-                            val imageAction = if (selectedImageUri != null) "update" else "keep"
-                            val imageFile = selectedImageUri?.let { uri ->
-                                uriToFile(context, uri)
-                            }
+                    // 그룹장: [수정하기]/[그룹 삭제하기]
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LcBtn(
+                            text = "수정하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = main,
+                            buttonTextColor = white,
+                            isEnabled = canSubmit && updateState !is HealthGroupEditViewModel.UpdateState.Loading,
+                            onClick = {
+                                val imageAction = if (selectedImageUri != null) "update" else "keep"
+                                val imageFile = selectedImageUri?.let { uri ->
+                                    uriToFile(context, uri)
+                                }
 
-                            viewModel.updateGroup(
-                                groupSeq = groupSeq,
-                                groupName = name.trim(),
-                                groupDescription = desc.trim(),
-                                imageAction = imageAction,
-                                imageFile = imageFile,
-                                minCalorie = kcalText.toFloatOrNull(),
-                                minStep = stepsText.toIntOrNull(),
-                                minDistance = kmText.toFloatOrNull(),
-                                minDuration = minutesText.toIntOrNull()
-                            )
-                        }
-                    )
+                                viewModel.updateGroup(
+                                    groupSeq = groupSeq,
+                                    groupName = name.trim(),
+                                    groupDescription = desc.trim(),
+                                    imageAction = imageAction,
+                                    imageFile = imageFile,
+                                    minCalorie = kcalText.toFloatOrNull(),
+                                    minStep = stepsText.toIntOrNull(),
+                                    minDistance = kmText.toFloatOrNull(),
+                                    minDuration = minutesText.toIntOrNull()
+                                )
+                            }
+                        )
+                        LcBtn(
+                            text = "그룹 삭제하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = Color(0xFFFF6B6B),
+                            buttonTextColor = white,
+                            isEnabled = true,
+                            onClick = onDelete
+                        )
+                    }
                 } else {
                     // 일반 구성원: [돌아가기]/[탈퇴하기]
                     Row(
