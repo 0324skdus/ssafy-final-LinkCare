@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.caregroup.data
 
 import com.a307.linkcare.feature.caregroup.domain.CareGroupResponse
 import com.a307.linkcare.feature.caregroup.domain.DailyHealthDetailResponse
+import com.a307.linkcare.feature.caregroup.domain.GroupStepStatisticsResponse
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.feature.caregroup.domain.WeeklyHeaderResponse
 import retrofit2.Response
@@ -47,4 +48,10 @@ interface CareGroupApi {
         @Query("startDate") startDate: LocalDate,
         @Query("endDate") endDate: LocalDate
     ): SleepStatisticsResponse
+
+    @GET("/api/groups/{groupSeq}/step-statistics")
+    suspend fun getGroupStepStatistics(
+        @Path("groupSeq") groupSeq: Long
+    ): Response<GroupStepStatisticsResponse>
+
 }

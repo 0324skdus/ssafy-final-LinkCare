@@ -28,7 +28,8 @@ fun MemberRowHealth(
     m: Member,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isSelf: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -82,11 +83,19 @@ fun MemberRowHealth(
             Text("${m.progresses} 달성", fontWeight = FontWeight.Bold, color = if (m.goal > m.progresses) main else point)
             Text("목표 ${m.goal}", fontSize = 12.sp, color = Color(0xFF888888))
         }
-        Spacer(Modifier.width(8.dp))
-        Image(
-            painter = painterResource(R.drawable.tap),
-            contentDescription = null,
-            modifier = Modifier.size(30.dp)
-        )
+
+        if (!isSelf) {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp)
+            )
+        } else {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.size(30.dp)
+            )
+        }
     }
 }

@@ -34,6 +34,7 @@ import com.a307.linkcare.R
 @Composable
 fun GroupAvatarPicker(
     @DrawableRes defaultRes: Int = R.drawable.main_duck,
+    imageUrl: String? = null,
     onImagePicked: (Uri?) -> Unit
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -78,13 +79,25 @@ fun GroupAvatarPicker(
             shadowElevation = 0.dp
         ) {
             if (selectedImageUri != null) {
+                // User picked a new image
                 AsyncImage(
                     model = selectedImageUri,
                     contentDescription = "그룹 프로필",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (!imageUrl.isNullOrBlank()) {
+                // Load from database URL
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "그룹 프로필",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(defaultRes),
+                    error = painterResource(defaultRes)
+                )
             } else {
+                // Default image
                 Image(
                     painter = painterResource(defaultRes),
                     contentDescription = "기본 그룹 프로필",

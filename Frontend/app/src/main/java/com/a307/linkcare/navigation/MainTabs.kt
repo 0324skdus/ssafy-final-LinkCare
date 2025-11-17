@@ -571,7 +571,7 @@ fun MainTabs(
             navigation(route = Route.MyPage.route, startDestination = Route.MyPageMain.route) {
                 // MyPage 홈
                 composable(Route.MyPageMain.route) {
-                    val myPageViewModel: MyPageViewModel = viewModel()
+                    val myPageViewModel: MyPageViewModel = hiltViewModel()
                     val apiState by myPageViewModel.apiState.collectAsState()
                     val context = LocalContext.current
 
