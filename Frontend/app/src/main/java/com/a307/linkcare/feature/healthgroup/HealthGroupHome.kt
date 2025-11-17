@@ -121,13 +121,22 @@ fun HealthGroupHome(
     val goalState by goalVm.goalState
 
     // --- 실제 데이터로 교체 ---
-    val todayGroupProgress = totalStats?.totalSteps ?: 0
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
+
+    // 현재 metric 타입에 따른 진행도 계산
+    val currentMetricType = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals?.selectedMetricType ?: "STEPS"
+    val todayGroupProgress = when (currentMetricType) {
+        "STEPS" -> (totalStats?.totalSteps ?: 0).toDouble()
+        "KCAL" -> (totalStats?.totalCalories ?: 0.0)
+        "DURATION" -> (totalStats?.totalDuration ?: 0).toDouble()
+        "DISTANCE" -> (totalStats?.totalDistances ?: 0.0) / 1000 // m -> km 변환
+        else -> (totalStats?.totalSteps ?: 0).toDouble()
+    }
 
     val todayGroupPercent by remember(totalGroupGoal, todayGroupProgress) {
         mutableStateOf(
             if (totalGroupGoal > 0) {
-                todayGroupProgress / totalGroupGoal.toFloat()
+                (todayGroupProgress / totalGroupGoal.toDouble()).toFloat()
             } else 0f
         )
     }
@@ -239,20 +248,48 @@ fun HealthGroupHome(
 
                 item {
                     Spacer(Modifier.height(8.dp))
-                    val currentMetric = GoalMetricType.entries[currentMetricIndex]
+
+                    // 현재 선택된 metric 타입 가져오기
+                    val currentMetricType = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals?.selectedMetricType ?: "STEPS"
+                    val currentMetric = when (currentMetricType) {
+                        "STEPS" -> GoalMetricType.STEPS
+                        "KCAL" -> GoalMetricType.KCAL
+                        "DURATION" -> GoalMetricType.DURATION
+                        "DISTANCE" -> GoalMetricType.DISTANCE
+                        else -> GoalMetricType.STEPS
+                    }
                     val unit = currentMetric.unit
+
+                    // 현재 metric에 따른 실제 진행도 계산 및 표시
+                    val (progressValue, progressText) = when (currentMetricType) {
+                        "STEPS" -> {
+                            val value = totalStats?.totalSteps ?: 0
+                            value to "$value"
+                        }
+                        "KCAL" -> {
+                            val value = totalStats?.totalCalories?.toInt() ?: 0
+                            value to "$value"
+                        }
+                        "DURATION" -> {
+                            val value = totalStats?.totalDuration ?: 0
+                            value to "$value"
+                        }
+                        "DISTANCE" -> {
+                            val valueInKm = (totalStats?.totalDistances ?: 0.0) / 1000 // m -> km 변환
+                            val valueInt = valueInKm.toInt()
+                            valueInt to String.format("%.2f", valueInKm)
+                        }
+                        else -> 0 to "0"
+                    }
+
                     ScreenTitleRow(
-                        title = "$todayGroupProgress$unit",
+                        title = "$progressText$unit",
                         subtitle = "목표 ${if (totalGroupGoal > 0) "$totalGroupGoal$unit" else "미설정"} 까지\n${percentText}% 달성했어요",
                         onEditClick = {
                             android.util.Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
                             if (!isLeader) {
                                 scope.launch { snackbar.showSnackbar("그룹장만 목표를 수정할 수 있어요.") }
                                 return@ScreenTitleRow
-                            }
-
-                            if (aiGoals != null) {
-                                currentMetricIndex = (currentMetricIndex + 1) % 4
                             }
 
                             goalInput = if (totalGroupGoal > 0) totalGroupGoal.toString() else ""
@@ -289,28 +326,49 @@ fun HealthGroupHome(
                     val currentMetricType = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals?.selectedMetricType ?: "STEPS"
                     val goals = (goalState as? HealthGroupHomeViewModel.GoalState.Success)?.goals
 
-                    val progress = when (currentMetricType) {
-                        "STEPS" -> activity.totalSteps
-                        "KCAL" -> activity.totalCalories.toInt()
-                        "DURATION" -> activity.totalDuration
-                        "DISTANCE" -> activity.totalDistances.toInt()
-                        else -> 0 // 기본값
+                    val (progress, goal) = when (currentMetricType) {
+                        "DISTANCE" -> {
+                            // 이동거리는 Double로 유지하여 소수점 표시
+                            val progressKm = (activity.totalDistances / 1000.0) // m -> km 변환
+                            val weeklyGroupGoal = goals?.goalDistance
+                            val numberOfMembers = membersWithActivity.size.coerceAtLeast(1)
+                            val goalKm = if (weeklyGroupGoal != null) {
+                                (weeklyGroupGoal / numberOfMembers.toDouble() / 7.0)
+                            } else {
+                                member.goal.toDouble()
+                            }
+                            // Int로 변환하되, 나중에 MemberRowHealth에서 소수점 표시 위해 원래 값 보존
+                            (progressKm * 100.0).toInt() to (goalKm * 100.0).toInt() // 100배로 저장 (소수점 2자리 유지)
+                        }
+                        else -> {
+                            val prog = when (currentMetricType) {
+                                "STEPS" -> activity.totalSteps
+                                "KCAL" -> activity.totalCalories.toInt()
+                                "DURATION" -> activity.totalDuration
+                                else -> 0
+                            }
+                            val numberOfMembers = membersWithActivity.size.coerceAtLeast(1)
+                            val weeklyGroupGoal = when (currentMetricType) {
+                                "STEPS" -> goals?.goalSteps?.toDouble()
+                                "KCAL" -> goals?.goalKcal?.toDouble()
+                                "DURATION" -> goals?.goalDuration?.toDouble()
+                                else -> null
+                            }
+                            val g = if (weeklyGroupGoal != null) {
+                                (weeklyGroupGoal / numberOfMembers / 7).toInt()
+                            } else {
+                                member.goal
+                            }
+                            prog to g
+                        }
                     }
 
-                    val numberOfMembers = membersWithActivity.size.coerceAtLeast(1) // 0으로 나누는 것을 방지
-
-                    val weeklyGroupGoal = when (currentMetricType) {
-                        "STEPS" -> goals?.goalSteps?.toDouble()
-                        "KCAL" -> goals?.goalKcal?.toDouble()
-                        "DURATION" -> goals?.goalDuration?.toDouble()
-                        "DISTANCE" -> goals?.goalDistance?.toDouble()
-                        else -> null
-                    }
-
-                    val goal = if (weeklyGroupGoal != null) {
-                        (weeklyGroupGoal / numberOfMembers / 7).toInt()
-                    } else {
-                        member.goal // 주간 목표가 설정되지 않은 경우 기존 목표 사용
+                    val currentUnit = when (currentMetricType) {
+                        "STEPS" -> "걸음"
+                        "KCAL" -> "kcal"
+                        "DURATION" -> "분"
+                        "DISTANCE" -> "km"
+                        else -> ""
                     }
 
                     MemberRowHealth(
@@ -320,7 +378,9 @@ fun HealthGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
-                        onClick = { selectedMember = member }
+                        onClick = { selectedMember = member },
+                        isDistanceMetric = currentMetricType == "DISTANCE",
+                        unit = currentUnit
                     )
                     if (index < membersWithActivity.lastIndex) {
                         Divider(color = Color(0x11000000))
@@ -386,7 +446,7 @@ fun HealthGroupHome(
                                 "STEPS" -> weeklyActivity.totalSteps
                                 "KCAL" -> weeklyActivity.totalCalories.toInt()
                                 "DURATION" -> weeklyActivity.totalDuration
-                                "DISTANCE" -> weeklyActivity.totalDistances.toInt()
+                                "DISTANCE" -> (weeklyActivity.totalDistances / 1000).toInt() // m -> km 변환
                                 else -> 0
                             }
 
@@ -495,7 +555,6 @@ fun HealthGroupHome(
                     },
                     onDismiss = {
                         showGoalSheet = false
-                        goalVm.resetGoalState()
                     },
                     onSave = { metricType ->
                         val parsed = goalInput.toLongOrNull()
@@ -533,14 +592,6 @@ fun HealthGroupHome(
                                 scope.launch { snackbar.showSnackbar("목표가 저장되었어요.") }
                             }
                         }
-                    },
-                    onRefreshClick = {
-                        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                        val dateStr = today.format(formatter)
-                        goalVm.generateGroupGoals(
-                            groupSeq = groupSeq,
-                            requestDate = dateStr
-                        )
                     }
                 )
             }
@@ -649,8 +700,7 @@ private fun GoalEditSheet(
     onTextChange: (String) -> Unit,
     onMetricChange: (GoalMetricType) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (GoalMetricType) -> Unit,
-    onRefreshClick: () -> Unit
+    onSave: (GoalMetricType) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val metrics = GoalMetricType.entries.toList()
@@ -704,32 +754,7 @@ private fun GoalEditSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("그룹 목표 설정", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = black)
-
-                IconButton(
-                    onClick = onRefreshClick,
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = main,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "AI 목표 새로고침",
-                            tint = main
-                        )
-                    }
-                }
-            }
+            Text("그룹 목표 설정", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = black)
 
             Spacer(Modifier.height(10.dp))
 
