@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +26,7 @@ import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
+import org.apache.commons.lang3.text.FormattableUtils.append
 
 @Composable
 fun MemberRowHealth(
@@ -31,7 +34,9 @@ fun MemberRowHealth(
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
-    isSelf: Boolean = false
+    isSelf: Boolean = false,
+    isDistanceMetric: Boolean = false,
+    unit: String = ""
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -82,8 +87,32 @@ fun MemberRowHealth(
         }
         Spacer(Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text("${m.progresses} 달성", fontWeight = FontWeight.Bold, color = if (m.goal > m.progresses) main else point)
-            Text("목표 ${m.goal}", fontSize = 12.sp, color = Color(0xFF888888))
+            val progressText = if (isDistanceMetric) {
+                String.format("%.2f", m.progresses / 100.0) // 100배 한 값을 다시 복원
+            } else {
+                m.progresses.toString()
+            }
+            val goalText = if (isDistanceMetric) {
+                String.format("%.2f", m.goal / 100.0) // 100배 한 값을 다시 복원
+            } else {
+                m.goal.toString()
+            }
+            val progressAnnotated = buildAnnotatedString {
+                append(progressText)   // 원래 크기 유지
+
+                pushStyle(SpanStyle(fontSize = 12.sp))  // unit만 크기 줄이기
+                append(unit)
+                pop()
+
+                append(" 달성")        // 다시 원래 크기
+            }
+
+            Text(
+                text = progressAnnotated,
+                fontWeight = FontWeight.Bold,
+                color = if (m.goal > m.progresses) main else point
+            )
+            Text("목표 $goalText$unit", fontSize = 12.sp, color = Color(0xFF888888))
         }
 
         if (!isSelf) {
