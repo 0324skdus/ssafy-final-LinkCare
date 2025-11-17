@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -92,7 +93,7 @@ public class ExerciseService {
                                         .exerciseType(sessionDto.getExerciseType())
                                         .calories(sessionDto.getCalories())
                                         .distance(sessionDto.getDistance())
-                                        .duration(sessionDto.getDuration())
+                                        .duration(TimeUnit.MILLISECONDS.toSeconds(sessionDto.getDuration()))
                                         .build()
                                 ).toList();
 
@@ -555,7 +556,7 @@ public class ExerciseService {
                             .exerciseType(session.getExerciseType())
                             .distance(session.getDistance())
                             .calories(session.getCalories())
-                            .duration(session.getDuration())
+                            .duration(TimeUnit.MILLISECONDS.toSeconds(session.getDuration()))
                             .exercise(exercise)
                             .build())
                     .toList();
@@ -768,8 +769,8 @@ public class ExerciseService {
     ) {
         User user = validateUser(userSeq);
 
-        Long effectiveStartTime = startTime != null ? timeStampUtil.getDateStartTimestamp(startTime) : timeStampUtil.getThreeWeeksAgoTimestamp();
-        Long effectiveEndTime = endTime != null ? timeStampUtil.getDateEndTimestamp(endTime) : timeStampUtil.getCurrentTimestamp();
+        Long effectiveStartTime = timeStampUtil.getDateStartTimestamp(startTime);
+        Long effectiveEndTime = timeStampUtil.getDateEndTimestamp(endTime);
 
         log.info("(LocalDate) 운동 통계 조회 - User: {}, Start: {}, End: {}", userSeq, effectiveStartTime, effectiveEndTime);
 
