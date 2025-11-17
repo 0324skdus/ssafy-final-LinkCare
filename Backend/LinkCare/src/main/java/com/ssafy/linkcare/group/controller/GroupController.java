@@ -212,10 +212,10 @@ public class GroupController {
     })
     @GetMapping("/{groupSeq}/details")
     public ResponseEntity<MyGroupDetailResponseDto> getGroupDetails(
-            @PathVariable Long groupSeq) {
+            Authentication authentication, @PathVariable Long groupSeq) {
+        Long userId = Long.valueOf(authentication.getName());
+        MyGroupDetailResponseDto response = groupService.getGroupDetails(userId, groupSeq);
 
-        log.info("그룹 상세 정보 조회 (멤버 프로필 포함) 요청: groupSeq={}", groupSeq);
-        MyGroupDetailResponseDto response = groupService.getGroupDetails(groupSeq);
         return ResponseEntity.ok(response);
     }
 

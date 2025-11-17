@@ -23,7 +23,6 @@ import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,13 +66,6 @@ public class GroupService {
     @Value("${app.default-group-image-url}")
     private String defaultGroupImageUrl;
 
-    /*
-        * 헬스 그룹 생성
-            * - 그룹 생성
-            * - 목표 기준 설정 (선택)
-            * - 생성자를 방장으로 등록
-            * - 필수 권한 설정 (걸음수, 심박수, 운동)
-    */
     @Transactional
     public GroupResponse createHealthGroup(Long userId, CreateHealthGroupRequest request, MultipartFile image) {
         // 1. 사용자 조회
@@ -227,6 +219,7 @@ public class GroupService {
     }
 
     // 그룹 상세 조회 (멤버, 목표 기준, 권한 포함)
+    @Transactional
     public GroupDetailResponse getGroupDetail(Long groupSeq) {
         Group group = groupRepository.findById(groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
@@ -294,6 +287,7 @@ public class GroupService {
     }
 
     // 내 그룹 목록 조회
+    @Transactional
     public List<GroupResponse> getMyGroups(Long userId, GroupType type) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -322,23 +316,23 @@ public class GroupService {
                 .toList();
     }
 
-    // 그룹 상세 조회 (멤버 프로필 포함)
-    public MyGroupDetailResponseDto getGroupDetails(Long groupSeq) {
-        // 1. 그룹 조회
+    @Transactional
+    public MyGroupDetailResponseDto getGroupDetails(Long userId, Long groupSeq) {
+        GroupMember groupMember = groupMemberRepository.findByUserIdAndGroupId(userId, groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+        boolean isLeader = groupMember.getIsLeader();
+
         Group group = groupRepository.findById(groupSeq)
                 .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
-        // 2. 그룹 멤버와 관련 엔티티(User, MainCharacter, MainBackground)를 fetch join으로 한번에 조회
         List<GroupMember> members = groupMemberRepository.findMembersWithDetailsByGroup(group);
 
-        // 3. 멤버 프로필 DTO 리스트 생성
         List<GroupMemberProfileDto> memberProfiles = members.stream()
                 .map(member -> {
                     User user = member.getUser();
                     String characterUrl = null;
                     String backgroundUrl = null;
 
-                    // User의 MainCharacter와 MainBackground가 null이 아닐 경우 URL 추출
                     if (user.getMainCharacter() != null) {
                         characterUrl = user.getMainCharacter().getCharacter().getBaseImageS3Key();
                     }
@@ -350,13 +344,13 @@ public class GroupService {
                             .userId(user.getUserPk())
                             .userName(user.getName())
                             .petName(user.getPetName())
+                            .isLeader(isLeader)
                             .mainCharacterImageUrl(characterUrl)
                             .mainBackgroundImageUrl(backgroundUrl)
                             .build();
                 })
                 .collect(Collectors.toList());
 
-        // 4. 최종 응답 DTO 생성 및 반환
         return MyGroupDetailResponseDto.builder()
                 .groupId(group.getGroupSeq())
                 .groupName(group.getGroupName())
@@ -365,6 +359,7 @@ public class GroupService {
     }
 
     // 그룹 검색 (이름으로)
+    @Transactional
     public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "검색어를 입력해주세요");
@@ -410,11 +405,6 @@ public class GroupService {
                 .toList();
     }
 
-    /*
-        * 그룹 정보 수정
-            * - 방장만 수정 가능
-            * - 그룹명, 소개, 이미지 수정 가능
-    */
     @Transactional
     public GroupResponse updateGroup(Long userId, Long groupSeq, UpdateGroupRequest request, String imageAction, MultipartFile newImage) {
         // 1. 그룹 조회
@@ -497,12 +487,6 @@ public class GroupService {
         );
     }
 
-    /*
-        * 초대 링크 생성
-            * - 방장만 생성 가능
-            * - 정원이 가득 차면 생성 불가
-            * - 유효한 링크가 이미 있으면 재사용
-    */
     @Transactional
     public InvitationResponse createInvitation(Long userId, Long groupSeq) {
         // 1. 그룹 조회
@@ -544,13 +528,7 @@ public class GroupService {
         return toInvitationResponse(invitation);
     }
 
-    /*
-        * 그룹 참가 신청 공통 로직
-            * - 중복 체크 (이미 멤버, 이미 신청)
-            * - 정원 체크
-            * - 권한 동의 검증 (사용자가 방장보다 많은 권한 요구 불가)
-            * - GroupJoinRequest 생성
-    */
+    @Transactional
     private void createJoinRequest(User user, Group group, PermissionAgreementDto agreement, String joinMethod) {
         // 1. 이미 그룹 멤버인지 체크
         boolean alreadyMember = groupMemberRepository.findByGroupAndUser_UserPk(group, user.getUserPk())
@@ -639,13 +617,7 @@ public class GroupService {
                 agreement.isBloodPressureAllowed(), agreement.isBloodSugarAllowed());
     }
 
-    /*
-        * 초대 링크로 그룹 정보 미리보기
-            * - 토큰으로 그룹 정보 조회
-            * - 만료 여부, 정원 초과 여부 체크
-            * - 방장의 권한 설정 조회 (참가자가 동의해야 할 항목)
-            * - 사용자가 참여 버튼을 누를지 결정하도록 정보 제공
-    */
+    @Transactional
     public InvitationPreviewResponse getInvitationPreview(String invitationToken) {
         // 1. 토큰으로 초대 링크 조회
         GroupInvitation invitation = invitationRepository.findByInvitationToken(invitationToken)
@@ -713,14 +685,6 @@ public class GroupService {
         );
     }
 
-    /*
-        * 초대 링크로 그룹 참가 신청
-            * - 토큰 검증 및 만료 체크
-            * - 중복 방지 (이미 멤버 or 이미 신청)
-            * - 정원 체크
-            * - GroupJoinRequest 생성 (대기열 등록)
-            * - 방장 승인 대기 상태
-    */
     @Transactional
     public void joinByInvitation(Long userId, String invitationToken, PermissionAgreementDto agreement) {
         // 1. 사용자 조회
@@ -743,14 +707,7 @@ public class GroupService {
         createJoinRequest(user, group, agreement, "초대 링크");
     }
 
-    /*
-        * 검색으로 그룹 참가 신청 (초대 링크 없이)
-            * - 그룹 존재 여부 확인
-            * - 중복 방지 (이미 멤버 or 이미 신청)
-            * - 정원 체크
-            * - GroupJoinRequest 생성 (대기열 등록)
-            * - 방장 승인 대기 상태
-    */
+
     @Transactional
     public void joinBySearch(Long userId, Long groupSeq, PermissionAgreementDto agreement) {
         // 1. 사용자 조회
@@ -765,12 +722,6 @@ public class GroupService {
         createJoinRequest(user, group, agreement, "검색");
     }
 
-    /*
-        * 그룹 참가 신청 공통 로직
-            * - 중복 체크 (이미 멤버, 이미 신청)
-            * - 정원 체크
-            * - GroupJoinRequest 생성
-    */
     private void createJoinRequest(User user, Group group, String joinMethod) {
         // 1. 이미 그룹 멤버인지 체크
         boolean alreadyMember = groupMemberRepository.findByGroupAndUser_UserPk(group, user.getUserPk())
@@ -805,11 +756,6 @@ public class GroupService {
         log.info("그룹 참가 신청 완료 ({}): userId={}, groupSeq={}", joinMethod, user.getUserPk(), group.getGroupSeq());
     }
 
-    /*
-        * 방장이 대기 중인 참가 신청 목록 조회
-            * - 방장 권한 확인
-            * - PENDING 상태인 신청만 조회
-    */
     public List<JoinRequestResponse> getPendingJoinRequests(Long userId, Long groupSeq) {
         // 1. 그룹 조회
         Group group = groupRepository.findById(groupSeq)
@@ -848,14 +794,6 @@ public class GroupService {
                 .toList();
     }
 
-    /*
-        * 참가 신청 승인
-            * - 방장 권한 확인
-            * - 정원 체크 (승인 시점에 다시 확인)
-            * - GroupMember 생성 (실제 멤버 추가)
-            * - GroupHealthPermission 생성 (방장 권한 복사)
-            * - 신청 상태를 APPROVED로 변경
-     */
     @Transactional
     public void approveJoinRequest(Long userId, Long requestSeq) {
         // 1. 참가 신청 조회
@@ -935,11 +873,6 @@ public class GroupService {
         );
     }
 
-    /*
-        * 참가 신청 거절
-            * - 방장 권한 확인
-            * - 신청 상태를 REJECTED로 변경
-    */
     @Transactional
     public void rejectJoinRequest(Long userId, Long requestSeq) {
         // 1. 참가 신청 조회
@@ -981,9 +914,7 @@ public class GroupService {
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());
     }
 
-    /**
-     * 저장된 주간 헤더 조회
-     */
+    @Transactional
     public WeeklyHeaderResponse getWeeklyHeader(Long groupSeq) {
         Group group = validateGroup(groupSeq);
 
@@ -1001,9 +932,7 @@ public class GroupService {
                 .build();
     }
 
-    /**
-     * 헤더 수동 재생성 (30초 중복 방지)
-     */
+    @Transactional
     public WeeklyHeaderResponse regenerateWeeklyHeader(Long groupSeq) {
         log.info("헤더 재생성 요청: 그룹={}", groupSeq);
 
@@ -1027,7 +956,7 @@ public class GroupService {
         return response;
     }
 
-    // 그룹 건강 요약 데이터 반환
+    @Transactional
     public List<HealthStaticsResponse> getLastWeekGroupHealthStats(Long groupSeq, LocalDate startDate, LocalDate endDate) {
         Group group = validateGroup(groupSeq);
 
@@ -1052,7 +981,7 @@ public class GroupService {
                 .toList();
     }
 
-    // 그룹원 전체 총 걸음 수, 총 칼로리, 총 운동 시간 조회
+    @Transactional
     public TotalActivityStatisticsResponse getGroupTotalActivityStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
         Group group = validateGroup(groupSeq);
 
@@ -1085,7 +1014,7 @@ public class GroupService {
                 .build();
     }
 
-    // 그룹원 수면 기록 조회
+    @Transactional
     public GroupSleepStatisticsResponse getGroupSleepStatistics(Long groupSeq, LocalDate startDate, LocalDate endDate) {
         Group group = validateGroup(groupSeq);
 
@@ -1116,7 +1045,7 @@ public class GroupService {
                 .build();
     }
 
-    // 당일 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    @Transactional
     public GroupStepStatisticsResponse getGroupStepStatistics(Long groupSeq) {
         Group group = validateGroup(groupSeq);
 
@@ -1141,15 +1070,6 @@ public class GroupService {
                 .build();
     }
 
-
-    /*
-        * GroupInvitation을 InvitationResponse로 변환
-        * invitationUrl은 null로 반환 - 프론트엔드에서 자유롭게 사용
-        * 예시:
-            *   - 앱 내 딥링크: linkcare://invite/{token}
-            *   - 공유 메시지: "LinkCare 모임 초대! 앱에서 코드 입력: {token}"
-            *   - 카카오톡 공유: 토큰 + 그룹명 조합
-    */
     private InvitationResponse toInvitationResponse(GroupInvitation invitation) {
         return new InvitationResponse(
                 invitation.getInvitationSeq(),
@@ -1290,12 +1210,6 @@ public class GroupService {
                 permission.getIsBloodPressureAllowed(), permission.getIsBloodSugarAllowed());
     }
 
-    /*
-        * 케어 그룹 권한 업데이트 및 알림 발송
-            * - GroupRequiredPermission 업데이트
-            * - 변경사항 감지 (true↔false 변경된 항목)
-            * - 모든 그룹원에게 알림 발송
-    */
     private void updateCareGroupPermissions(Group group, UpdateGroupRequest request) {
         // 1. 기존 권한 조회
         GroupRequiredPermission requiredPermission = requiredPermissionRepository.findByGroup(group)
@@ -1407,11 +1321,6 @@ public class GroupService {
         }
     }
 
-    /*
-        * 헬스 그룹 목표 기준 업데이트 (private 메서드)
-            * - 기존 목표 기준이 있으면 업데이트
-            * - 없으면 새로 생성
-    */
     private void updateHealthGroupGoalCriteria(Group group, GoalCriteriaDto criteria) {
         Optional<GroupGoalCriteria> existingCriteria = goalCriteriaRepository.findByGroup(group);
 
