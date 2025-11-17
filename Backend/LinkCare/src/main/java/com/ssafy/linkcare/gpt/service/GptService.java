@@ -121,7 +121,7 @@ public class GptService {
                 
                 3. 친근하고 격려하는 말투 (존댓말, 이모티콘 금지)
                 
-                4. 한줄평은 30자 이내
+                4. 한줄평은 10자 이내
                 
                 응답 형식:
                 한줄평: [기록된 데이터 기반 조언]
@@ -202,7 +202,7 @@ public class GptService {
 
         String response = getChatCompletion(groupHealthDataText, systemPrompt);
 
-        return new WeeklyHeaderResponse(response.trim());
+        return new WeeklyHeaderResponse(response.trim(), LocalDateTime.now());
     }
 
     /**
