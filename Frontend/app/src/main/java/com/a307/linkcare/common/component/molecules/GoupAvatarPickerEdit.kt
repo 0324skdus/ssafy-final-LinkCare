@@ -38,7 +38,8 @@ fun GroupAvatarPickerEdit(
     onImagePicked: (Uri?) -> Unit,
     enabled: Boolean = true,            //  편집 가능 여부
     size: Dp = 96.dp,
-    initialUri: Uri? = null
+    initialUri: Uri? = null,
+    imageUrl: String? = null
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(initialUri) }
 
@@ -81,13 +82,25 @@ fun GroupAvatarPickerEdit(
             color = Color(0xFFF2F3F6)
         ) {
             if (selectedImageUri != null) {
+                // User picked a new image
                 AsyncImage(
                     model = selectedImageUri,
                     contentDescription = "그룹 프로필",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (!imageUrl.isNullOrBlank()) {
+                // Load from database URL
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "그룹 프로필",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(defaultRes),
+                    error = painterResource(defaultRes)
+                )
             } else {
+                // Default image
                 Image(
                     painter = painterResource(defaultRes),
                     contentDescription = "기본 그룹 프로필",
