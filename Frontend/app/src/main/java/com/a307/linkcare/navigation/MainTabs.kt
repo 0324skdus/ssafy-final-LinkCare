@@ -433,6 +433,7 @@ fun MainTabs(
                         MainWithNoGroup(
                             navController = navController,
                             onCreateGroupClick = { navController.navigate(Route.CreateCareGroup.route) },
+                            onExploreGroupClick = { navController.navigate(Route.CareSearch) },
                             currentTab = "care"
                         )
                     } else {
@@ -501,6 +502,7 @@ fun MainTabs(
                         MainWithNoGroup(
                             navController = navController,
                             onCreateGroupClick = { navController.navigate(Route.CreateHealthGroup.route) },
+                            onExploreGroupClick = { navController.navigate(Route.HealthSearch) },
                             currentTab = "health"
                         )
                     } else {

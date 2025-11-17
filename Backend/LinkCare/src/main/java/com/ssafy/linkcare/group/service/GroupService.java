@@ -312,6 +312,36 @@ public class GroupService {
                 .toList();
     }
 
+    // 내가 신청한 그룹 목록 조회 (PENDING 상태)
+    public List<GroupResponse> getMyPendingGroups(Long userId, GroupType type) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 사용자의 PENDING 상태 신청 목록 조회
+        List<GroupJoinRequest> pendingRequests = groupJoinRequestRepository
+                .findByUser_UserPkAndStatus(userId, RequestStatus.PENDING);
+
+        return pendingRequests.stream()
+                .map(GroupJoinRequest::getGroup)  // Group 추출
+                .filter(group -> type == null || group.getType() == type)  // 타입 필터링
+                .map(group -> {
+                    int currentMembers = groupMemberRepository.countByGroup(group);
+
+                    return new GroupResponse(
+                            group.getGroupSeq(),
+                            group.getGroupName(),
+                            group.getGroupDescription(),
+                            group.getType(),
+                            group.getCapacity(),
+                            currentMembers,
+                            group.getImageUrl(),
+                            group.getCreatedAt(),
+                            "PENDING"  // 신청 대기 상태
+                    );
+                })
+                .toList();
+    }
+
     // 그룹 검색 (이름으로)
     public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
