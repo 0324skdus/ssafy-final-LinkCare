@@ -330,10 +330,13 @@ fun MainTabs(
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = careGroups[selectedIndexCare].groupSeq
-                                                navController.navigate(
-                                                    Route.EditCareGroup.withArgs(currentId.toString())
-                                                )
+                                                if (careGroups.isNotEmpty()) {
+                                                    val currentId =
+                                                        careGroups[selectedIndexCare].groupSeq
+                                                    navController.navigate(
+                                                        Route.EditCareGroup.withArgs(currentId.toString())
+                                                    )
+                                                }
                                             }
                                         )
                                         DropdownMenuItem(
@@ -375,10 +378,13 @@ fun MainTabs(
                                             text = { Text("그룹 수정하기") },
                                             onClick = {
                                                 dismiss()
-                                                val currentId = healthGroups[selectedIndexHealth].groupSeq
-                                                navController.navigate(
-                                                    Route.EditHealthGroup.withArgs(currentId.toString())
-                                                )
+                                                if (healthGroups.isNotEmpty()) {
+                                                    val currentId =
+                                                        healthGroups[selectedIndexHealth].groupSeq
+                                                    navController.navigate(
+                                                        Route.EditHealthGroup.withArgs(currentId.toString())
+                                                    )
+                                                }
                                             }
                                         )
                                         DropdownMenuItem(
@@ -482,7 +488,7 @@ fun MainTabs(
                 }
 
                 composable(Route.CreateCareGroup.route) {
-                    CareGroupCreate(navController = navController)
+                    CareGroupCreate(navController = navController, groupvm = groupvm)
                 }
 
                 composable(
@@ -550,7 +556,7 @@ fun MainTabs(
                 }
 
                 composable(Route.CreateHealthGroup.route) {
-                    HealthGroupCreate(navController = navController)
+                    HealthGroupCreate(navController = navController, groupvm = groupvm)
                 }
 
                 composable(
