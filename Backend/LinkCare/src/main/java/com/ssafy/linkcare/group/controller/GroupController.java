@@ -568,4 +568,48 @@ public class GroupController {
         WeeklyHeaderResponse response = groupHeaderScheduler.updateGroupHeader(groupSeq);
         return ResponseEntity.ok(response);
     }
+
+    // ============== 그룹 관리 API ==============
+
+    @PostMapping("/{groupSeq}/delegate")
+    @Operation(summary = "그룹장 위임", description = "그룹장이 다른 멤버에게 그룹장 권한을 위임합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "위임 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> delegateLeader(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestParam Long newLeaderUserSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹장 위임 요청: groupSeq={}, currentUser={}, newLeader={}",
+                groupSeq, currentUserSeq, newLeaderUserSeq);
+
+        groupService.delegateLeader(groupSeq, newLeaderUserSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupSeq}/members/{targetUserSeq}")
+    @Operation(summary = "그룹원 내보내기", description = "그룹장이 그룹원을 내보냅니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "내보내기 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음 또는 그룹장은 내보낼 수 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> kickMember(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @PathVariable Long targetUserSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹원 내보내기 요청: groupSeq={}, currentUser={}, targetUser={}",
+                groupSeq, currentUserSeq, targetUserSeq);
+
+        groupService.kickMember(groupSeq, targetUserSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
 }
