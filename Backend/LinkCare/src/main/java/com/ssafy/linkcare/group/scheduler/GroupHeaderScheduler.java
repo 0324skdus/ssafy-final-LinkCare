@@ -3,6 +3,7 @@ package com.ssafy.linkcare.group.scheduler;
 import com.ssafy.linkcare.gpt.dto.WeeklyHeaderResponse;
 import com.ssafy.linkcare.gpt.service.GptService;
 import com.ssafy.linkcare.group.entity.Group;
+import com.ssafy.linkcare.group.provider.GroupHealthDataProvider;
 import com.ssafy.linkcare.group.repository.GroupRepository;
 import com.ssafy.linkcare.group.service.GroupService;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
@@ -25,7 +26,7 @@ import java.util.List;
 public class GroupHeaderScheduler {
 
     private final GroupRepository groupRepository;
-    private final GroupService groupService;
+    private final GroupHealthDataProvider groupHealthDataProvider;
     private final GptService gptService;
     private final TimeStampUtil timeStampUtil;
 
@@ -81,13 +82,13 @@ public class GroupHeaderScheduler {
                 .orElseThrow(() -> new EntityNotFoundException("그룹을 찾을 수 없습니다"));
 
         // 이번 주 생성된 그룹이면 스킵
-        if (group.isCreatedThisWeek()) {
-            log.warn("그룹 {} - 이번 주 생성된 그룹, 헤더 업데이트 스킵", groupSeq);
-            return WeeklyHeaderResponse.builder()
-                    .headerMessage(group.getWeeklyHeaderMessage())
-                    .generatedAt(group.getHeaderGeneratedAt())
-                    .build();
-        }
+//        if (group.isCreatedThisWeek()) {
+//            log.warn("그룹 {} - 이번 주 생성된 그룹, 헤더 업데이트 스킵", groupSeq);
+//            return WeeklyHeaderResponse.builder()
+//                    .headerMessage(group.getWeeklyHeaderMessage())
+//                    .generatedAt(group.getHeaderGeneratedAt())
+//                    .build();
+//        }
 
         // 1. 지난 주 데이터 조회
         LocalDate lastWeekStart = timeStampUtil.getLastWeekMonday();
@@ -95,7 +96,7 @@ public class GroupHeaderScheduler {
 
         log.info("조회 기간: {} ~ {}", lastWeekStart, lastWeekEnd);
 
-        List<HealthStaticsResponse> healthStats = groupService.getLastWeekGroupHealthStats(
+        List<HealthStaticsResponse> healthStats = groupHealthDataProvider.getLastWeekGroupHealthStats(
                 groupSeq,
                 lastWeekStart,
                 lastWeekEnd

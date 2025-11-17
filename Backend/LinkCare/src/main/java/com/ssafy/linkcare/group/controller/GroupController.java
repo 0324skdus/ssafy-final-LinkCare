@@ -205,6 +205,21 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "그룹 상세 정보 조회 (멤버 프로필 포함)", description = "그룹 ID로 그룹의 기본 정보와 멤버들의 프로필(캐릭터, 배경 이미지)을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/details")
+    public ResponseEntity<MyGroupDetailResponseDto> getGroupDetails(
+            @PathVariable Long groupSeq) {
+
+        log.info("그룹 상세 정보 조회 (멤버 프로필 포함) 요청: groupSeq={}", groupSeq);
+        MyGroupDetailResponseDto response = groupService.getGroupDetails(groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
+
     // ============== 초대 링크 관련 API ==============
 
     @Operation(summary = "초대 링크 생성", description = "그룹 초대 링크를 생성합니다. 방장만 생성 가능하며, 정원이 가득 차면 생성할 수 없습니다.")
@@ -538,4 +553,3 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 }
-
