@@ -312,6 +312,47 @@ public class GroupService {
                 .toList();
     }
 
+    // 그룹 상세 조회 (멤버 프로필 포함)
+    public MyGroupDetailResponseDto getGroupDetails(Long groupSeq) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 그룹 멤버와 관련 엔티티(User, MainCharacter, MainBackground)를 fetch join으로 한번에 조회
+        List<GroupMember> members = groupMemberRepository.findMembersWithDetailsByGroup(group);
+
+        // 3. 멤버 프로필 DTO 리스트 생성
+        List<GroupMemberProfileDto> memberProfiles = members.stream()
+                .map(member -> {
+                    User user = member.getUser();
+                    String characterUrl = null;
+                    String backgroundUrl = null;
+
+                    // User의 MainCharacter와 MainBackground가 null이 아닐 경우 URL 추출
+                    if (user.getMainCharacter() != null) {
+                        characterUrl = user.getMainCharacter().getCharacter().getBaseImageS3Key();
+                    }
+                    if (user.getMainBackground() != null) {
+                        backgroundUrl = user.getMainBackground().getBackground().getS3Key();
+                    }
+
+                    return GroupMemberProfileDto.builder()
+                            .userId(user.getUserPk())
+                            .userName(user.getName())
+                            .mainCharacterImageUrl(characterUrl)
+                            .mainBackgroundImageUrl(backgroundUrl)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 4. 최종 응답 DTO 생성 및 반환
+        return MyGroupDetailResponseDto.builder()
+                .groupId(group.getGroupSeq())
+                .groupName(group.getGroupName())
+                .members(memberProfiles)
+                .build();
+    }
+
     // 그룹 검색 (이름으로)
     public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
