@@ -90,7 +90,10 @@ public enum ErrorCode {
 
     // AI 목표 생성 관련 에러
     INSUFFICIENT_DATA(HttpStatus.CONFLICT, "데이터가 부족합니다. 최근 3주 데이터가 필요합니다"),
-    GOAL_NOT_FOUND(HttpStatus.NOT_FOUND, "이번 주 목표를 찾을 수 없습니다");
+    GOAL_NOT_FOUND(HttpStatus.NOT_FOUND, "이번 주 목표를 찾을 수 없습니다"),
+
+    // 그룹 헤더 관련 에러
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요");
 
     private final HttpStatus status;
     private final String message;
