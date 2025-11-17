@@ -612,4 +612,42 @@ public class GroupController {
 
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{groupSeq}/leave")
+    @Operation(summary = "그룹 탈퇴", description = "그룹원이 그룹을 탈퇴합니다. 그룹장은 다른 멤버가 있으면 탈퇴할 수 없습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "탈퇴 완료"),
+            @ApiResponse(responseCode = "400", description = "그룹장은 다른 멤버가 있을 때 탈퇴할 수 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> leaveGroup(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹 탈퇴 요청: groupSeq={}, currentUser={}", groupSeq, currentUserSeq);
+
+        groupService.leaveGroup(groupSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupSeq}")
+    @Operation(summary = "그룹 삭제", description = "그룹장이 그룹을 삭제합니다. 그룹장만 가능합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    public ResponseEntity<Void> deleteGroup(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹 삭제 요청: groupSeq={}, currentUser={}", groupSeq, currentUserSeq);
+
+        groupService.deleteGroup(groupSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
 }

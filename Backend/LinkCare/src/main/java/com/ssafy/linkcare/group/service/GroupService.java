@@ -1537,4 +1537,86 @@ public class GroupService {
 
         log.info("그룹원 내보내기 완료: groupSeq={}, kickedUser={}", groupSeq, targetUserSeq);
     }
+
+    // 그룹 탈퇴
+    @Transactional
+    public void leaveGroup(Long groupSeq, Long currentUserSeq) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 현재 사용자의 그룹 멤버 정보 조회
+        GroupMember currentMember = groupMemberRepository.findByGroupAndUser_UserPk(group, currentUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 3. 그룹장이면서 다른 멤버가 있으면 탈퇴 불가
+        if (currentMember.getIsLeader()) {
+            long memberCount = groupMemberRepository.countByGroup(group);
+            if (memberCount > 1) {
+                throw new CustomException(ErrorCode.LEADER_CANNOT_LEAVE_WITH_MEMBERS);
+            }
+            // 그룹장 혼자만 남았으면 그룹 전체 삭제
+            deleteGroupCompletely(group);
+            log.info("그룹장 탈퇴로 그룹 삭제 완료: groupSeq={}, user={}", groupSeq, currentUserSeq);
+        } else {
+            // 일반 멤버는 바로 탈퇴
+            // 연관된 GroupHealthPermission 먼저 삭제
+            healthPermissionRepository.findByGroupMember(currentMember).ifPresent(permission -> {
+                healthPermissionRepository.delete(permission);
+                log.info("탈퇴 멤버의 건강 권한 삭제 완료: permissionSeq={}", permission.getPermissionSeq());
+            });
+
+            groupMemberRepository.delete(currentMember);
+            log.info("그룹 탈퇴 완료: groupSeq={}, user={}", groupSeq, currentUserSeq);
+        }
+    }
+
+    // 그룹 삭제 (그룹장 전용)
+    @Transactional
+    public void deleteGroup(Long groupSeq, Long currentUserSeq) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 현재 사용자가 그룹장인지 확인
+        GroupMember currentMember = groupMemberRepository.findByGroupAndUser_UserPk(group, currentUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        if (!currentMember.getIsLeader()) {
+            throw new CustomException(ErrorCode.NOT_GROUP_LEADER);
+        }
+
+        // 3. 그룹 전체 삭제
+        deleteGroupCompletely(group);
+        log.info("그룹 삭제 완료: groupSeq={}, deletedBy={}", groupSeq, currentUserSeq);
+    }
+
+    // 그룹 완전 삭제 (private 메서드)
+    private void deleteGroupCompletely(Group group) {
+        // 1. 모든 그룹 멤버 조회
+        List<GroupMember> members = groupMemberRepository.findByGroup(group);
+
+        // 2. 각 멤버의 건강 권한 삭제
+        for (GroupMember member : members) {
+            healthPermissionRepository.findByGroupMember(member).ifPresent(permission -> {
+                healthPermissionRepository.delete(permission);
+            });
+        }
+
+        // 3. 모든 그룹 멤버 삭제
+        groupMemberRepository.deleteAll(members);
+
+        // 4. 그룹 필수 권한 삭제 (CARE 그룹인 경우)
+        requiredPermissionRepository.findByGroup(group).ifPresent(permission -> {
+            requiredPermissionRepository.delete(permission);
+        });
+
+        // 5. 그룹 목표 기준 삭제 (HEALTH 그룹인 경우)
+        goalCriteriaRepository.findByGroup(group).ifPresent(criteria -> {
+            goalCriteriaRepository.delete(criteria);
+        });
+
+        // 6. 그룹 삭제
+        groupRepository.delete(group);
+    }
 }

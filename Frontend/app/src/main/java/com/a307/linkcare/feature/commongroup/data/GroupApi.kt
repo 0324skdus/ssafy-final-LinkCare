@@ -138,4 +138,16 @@ interface GroupApi {
         @Path("groupSeq") groupSeq: Long,
         @Path("targetUserSeq") targetUserSeq: Long
     ): Response<Unit>
+
+    // 그룹 탈퇴
+    @DELETE("/api/groups/{groupSeq}/leave")
+    suspend fun leaveGroup(
+        @Path("groupSeq") groupSeq: Long
+    ): Response<Unit>
+
+    // 그룹 삭제
+    @DELETE("/api/groups/{groupSeq}")
+    suspend fun deleteGroup(
+        @Path("groupSeq") groupSeq: Long
+    ): Response<Unit>
 }

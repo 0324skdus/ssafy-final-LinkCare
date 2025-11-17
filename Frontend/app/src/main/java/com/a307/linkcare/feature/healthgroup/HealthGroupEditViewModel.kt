@@ -36,6 +36,8 @@ class HealthGroupEditViewModel @Inject constructor(
         object Loading : MemberActionState()
         data class DelegateSuccess(val msg: String) : MemberActionState()
         data class KickSuccess(val msg: String) : MemberActionState()
+        data class LeaveSuccess(val msg: String) : MemberActionState()
+        data class DeleteSuccess(val msg: String) : MemberActionState()
         data class Error(val msg: String) : MemberActionState()
     }
 
@@ -159,6 +161,40 @@ class HealthGroupEditViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("HealthGroupEditViewModel", "그룹 상세 정보 갱신 실패: ${e.message}")
+        }
+    }
+
+    fun leaveGroup(groupSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.leaveGroup(groupSeq)
+            result.fold(
+                onSuccess = {
+                    Log.d("HealthGroupEditViewModel", "그룹 탈퇴 성공")
+                    _memberActionState.value = MemberActionState.LeaveSuccess("그룹에서 탈퇴했습니다")
+                },
+                onFailure = { error ->
+                    Log.e("HealthGroupEditViewModel", "그룹 탈퇴 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹 탈퇴에 실패했습니다")
+                }
+            )
+        }
+    }
+
+    fun deleteGroup(groupSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.deleteGroup(groupSeq)
+            result.fold(
+                onSuccess = {
+                    Log.d("HealthGroupEditViewModel", "그룹 삭제 성공")
+                    _memberActionState.value = MemberActionState.DeleteSuccess("그룹을 삭제했습니다")
+                },
+                onFailure = { error ->
+                    Log.e("HealthGroupEditViewModel", "그룹 삭제 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹 삭제에 실패했습니다")
+                }
+            )
         }
     }
 }
