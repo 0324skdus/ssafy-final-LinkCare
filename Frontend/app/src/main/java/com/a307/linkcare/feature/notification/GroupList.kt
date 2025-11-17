@@ -102,7 +102,10 @@ fun GroupList(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    items(items = notifications) { notification ->
+                    items(
+                        items = notifications,
+                        key = { it.notificationId }
+                    ) { notification ->
                         // 로컬 상태로 처리 여부 관리
                         var isProcessed by remember(notification.notificationId) {
                             mutableStateOf(processedNotifications[notification.notificationId] != null)
@@ -120,10 +123,14 @@ fun GroupList(
                             notification.content
                         }
 
+                        // 삭제 처리 여부를 추적하는 로컬 상태
+                        var isDismissed by remember { mutableStateOf(false) }
+
                         // 스와이프로 삭제
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
-                                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                if (dismissValue == SwipeToDismissBoxValue.EndToStart && !isDismissed) {
+                                    isDismissed = true
                                     scope.launch {
                                         try {
                                             android.util.Log.d("GroupList", "알림 삭제 시도: ${notification.notificationId}")
@@ -134,18 +141,20 @@ fun GroupList(
                                             }.onFailure { error ->
                                                 android.util.Log.e("GroupList", "알림 삭제 실패: ${error.message}", error)
                                                 Toast.makeText(context, "삭제 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                isDismissed = false
                                             }
                                         } catch (e: Exception) {
                                             android.util.Log.e("GroupList", "알림 삭제 예외: ${e.message}", e)
                                             Toast.makeText(context, "삭제 중 오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            isDismissed = false
                                         }
                                     }
-                                    true // 스와이프 확정 (UI에서 일단 제거, 실패하면 에러 표시)
+                                    true // 스와이프 완료 허용
                                 } else {
-                                    false // 스와이프 취소
+                                    false
                                 }
                             },
-                            positionalThreshold = { it * 0.5f } // 절반 이상 스와이프해야 삭제
+                            positionalThreshold = { it * 0.5f }
                         )
 
                         SwipeToDismissBox(
