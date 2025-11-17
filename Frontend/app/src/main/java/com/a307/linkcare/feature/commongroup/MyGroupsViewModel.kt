@@ -33,6 +33,12 @@ class MyGroupsViewModel @Inject constructor(
     private val _healthGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
     val healthGroups: StateFlow<List<MyGroupResponse>> = _healthGroups
 
+    private val _carePendingGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
+    val carePendingGroups: StateFlow<List<MyGroupResponse>> = _carePendingGroups
+
+    private val _healthPendingGroups = MutableStateFlow<List<MyGroupResponse>>(emptyList())
+    val healthPendingGroups: StateFlow<List<MyGroupResponse>> = _healthPendingGroups
+
     fun loadCare() {
         viewModelScope.launch {
             android.util.Log.d("MyGroupsViewModel", "케어 그룹 목록 로드 시작")
@@ -48,6 +54,24 @@ class MyGroupsViewModel @Inject constructor(
             val groups = repo.getMyGroups("HEALTH")
             _healthGroups.value = groups
             android.util.Log.d("MyGroupsViewModel", "헬스 그룹 목록 로드 완료: ${groups.size}개")
+        }
+    }
+
+    fun loadCarePending() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "케어 신청 그룹 목록 로드 시작")
+            val groups = repo.getMyPendingGroups("CARE")
+            _carePendingGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "케어 신청 그룹 목록 로드 완료: ${groups.size}개")
+        }
+    }
+
+    fun loadHealthPending() {
+        viewModelScope.launch {
+            android.util.Log.d("MyGroupsViewModel", "헬스 신청 그룹 목록 로드 시작")
+            val groups = repo.getMyPendingGroups("HEALTH")
+            _healthPendingGroups.value = groups
+            android.util.Log.d("MyGroupsViewModel", "헬스 신청 그룹 목록 로드 완료: ${groups.size}개")
         }
     }
 

@@ -25,6 +25,11 @@ interface GroupApi {
         @Query("type") type: String? = null   // HEALTH, CARE, 혹은 null
     ): List<MyGroupResponse>
 
+    @GET("/api/groups/my-pending")
+    suspend fun getMyPendingGroups(
+        @Query("type") type: String? = null   // HEALTH, CARE, 혹은 null
+    ): List<MyGroupResponse>
+
     @GET("/api/groups/{groupSeq}")
     suspend fun getMyGroupDetail(
         @Path("groupSeq") groupSeq: Long
