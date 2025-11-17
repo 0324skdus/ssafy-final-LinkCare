@@ -10,9 +10,11 @@ import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
 import com.ssafy.linkcare.health.dto.SleepDetailResponse;
+import com.ssafy.linkcare.health.dto.StepDetailResponse;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.health.service.SleepService;
+import com.ssafy.linkcare.health.service.StepService;
 import com.ssafy.linkcare.notification.enums.NotificationType;
 import com.ssafy.linkcare.notification.service.NotificationService;
 import com.ssafy.linkcare.s3.S3Service;
@@ -40,6 +42,7 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private final S3Service s3Service;
+    private final StepService stepService;
     private final SleepService sleepService;
     private final HealthService healthService;
     private final UserRepository userRepository;
@@ -1003,6 +1006,31 @@ public class GroupService {
                 .avgDuration(groupAvgDuration)
                 .startDate(startDate)
                 .endDate(endDate)
+                .build();
+    }
+
+    // 당일 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    public GroupStepStatisticsResponse getGroupStepStatistics(Long groupSeq) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        List<StepDetailResponse> responses = groupMembers.stream()
+                .map(groupMember -> {
+                    int userSeq = Math.toIntExact(groupMember.getUser().getUserPk());
+                    int steps = stepService.getTodayStepCount(userSeq);
+                    return StepDetailResponse.builder()
+                            .userSeq(userSeq)
+                            .steps(steps)
+                            .build();
+                })
+                .toList();
+
+        int totalSteps = responses.stream().mapToInt(StepDetailResponse::getSteps).sum();
+
+        return GroupStepStatisticsResponse.builder()
+                .members(responses)
+                .totalSteps(totalSteps)
                 .build();
     }
 

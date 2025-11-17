@@ -10,6 +10,8 @@ import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.dto.WaterIntakeStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -368,6 +370,30 @@ public class GroupController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         GroupSleepStatisticsResponse response = groupService.getGroupSleepStatistics(groupSeq, startDate, endDate);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "그룹 걸음수 통계 조회",
+            description = "오늘 날짜 기준 그룹원들의 개별 걸음수와 그룹 전체 총 걸음수를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = GroupStepStatisticsResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "그룹을 찾을 수 없음"
+            )
+    })
+    @GetMapping("/{groupSeq}/step-statistics")
+    public ResponseEntity<GroupStepStatisticsResponse> getGroupStepStatistics(
+            @Parameter(description = "그룹 시퀀스", required = true, example = "1")
+            @PathVariable Long groupSeq) {
+
+        GroupStepStatisticsResponse response = groupService.getGroupStepStatistics(groupSeq);
         return ResponseEntity.ok(response);
     }
 
