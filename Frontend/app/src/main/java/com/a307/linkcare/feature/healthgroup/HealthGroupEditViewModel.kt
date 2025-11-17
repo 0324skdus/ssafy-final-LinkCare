@@ -96,4 +96,36 @@ class HealthGroupEditViewModel @Inject constructor(
     fun resetUpdateState() {
         _updateState.value = UpdateState.Idle
     }
+
+    fun delegateLeader(groupSeq: Long, newLeaderUserSeq: Long) {
+        viewModelScope.launch {
+            val result = repo.delegateLeader(groupSeq, newLeaderUserSeq)
+            result.fold(
+                onSuccess = {
+                    Log.d("HealthGroupEditViewModel", "그룹장 위임 성공")
+                    // 그룹 상세 정보 다시 로드
+                    loadGroupDetail(groupSeq)
+                },
+                onFailure = { error ->
+                    Log.e("HealthGroupEditViewModel", "그룹장 위임 실패: ${error.message}")
+                }
+            )
+        }
+    }
+
+    fun kickMember(groupSeq: Long, targetUserSeq: Long) {
+        viewModelScope.launch {
+            val result = repo.kickMember(groupSeq, targetUserSeq)
+            result.fold(
+                onSuccess = {
+                    Log.d("HealthGroupEditViewModel", "그룹원 내보내기 성공")
+                    // 그룹 상세 정보 다시 로드
+                    loadGroupDetail(groupSeq)
+                },
+                onFailure = { error ->
+                    Log.e("HealthGroupEditViewModel", "그룹원 내보내기 실패: ${error.message}")
+                }
+            )
+        }
+    }
 }

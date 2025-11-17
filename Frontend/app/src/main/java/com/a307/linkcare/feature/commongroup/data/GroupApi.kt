@@ -11,6 +11,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -123,4 +124,18 @@ interface GroupApi {
         @Query("startDate") startDate: String, // yyyy-MM-dd
         @Query("endDate") endDate: String      // yyyy-MM-dd
     ): GroupTotalActivityStats
+
+    // 그룹장 위임하기
+    @POST("/api/groups/{groupSeq}/delegate")
+    suspend fun delegateLeader(
+        @Path("groupSeq") groupSeq: Long,
+        @Query("newLeaderUserSeq") newLeaderUserSeq: Long
+    ): Response<Unit>
+
+    // 그룹원 내보내기
+    @DELETE("/api/groups/{groupSeq}/members/{targetUserSeq}")
+    suspend fun kickMember(
+        @Path("groupSeq") groupSeq: Long,
+        @Path("targetUserSeq") targetUserSeq: Long
+    ): Response<Unit>
 }

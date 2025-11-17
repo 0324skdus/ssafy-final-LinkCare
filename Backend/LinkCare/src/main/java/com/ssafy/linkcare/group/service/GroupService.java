@@ -1472,4 +1472,63 @@ public class GroupService {
                 log.info("헬스 그룹 목표 기준 생성 완료: groupSeq={}", group.getGroupSeq());
             }
         }
+    // 그룹장 위임하기
+    @Transactional
+    public void delegateLeader(Long groupSeq, Long newLeaderUserSeq, Long currentUserSeq) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 현재 사용자가 그룹장인지 확인
+        GroupMember currentLeader = groupMemberRepository.findByGroupAndUser_UserPk(group, currentUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        if (!currentLeader.getIsLeader()) {
+            throw new CustomException(ErrorCode.NOT_GROUP_LEADER);
+        }
+
+        // 3. 새 그룹장이 그룹 멤버인지 확인
+        GroupMember newLeader = groupMemberRepository.findByGroupAndUser_UserPk(group, newLeaderUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 4. 그룹장 권한 이전
+        currentLeader.updateLeaderStatus(false);
+        newLeader.updateLeaderStatus(true);
+
+        groupMemberRepository.save(currentLeader);
+        groupMemberRepository.save(newLeader);
+
+        log.info("그룹장 위임 완료: groupSeq={}, oldLeader={}, newLeader={}",
+                groupSeq, currentUserSeq, newLeaderUserSeq);
+    }
+
+    // 그룹원 내보내기
+    @Transactional
+    public void kickMember(Long groupSeq, Long targetUserSeq, Long currentUserSeq) {
+        // 1. 그룹 조회
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
+        // 2. 현재 사용자가 그룹장인지 확인
+        GroupMember currentUser = groupMemberRepository.findByGroupAndUser_UserPk(group, currentUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        if (!currentUser.getIsLeader()) {
+            throw new CustomException(ErrorCode.NOT_GROUP_LEADER);
+        }
+
+        // 3. 내보낼 멤버 조회
+        GroupMember targetMember = groupMemberRepository.findByGroupAndUser_UserPk(group, targetUserSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_MEMBER_NOT_FOUND));
+
+        // 4. 그룹장은 내보낼 수 없음
+        if (targetMember.getIsLeader()) {
+            throw new CustomException(ErrorCode.CANNOT_KICK_LEADER);
+        }
+
+        // 5. 그룹원 삭제
+        groupMemberRepository.delete(targetMember);
+
+        log.info("그룹원 내보내기 완료: groupSeq={}, kickedUser={}", groupSeq, targetUserSeq);
+    }
 }

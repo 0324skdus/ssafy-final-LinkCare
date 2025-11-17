@@ -82,8 +82,6 @@ fun CareGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: CareGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    onDelegate: (memberId: Long) -> Unit = {},
-    onKick: (memberId: Long) -> Unit = {},
     onLeave: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
@@ -95,6 +93,18 @@ fun CareGroupEdit(
     // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
         viewModel.loadGroupDetail(groupSeq)
+    }
+
+    // 위임하기 핸들러
+    val onDelegate: (Long) -> Unit = { memberUserSeq ->
+        viewModel.delegateLeader(groupSeq, memberUserSeq)
+        Toast.makeText(context, "그룹장을 위임했습니다", Toast.LENGTH_SHORT).show()
+    }
+
+    // 내보내기 핸들러
+    val onKick: (Long) -> Unit = { memberUserSeq ->
+        viewModel.kickMember(groupSeq, memberUserSeq)
+        Toast.makeText(context, "그룹원을 내보냈습니다", Toast.LENGTH_SHORT).show()
     }
 
     // Handle update success

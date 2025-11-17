@@ -62,6 +62,7 @@ public enum ErrorCode {
     // 403 Forbidden
     NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
     ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버임"),
+    CANNOT_KICK_LEADER(HttpStatus.FORBIDDEN, "그룹장은 내보낼 수 없습니다"),
 
     // 409 Conflict
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
