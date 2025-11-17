@@ -21,52 +21,55 @@ fun GroupContributionBar(
     members: List<Member>,
     modifier: Modifier = Modifier
 ) {
-    val summaries = toSummaries(members)
-
-    val goal: Int = members.firstOrNull()?.goal
-        ?.takeIf { it > 0 }
-        ?: members.sumOf { it.progresses }
-            .takeIf { it > 0 }
-        ?: 1 // 0 나눗셈 방지용
-
-    // 각 멤버의 기여도 (0.0 ~ 1.0)
-    data class Segment(val fraction: Float, val color: Color, val label: String)
-
-    val segments: List<Segment> = members.mapIndexed { index, m ->
-        val fraction = (m.progresses.toFloat() / goal.toFloat())
-            .coerceIn(0f, 1f) // 이상값 방지
-
-        Segment(
-            fraction = fraction,
-            color = summaries.getOrNull(index)?.color ?: Color.Gray,
-            label = summaries.getOrNull(index)?.label ?: m.name
-        )
-    }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        // --- 상단 전체 기여도 Progress Bar ---
+    // 목표(goal)는 모든 멤버에게 동일하게 '그룹 전체 목표'로 설정되어 있다고 가정
+    val totalGoal = members.firstOrNull()?.goal?.toFloat() ?: 1f
+    if (totalGoal <= 0f) {
+        // 목표가 0이거나 설정되지 않은 경우, 빈 막대만 표시
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .height(18.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(0xFFE5E9F0))
+        )
+        return
+    }
+
+    // 모든 멤버가 달성한 총량
+    val totalAchieved = members.sumOf { it.progresses }.toFloat()
+    // 목표까지 남은 양 (음수 방지)
+    val emptyProgress = (totalGoal - totalAchieved).coerceAtLeast(0f)
+
+    val summaries = toSummaries(members) // 범례 표시에 필요
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // --- 상단 전체 합산 Progress Bar ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(18.dp)
+                .clip(RoundedCornerShape(8.dp))
         ) {
-            // 배경 위에 색깔 구간 Row로 쌓기
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                segments.forEach { s ->
-                    if (s.fraction > 0f) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .weight(s.fraction) // 기여도 비율만큼 폭 차지
-                                .background(s.color)
-                        )
-                    }
+            // 각 멤버의 기여도를 weight로 그림
+            summaries.forEachIndexed { index, summary ->
+                val member = members[index]
+                if (member.progresses > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(member.progresses.toFloat())
+                            .background(summary.color)
+                    )
                 }
+            }
+            // 목표까지 남은 빈 공간을 그림
+            if (emptyProgress > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(emptyProgress)
+                        .background(Color(0xFFE5E9F0))
+                )
             }
         }
 
@@ -74,7 +77,7 @@ fun GroupContributionBar(
 
         // --- 하단 범례 ---
         Column {
-            segments.forEach { s ->
+            summaries.forEach { s ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(vertical = 2.dp)

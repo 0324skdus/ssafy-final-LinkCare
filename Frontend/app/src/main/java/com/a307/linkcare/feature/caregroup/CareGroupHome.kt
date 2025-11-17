@@ -30,6 +30,7 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -199,7 +200,6 @@ fun CareGroupHome(
             )
         }
     }
-
 
     // 날짜/리스트 상태
     val today = remember { LocalDate.now() }
@@ -394,6 +394,7 @@ fun CareGroupHome(
                         isSelf = (m.name == currentUserName)
                     )
 
+                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
@@ -449,6 +450,7 @@ fun CareGroupHome(
                     item {
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
+                            title = "활동 요약",
                             members = todayMembers,
                             totalSteps = stepUiState.goal,
                             totalGoal = stepUiState.goal,
