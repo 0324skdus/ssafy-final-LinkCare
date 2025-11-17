@@ -98,6 +98,10 @@ fun CareMemberDetail(
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp
 ) {
+    val isSelf = remember(member.name, currentUserName) {
+        member.name == currentUserName
+    }
+
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -316,13 +320,12 @@ fun CareMemberDetail(
                             }
                         }
                     }
-
-                    Spacer(Modifier.height(8.dp))
                 }
 
                 var showLetter by remember { mutableStateOf(false) }
                 // 편지쓰기 버튼
                 Button(
+                    enabled = !isSelf,
                     onClick = { showLetter = true },
                     modifier = Modifier
                         .fillMaxWidth()
