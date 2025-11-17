@@ -132,6 +132,20 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    // 내가 신청한 그룹 목록 조회
+    @GetMapping("/my-pending")
+    @Operation(summary = "내가 신청한 그룹 목록 조회", description = "승인 대기 중인 내 신청 목록을 조회합니다. type 파라미터로 HEALTH/CARE 필터링 가능")
+    public ResponseEntity<List<GroupResponse>> getMyPendingGroups(
+            Authentication authentication,
+            @RequestParam(required = false) GroupType type) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        log.info("내 신청 그룹 목록 조회 요청: userId={}, type={}", userId, type);
+
+        List<GroupResponse> response = groupService.getMyPendingGroups(userId, type);
+        return ResponseEntity.ok(response);
+    }
+
     // 그룹 검색
     @GetMapping("/search")
     @Operation(summary = "그룹 검색", description = "그룹 이름으로 검색합니다")

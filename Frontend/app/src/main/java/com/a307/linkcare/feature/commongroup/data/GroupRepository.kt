@@ -29,6 +29,17 @@ class GroupRepository @Inject constructor(
         }
     }
 
+    suspend fun getMyPendingGroups(type: String?): List<MyGroupResponse> {
+        return try {
+            val result = api.getMyPendingGroups(type)
+            android.util.Log.d("GroupRepository", "신청 그룹 목록 조회 성공: type=$type, count=${result.size}")
+            result
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "신청 그룹 목록 조회 실패: type=$type, error=${e.message}", e)
+            emptyList()
+        }
+    }
+
     suspend fun getGroupDetail(groupSeq: Long) =
         api.getMyGroupDetail(groupSeq)
 
