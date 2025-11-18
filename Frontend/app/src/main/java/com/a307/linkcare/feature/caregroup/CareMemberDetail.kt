@@ -122,7 +122,7 @@ fun CareMemberDetail(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)  // 화면 높이의 85%만 차지
+                .fillMaxHeight(0.85f)
                 .padding(horizontal = 20.dp)
         ) {
             Column(
@@ -130,7 +130,7 @@ fun CareMemberDetail(
                     .widthIn(max = maxWidth)
                     .background(white)
             ) {
-                // 헤더 (프로필 이미지 + 이름) - 고정
+                // 헤더
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -436,7 +436,7 @@ private fun HealthAccordion(
         onClick = { expanded = !expanded }
     ) {
         Column(Modifier.fillMaxWidth()) {
-            // 헤더 (항상 보임)
+            // 헤더
             Row(
                 Modifier
                     .fillMaxWidth()

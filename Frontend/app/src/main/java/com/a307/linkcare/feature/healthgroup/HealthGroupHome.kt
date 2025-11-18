@@ -40,6 +40,8 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
+import com.a307.linkcare.feature.caregroup.CareMemberDetail
+import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 
@@ -145,12 +147,12 @@ fun HealthGroupHome(
 
             Member(
                 name = m.userName,
-                avatarRes = R.drawable.char_bear_1, // TODO: 이미지 적용
+                avatarRes = R.drawable.char_bear_1,
                 isLeader = m.isLeader,
-                progresses = 0, // 이 값은 이제 membersWithActivity에서 가져옴
+                progresses = 0,
                 goal = detail?.goalCriteria?.minStep ?: 30000,
                 bubbleText = "AI 추천 메시지 준비중...",
-                userPk = m.userSeq // userPk 할당
+                userPk = m.userSeq
             )
         }
     }
@@ -169,7 +171,6 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
-    // --- 실제 데이터로 교체 ---
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     // 현재 metric 타입에 따른 진행도 계산
@@ -241,18 +242,15 @@ fun HealthGroupHome(
                     else -> 0
                 }
                 totalGroupGoal = currentGoalValue.toInt()
-
-                android.util.Log.d("HealthGroupHome", "  - 화면에 표시할 목표: $currentGoalValue")
             }
             is HealthGroupHomeViewModel.GoalState.Error -> {
-                android.util.Log.e("HealthGroupHome", "❌ 목표 조회 실패: ${state.msg}")
                 scope.launch { snackbar.showSnackbar("목표 조회 실패: ${state.msg}") }
             }
             is HealthGroupHomeViewModel.GoalState.Loading -> {
-                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
+//                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
             }
             is HealthGroupHomeViewModel.GoalState.Idle -> {
-                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
+//                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
             }
         }
     }
@@ -263,7 +261,7 @@ fun HealthGroupHome(
     }
 
     val leaderCharInfo = remember(leader, characterMap) {
-        characterMap[leader.userPk]   // userPk는 위에서 m.userSeq 넣어둔 값
+        characterMap[leader.userPk]
     }
 
     val leaderAvatarUrl = leaderCharInfo?.mainCharacterImageUrl
@@ -285,7 +283,7 @@ fun HealthGroupHome(
         }
     )
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, membersWithActivity) {
         membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
     }
@@ -445,8 +443,6 @@ fun HealthGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
-                    Log.d("HealthGroupHome", "$charInfo, avatarUrl = $avatarUrl")
-
 
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
@@ -458,7 +454,15 @@ fun HealthGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
-                        onClick = { selectedMember = member },
+                        onClick = {
+                            val charInfo = characterMap[member.userPk]
+                            selectedMember = MemberDetailInfo(
+                                member = member,
+                                avatarUrl = charInfo?.mainCharacterImageUrl,
+                                backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                                petName = charInfo?.petName
+                            )
+                        },
                         isDistanceMetric = currentMetricType == "DISTANCE",
                         unit = currentUnit
                     )
@@ -602,10 +606,16 @@ fun HealthGroupHome(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            selectedMember?.let { m ->
+            selectedMember?.let { info ->
+                val myCharInfo = characterMap[mySeq]
+
                 HealthMemberDetail(
-                    member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
+                    member = info.member,
+                    avatarUrl = info.avatarUrl,
+                    backgroundUrl = info.backgroundUrl,
+                    petName = info.petName,
+                    myCharInfo = myCharInfo,
+                    today = todayHealthByName[info.member.name] ?: HealthToday(),
                     onDismiss = { selectedMember = null }
                 )
             }

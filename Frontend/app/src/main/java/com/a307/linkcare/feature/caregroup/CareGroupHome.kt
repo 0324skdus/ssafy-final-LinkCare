@@ -361,13 +361,10 @@ fun CareGroupHome(
     var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
        todayMembers.associate { m ->
-            Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
             val health = if (m.userPk > 0) {
                 val apiData = healthData[m.userPk.toInt()]
-                Log.d("CareGroupHome", "API data for ${m.name}: ${if (apiData != null) "FOUND" else "NOT FOUND"}")
                 apiData ?: sampleHealthToday(m)
             } else {
-                Log.d("CareGroupHome", "userPk is 0 for ${m.name}, using dummy data")
                 sampleHealthToday(m)
             }
             m.name to health
