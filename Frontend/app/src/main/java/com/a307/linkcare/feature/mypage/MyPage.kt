@@ -72,7 +72,6 @@ fun MyPage(
     onGroupsClick: () -> Unit = {},
     onStoreClick: () -> Unit = {},
     onDecorateClick: () -> Unit = {},
-    onAiChatClick: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -128,7 +127,6 @@ fun MyPage(
                 tokenStore = tokenStore,
                 onStoreClick = onStoreClick,
                 onDecorateClick = onDecorateClick,
-                onAiChatClick = onAiChatClick,
                 onLogout = onLogout
             )
 
@@ -248,7 +246,6 @@ private fun MenuRow(
     tokenStore: TokenStore,
     onStoreClick: () -> Unit,
     onDecorateClick: () -> Unit,
-    onAiChatClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
@@ -266,24 +263,6 @@ private fun MenuRow(
                 icon = { Icon(Icons.Default.Lock, null) },
                 modifier = Modifier.weight(1f),
                 onClick = onDecorateClick
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // 중간: AI 채팅 버튼
-        Row(Modifier.fillMaxWidth()) {
-            MenuButtonCard(
-                title = "AI 상담",
-                icon = {
-                    Text(
-                        "🤖",
-                        fontSize = 24.sp,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onAiChatClick
             )
         }
 

@@ -604,7 +604,6 @@ fun MainTabs(
                                 onEditClick = { navController.navigate(Route.EditProfile.route) },
                                 onStoreClick = { navController.navigate(Route.Store.route) },
                                 onDecorateClick = { navController.navigate(Route.Decorate.route) },
-                                onAiChatClick = { navController.navigate(Route.AiChat.route) },
                                 onLogout = {
                                     rootNavController.navigate(Route.Login.route) {
                                         popUpTo(rootNavController.graph.id) { inclusive = true }
@@ -721,11 +720,6 @@ fun MainTabs(
                             navController.goBackToMyPage()
                         }
                     )
-                }
-
-                // AI 채팅
-                composable(Route.AiChat.route) {
-                    com.a307.linkcare.feature.ai.ui.AiChatScreen()
                 }
             }
         }
