@@ -10,6 +10,15 @@ plugins {
 android {
   compileSdk 36
 
+  signingConfigs {
+    debug {
+      storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
+      storePassword "android"
+      keyAlias "androiddebugkey"
+      keyPassword "android"
+    }
+  }
+
   defaultConfig {
     applicationId "com.a307.linkcare"
     minSdk 30
@@ -19,6 +28,10 @@ android {
   }
 
   buildTypes {
+    debug {
+      signingConfig signingConfigs.debug
+      debuggable true
+    }
     release {
       minifyEnabled true
       shrinkResources true
@@ -55,7 +68,7 @@ android {
 
     }
   }
-  namespace 'com.linkcare.linkcarewear'
+  namespace 'com.a307.linkcare'
 }
 
 kotlin {
