@@ -132,11 +132,19 @@ class CareGroupHomeViewModel @Inject constructor(
     private val _healthFeedbackMap = MutableStateFlow<Map<Int, HealthSummaryResponse>>(emptyMap())
     val healthFeedbackMap: StateFlow<Map<Int, HealthSummaryResponse>> = _healthFeedbackMap
 
-    fun loadHealthFeedback(userSeq: Int) {
+    private val _isLoadingHealthFeedback = MutableStateFlow(false)
+    val isLoadingHealthFeedback: StateFlow<Boolean> = _isLoadingHealthFeedback
+
+    fun clearHealthFeedback() {
+        _healthFeedbackMap.value = emptyMap()
+    }
+
+    fun loadHealthFeedback(userSeq: Int, date: LocalDate? = null) {
         viewModelScope.launch {
             try {
-                Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq")
-                val feedback = repo.getHealthFeedback(userSeq)
+                val targetDate = date ?: LocalDate.now()
+                Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq, date=$targetDate")
+                val feedback = repo.getHealthFeedback(userSeq, targetDate)
                 if (feedback != null) {
                     Log.d("CareGroupHomeVM", "Received health feedback for userSeq=$userSeq: ${feedback.status}")
                     _healthFeedbackMap.value = _healthFeedbackMap.value + (userSeq to feedback)
@@ -150,10 +158,31 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    fun loadHealthFeedbackForMembers(userSeqs: List<Int>) {
-        Log.d("CareGroupHomeVM", "loadHealthFeedbackForMembers called with ${userSeqs.size} members")
-        userSeqs.forEach { userSeq ->
-            loadHealthFeedback(userSeq)
+    fun loadHealthFeedbackForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
+        Log.d("CareGroupHomeVM", "loadHealthFeedbackForMembers called with ${userSeqs.size} members, date=$date")
+        _isLoadingHealthFeedback.value = true
+
+        viewModelScope.launch {
+            try {
+                val targetDate = date ?: LocalDate.now()
+                userSeqs.forEach { userSeq ->
+                    try {
+                        Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq, date=$targetDate")
+                        val feedback = repo.getHealthFeedback(userSeq, targetDate)
+                        if (feedback != null) {
+                            Log.d("CareGroupHomeVM", "Received health feedback for userSeq=$userSeq: ${feedback.status}")
+                            _healthFeedbackMap.value = _healthFeedbackMap.value + (userSeq to feedback)
+                        } else {
+                            Log.d("CareGroupHomeVM", "No health feedback for userSeq=$userSeq")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("CareGroupHomeVM", "Error loading health feedback for userSeq=$userSeq", e)
+                        e.printStackTrace()
+                    }
+                }
+            } finally {
+                _isLoadingHealthFeedback.value = false
+            }
         }
     }
 }
