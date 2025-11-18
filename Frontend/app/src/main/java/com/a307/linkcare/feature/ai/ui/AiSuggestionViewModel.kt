@@ -144,8 +144,9 @@ class AiSuggestionViewModel @Inject constructor(
                         val firstMessage = messages[0]
                         _quickNudgeMessage.value = firstMessage
 
-                        // 캐시 저장 (다음 인덱스는 1)
-                        nudgeCache[cacheKey] = messages to 1
+                        // 캐시 저장 (다음 인덱스 계산)
+                        val nextIndex = if (messages.size > 1) 1 else 0
+                        nudgeCache[cacheKey] = messages to nextIndex
 
                         Log.d(tag, "[QUICK_NUDGE] ✅ 모델 응답 캐싱: 총 ${messages.size}개 문장")
                         Log.d(tag, "[QUICK_NUDGE] 📤 첫 문장 출력: $firstMessage")
@@ -212,8 +213,9 @@ class AiSuggestionViewModel @Inject constructor(
                         val firstMessage = messages[0]
                         _quickNudgeMessage.value = firstMessage
 
-                        // 캐시 저장 (다음 인덱스는 1)
-                        nudgeCache[cacheKey] = messages to 1
+                        // 캐시 저장 (다음 인덱스 계산)
+                        val nextIndex = if (messages.size > 1) 1 else 0
+                        nudgeCache[cacheKey] = messages to nextIndex
 
                         Log.d(tag, "[QUICK_WELLNESS_NUDGE] ✅ 모델 응답 캐싱: 총 ${messages.size}개 문장")
                         Log.d(tag, "[QUICK_WELLNESS_NUDGE] 📤 첫 문장 출력: $firstMessage")

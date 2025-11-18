@@ -108,14 +108,18 @@ class AiModelLocalDataSource @Inject constructor(
      */
     private fun processQueue() {
         scope.launch {
-            queueMutex.withLock {
-                // 이미 처리 중이면 중복 실행 방지
+            // 이미 처리 중이면 중복 실행 방지
+            val shouldProcess = queueMutex.withLock {
                 if (isProcessing) {
                     Log.d(tag, "[QUEUE] 이미 처리 중, 스킵")
-                    return@launch
+                    false
+                } else {
+                    isProcessing = true
+                    true
                 }
-                isProcessing = true
             }
+
+            if (!shouldProcess) return@launch
 
             while (true) {
                 val task = queueMutex.withLock {

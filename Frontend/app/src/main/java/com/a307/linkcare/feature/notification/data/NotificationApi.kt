@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.notification.data
 
+import com.a307.linkcare.feature.notification.domain.AlarmResponse
 import com.a307.linkcare.feature.notification.domain.NotificationResponse
 import com.a307.linkcare.feature.notification.domain.SaveNotificationRequest
 import retrofit2.Response
@@ -39,5 +40,15 @@ interface NotificationApi {
     @POST("/api/alarms/save")
     suspend fun saveNotification(
         @Body request: SaveNotificationRequest
+    ): Response<Unit>
+
+    // 안 읽은 알림 조회
+    @GET("/api/alarms/unread")
+    suspend fun getUnreadAlarms(): Response<List<AlarmResponse>>
+
+    // 알림 읽음 처리
+    @PATCH("/api/alarms/{alarmId}/read")
+    suspend fun markAlarmAsRead(
+        @Path("alarmId") alarmId: Long
     ): Response<Unit>
 }

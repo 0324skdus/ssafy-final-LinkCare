@@ -162,6 +162,21 @@ class SendMessageUseCase @Inject constructor(
         // Priority 2: 목표 문장 수 달성
         when (perspective) {
             ModelPerspective.SELF -> {
+                // SELF 모델 특별 처리: 숫자 없는 완전한 문장이 생성되면 즉시 종료
+                if (sentences.isNotEmpty()) {
+                    val firstSentence = sentences[0].trim()
+                    val hasNoNumbers = !firstSentence.contains(Regex("\\d"))
+                    val hasEndMarker = hasTextEndMarker(rawText)
+                    val isLongEnough = firstSentence.length >= 10  // 최소 10자 이상
+
+                    if (hasNoNumbers && hasEndMarker && isLongEnough) {
+                        android.util.Log.d("SendMessageUseCase", "[SELF_EARLY_STOP] ✅ 숫자 없는 문장 감지, 조기 종료")
+                        android.util.Log.d("SendMessageUseCase", "[SELF_EARLY_STOP] 문장: $firstSentence")
+                        return true
+                    }
+                }
+
+                // 기존 로직: [1SENT] 태그 확인
                 val hasSelfTag = rawText.contains("[1SENT]")
                 val hasEndMarker = hasTextEndMarker(rawText)
                 if (hasSelfTag && hasEndMarker && sentences.size >= 1) {

@@ -60,20 +60,17 @@ class AiCommentService @Inject constructor(
      */
     suspend fun generateAndSaveCareGroupComments(): Result<List<String>> {
         return try {
-            Log.d(tag, "[CARE_SELF] ① 케어 그룹 코멘트 생성 시작")
-
             // 1. 모든 케어 그룹 조회
             val careGroups = groupRepository.getMyGroups("CARE")
-            Log.d(tag, "[CARE_SELF] 케어 그룹 ${careGroups.size}개 발견")
 
             if (careGroups.isEmpty()) {
-                Log.d(tag, "[CARE_SELF] 케어 그룹이 없어 종료")
                 return Result.success(emptyList())
             }
 
+            Log.d(tag, "[CARE_SELF] 케어 그룹 ${careGroups.size}개 - 코멘트 생성 시작")
+
             // 2. 오늘 00:00부터 현재까지의 건강 데이터 수집
             val todayHealthData = collectTodayHealthData()
-            Log.d(tag, "[CARE_SELF] 오늘 건강 데이터: $todayHealthData")
 
             // 3. health_self 모델 로드
             val modelInfo = getModelInfo(ModelCategory.HEALTH, ModelPerspective.SELF)
@@ -82,39 +79,29 @@ class AiCommentService @Inject constructor(
             loadModelUseCase(modelInfo).getOrElse {
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
-            Log.d(tag, "[CARE_SELF] 모델 로드 완료: ${modelInfo.displayName}")
 
             val results = mutableListOf<String>()
 
             // 4. 각 그룹별로 코멘트 생성 및 저장
             for (group in careGroups) {
-                Log.d(tag, "[CARE_SELF] 그룹 처리: ${group.groupName} (${group.groupSeq})")
-
                 // 4-1. 그룹 상세 정보 조회 (ShareOptions 포함)
                 val groupDetail = groupRepository.getGroupDetail(group.groupSeq)
 
                 // 4-2. ShareOptions에 따라 데이터 필터링
-                val filteredData = filterHealthDataByPermissions(
-                    todayHealthData,
-                    groupDetail
-                )
-                Log.d(tag, "[CARE_SELF] 필터링된 데이터: $filteredData")
+                val filteredData = filterHealthDataByPermissions(todayHealthData, groupDetail)
 
                 // 4-3. AI 코멘트 생성
                 val comment = generateComment(filteredData, modelInfo)
-                Log.d(tag, "[CARE_SELF] 생성된 코멘트: $comment")
+                Log.d(tag, "[CARE_SELF] 생성: $comment")
 
                 // 4-4. 서버에 저장
                 val saveResult = saveCommentToServer(group.groupSeq, comment)
                 if (saveResult.isSuccess) {
                     results.add("${group.groupName}: $comment")
-                    Log.d(tag, "[CARE_SELF] ✅ 저장 성공: ${group.groupName}")
-                } else {
-                    Log.e(tag, "[CARE_SELF] ❌ 저장 실패: ${group.groupName}")
                 }
             }
 
-            Log.d(tag, "[CARE_SELF] ✅ 완료: ${results.size}/${careGroups.size}개 성공")
+            Log.d(tag, "[CARE_SELF] ✅ 완료: ${results.size}/${careGroups.size}개")
             Result.success(results)
         } catch (e: Exception) {
             Log.e(tag, "[CARE_SELF] ❌ 에러", e)
@@ -131,20 +118,17 @@ class AiCommentService @Inject constructor(
      */
     suspend fun generateAndSaveHealthGroupComments(): Result<List<String>> {
         return try {
-            Log.d(tag, "[WELLNESS_SELF] ② 헬스 그룹 코멘트 생성 시작")
-
             // 1. 모든 헬스 그룹 조회
             val healthGroups = groupRepository.getMyGroups("HEALTH")
-            Log.d(tag, "[WELLNESS_SELF] 헬스 그룹 ${healthGroups.size}개 발견")
 
             if (healthGroups.isEmpty()) {
-                Log.d(tag, "[WELLNESS_SELF] 헬스 그룹이 없어 종료")
                 return Result.success(emptyList())
             }
 
+            Log.d(tag, "[WELLNESS_SELF] 헬스 그룹 ${healthGroups.size}개 - 코멘트 생성 시작")
+
             // 2. 오늘 00:00부터 현재까지의 운동 데이터 수집
             val todayHealthData = collectTodayHealthData()
-            Log.d(tag, "[WELLNESS_SELF] 오늘 운동 데이터: $todayHealthData")
 
             // 3. wellness_self 모델 로드
             val modelInfo = getModelInfo(ModelCategory.WELLNESS, ModelPerspective.SELF)
@@ -153,36 +137,29 @@ class AiCommentService @Inject constructor(
             loadModelUseCase(modelInfo).getOrElse {
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
-            Log.d(tag, "[WELLNESS_SELF] 모델 로드 완료: ${modelInfo.displayName}")
 
             val results = mutableListOf<String>()
 
             // 4. 각 그룹별로 코멘트 생성 및 저장
             for (group in healthGroups) {
-                Log.d(tag, "[WELLNESS_SELF] 그룹 처리: ${group.groupName} (${group.groupSeq})")
-
                 // 4-1. 그룹 상세 정보 조회 (목표값 포함)
                 val groupDetail = groupRepository.getGroupDetail(group.groupSeq)
 
                 // 4-2. 목표값 추가
                 val dataWithGoal = addGoalData(todayHealthData, groupDetail.goalCriteria)
-                Log.d(tag, "[WELLNESS_SELF] 목표값 포함 데이터: $dataWithGoal")
 
                 // 4-3. AI 코멘트 생성
                 val comment = generateComment(dataWithGoal, modelInfo)
-                Log.d(tag, "[WELLNESS_SELF] 생성된 코멘트: $comment")
+                Log.d(tag, "[WELLNESS_SELF] 생성: $comment")
 
                 // 4-4. 서버에 저장
                 val saveResult = saveCommentToServer(group.groupSeq, comment)
                 if (saveResult.isSuccess) {
                     results.add("${group.groupName}: $comment")
-                    Log.d(tag, "[WELLNESS_SELF] ✅ 저장 성공: ${group.groupName}")
-                } else {
-                    Log.e(tag, "[WELLNESS_SELF] ❌ 저장 실패: ${group.groupName}")
                 }
             }
 
-            Log.d(tag, "[WELLNESS_SELF] ✅ 완료: ${results.size}/${healthGroups.size}개 성공")
+            Log.d(tag, "[WELLNESS_SELF] ✅ 완료: ${results.size}/${healthGroups.size}개")
             Result.success(results)
         } catch (e: Exception) {
             Log.e(tag, "[WELLNESS_SELF] ❌ 에러", e)
@@ -628,18 +605,59 @@ class AiCommentService @Inject constructor(
      * 3문장 응답 파싱
      */
     private fun parseSentences(text: String, expectedCount: Int): List<String> {
-        // 줄바꿈이나 마침표로 분리
-        val sentences = text.split("\n", ".", "!", "?")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .take(expectedCount)
+        Log.d(tag, "[PARSE_SENTENCES] 입력: $text")
 
-        return if (sentences.size == expectedCount) {
+        // 1. ※ 기호나 번호 패턴으로 분리 (우선)
+        // 예: "※ 1번 문장입니다 ※ 2번 문장입니다" → ["1번 문장입니다", "2번 문장입니다"]
+        // 예: "1. 첫 번째 2. 두 번째 3. 세 번째" → ["첫 번째", "두 번째", "세 번째"]
+        val markerPattern = Regex("""※\s*\d+번?\s+""")
+        val numberPattern = Regex("""\d+\.\s+""")
+
+        var sentences = when {
+            markerPattern.containsMatchIn(text) -> {
+                // ※ 기호로 분리
+                text.split(markerPattern)
+                    .map { it.replace("※", "").trim() }
+                    .filter { it.isNotBlank() }
+            }
+            numberPattern.containsMatchIn(text) -> {
+                // 숫자 번호로 분리
+                text.split(numberPattern)
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+            }
+            else -> {
+                // 2. 기본 방식: 줄바꿈이나 마침표로 분리
+                text.split("\n", ".", "!", "?")
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+            }
+        }
+
+        // 3. 각 문장에서 남은 ※ 제거 및 정리
+        sentences = sentences.map { sentence ->
+            sentence
+                .replace("※", "")
+                .replace(Regex("""\d+번?\s+"""), "")  // "1번", "2번" 등 제거
+                .trim()
+        }.filter { it.isNotBlank() }
+
+        // 4. 기대한 개수만큼 반환
+        val result = if (sentences.size >= expectedCount) {
+            sentences.take(expectedCount)
+        } else if (sentences.isNotEmpty()) {
             sentences
         } else {
-            // 기대한 개수가 안 나오면 전체를 단일 문장으로
-            listOf(text.trim())
+            // 파싱 실패 시 전체를 단일 문장으로
+            listOf(text.replace("※", "").trim())
         }
+
+        Log.d(tag, "[PARSE_SENTENCES] 결과 (${result.size}개):")
+        result.forEachIndexed { index, s ->
+            Log.d(tag, "[PARSE_SENTENCES]   ${index + 1}. $s")
+        }
+
+        return result
     }
 
     /**

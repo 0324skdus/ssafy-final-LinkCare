@@ -23,24 +23,15 @@ class LoadModelUseCase @Inject constructor(
         Log.d(tag, "[USECASE] invoke() 호출")
         Log.d(tag, "[USECASE] 요청 모델: ${modelInfo.displayName}")
 
-        // 기존 모델이 로드되어 있으면 먼저 언로드
+        // 우선순위 큐 시스템이 자동으로 모델 교체 처리
         if (repository.isModelLoaded()) {
             val currentModel = repository.getCurrentModel()
-            Log.d(tag, "[USECASE] 기존 모델 발견: ${currentModel?.displayName}")
-            Log.d(tag, "[USECASE] 기존 모델 언로드 시작...")
-
-            val unloadResult = repository.unloadModel()
-            if (unloadResult.isFailure) {
-                Log.e(tag, "[USECASE] ❌ 기존 모델 언로드 실패")
-                Log.e(tag, "========================================")
-                return unloadResult
-            }
-            Log.d(tag, "[USECASE] ✅ 기존 모델 언로드 완료")
+            Log.d(tag, "[USECASE] 현재 로드된 모델: ${currentModel?.displayName}")
         } else {
             Log.d(tag, "[USECASE] 로드된 모델 없음")
         }
 
-        Log.d(tag, "[USECASE] 새 모델 로드 시작...")
+        Log.d(tag, "[USECASE] 모델 로드 요청 (우선순위 큐 시스템)...")
         val result = repository.loadModel(modelInfo)
 
         if (result.isSuccess) {

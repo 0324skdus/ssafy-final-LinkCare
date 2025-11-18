@@ -236,16 +236,17 @@ fun HealthMemberDetail(
                 // ④ AI 제안 로드 (wellness-other)
                 val suggestionViewModel: AiSuggestionViewModel = hiltViewModel()
                 val aiSuggestions by suggestionViewModel.healthGroupSuggestions.collectAsState()
+                val isLoading by suggestionViewModel.isLoading.collectAsState()
                 val scope = rememberCoroutineScope()
 
                 // 편지쓰기 버튼
                 Button(
-                    enabled = !isSelf,
+                    enabled = !isSelf && !isLoading,
                     onClick = {
-                        showLetter = true
-                        // AI 제안 로드 (목표값 포함)
+                        // AI 제안 먼저 로드한 후 다이얼로그 열기
                         scope.launch {
                             suggestionViewModel.loadHealthGroupSuggestions(member.userPk, goalCriteria)
+                            showLetter = true
                         }
                     },
                     modifier = Modifier
@@ -255,12 +256,20 @@ fun HealthMemberDetail(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = main)
                 ) {
-                    Text(
-                        "💌 편지쓰기",
-                        color = white,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = white,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "💌 편지쓰기",
+                            color = white,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
 
                 if (showLetter) {

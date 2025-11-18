@@ -52,7 +52,6 @@ import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 import kotlinx.coroutines.launch
-import com.a307.linkcare.feature.auth.data.TokenStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -122,8 +121,7 @@ fun CareGroupHome(
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel(),
-    myPageViewModel: MyPageViewModel = hiltViewModel()
-    syncViewModel: HealthSyncViewModel = hiltViewModel(),
+    myPageViewModel: MyPageViewModel = hiltViewModel(),
     aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑤ AI 제안 추가
 ) {
     val context = LocalContext.current
@@ -245,13 +243,6 @@ fun CareGroupHome(
         }
     }
 
-    val detail by groupViewModel.detail.collectAsState()
-    val membersResponse by groupViewModel.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
-    val groupName by groupViewModel.groupName.collectAsState()
-    val totalStats by groupViewModel.totalActivityStats.collectAsState()
-    val healthData by healthViewModel.healthData.collectAsState()
-    val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
-
     // 날짜 변경 시 이전 health feedback 클리어
     LaunchedEffect(selectedDate) {
         healthViewModel.clearHealthFeedback()
@@ -319,12 +310,6 @@ fun CareGroupHome(
             )
         }
     }
-
-    // 날짜/리스트 상태
-    val today = remember { LocalDate.now() }
-    val minDate = remember { today.minusYears(1) }   // 1년 전
-    var selectedDate by rememberSaveable { mutableStateOf(today) }
-    var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
