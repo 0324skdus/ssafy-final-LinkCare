@@ -3,6 +3,7 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
@@ -40,6 +42,8 @@ import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
 import com.a307.linkcare.feature.caregroup.data.endOfWeek
 import com.a307.linkcare.feature.caregroup.data.startOfWeek
+import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -77,13 +81,55 @@ fun HealthGroupHome(
     groupSeq: Long,
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
-    goalVm: HealthGroupHomeViewModel = hiltViewModel()
+    goalVm: HealthGroupHomeViewModel = hiltViewModel(),
+    myPageViewModel: MyPageViewModel = hiltViewModel()
 ) {
+    val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
+    val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
+    val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
+
+    val characterMap = remember(groupChars) {
+        groupChars.associateBy({ it.userId }, { it })
+    }
+    LaunchedEffect(characterMap) {
+        Log.d("HealthGroupHome", "characterMap keys = ${characterMap.keys}")
+    }
+
+    LaunchedEffect(groupSeq) {
+        myPageViewModel.loadGroupCharacters(groupSeq)
+    }
+
+    when {
+        groupLoad -> CircularProgressIndicator()
+
+        groupError != null -> Text("에러: $groupError")
+
+        groupChars.isNotEmpty() -> {
+            Column {
+                Text("그룹 캐릭터 ${groupChars.size}명:")
+
+                groupChars.forEach { char ->
+                    Text("• ${char.userName} / ${char.petName}")
+
+                    AsyncImage(
+                        model = char.mainCharacterImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp)
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
     val today = remember { LocalDate.now() }
 
     val detail by vm.detail.collectAsStateWithLifecycle()
     val membersResponse = detail?.members ?: emptyList()
     val goalCriteria = detail?.goalCriteria
+    val groupCharResponse: List<GroupCharacterResponse> =
+        myPageViewModel.groupCharacters.collectAsState().value ?: emptyList()
 
     // --- ViewModel 상태 구독 ---
     val totalStats by goalVm.totalStats.collectAsStateWithLifecycle()
@@ -92,8 +138,13 @@ fun HealthGroupHome(
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
     // -------------------------
 
-    val members = remember(membersResponse) {
+    val members = remember(membersResponse, characterMap) {
         membersResponse.map { m ->
+            val charInfo = characterMap[m.userSeq]
+            val avatarUrl = charInfo?.mainCharacterImageUrl
+            val bgUrl = charInfo?.mainBackgroundImageUrl
+            val petName = charInfo?.petName
+
             Member(
                 name = m.userName,
                 avatarRes = R.drawable.char_bear_1, // TODO: 이미지 적용
@@ -171,10 +222,8 @@ fun HealthGroupHome(
 
     // GoalState 변화 감지
     LaunchedEffect(goalState) {
-        android.util.Log.d("HealthGroupHome", "📱 UI: GoalState 변화 감지 - ${goalState::class.simpleName}")
         when (val state = goalState) {
             is HealthGroupHomeViewModel.GoalState.Success -> {
-                android.util.Log.d("HealthGroupHome", "✅ UI: Success 상태 처리")
                 aiGoals = state.goals
 
                 val metricType = state.goals.selectedMetricType
@@ -344,8 +393,7 @@ fun HealthGroupHome(
 
                     val (progress, goal) = when (currentMetricType) {
                         "DISTANCE" -> {
-                            // 이동거리는 Double로 유지하여 소수점 표시
-                            val progressKm = (activity.totalDistances / 1000.0) // m -> km 변환
+                            val progressKm = (activity.totalDistances / 1000.0)
                             val weeklyGroupGoal = goals?.goalDistance
                             val numberOfMembers = membersWithActivity.size.coerceAtLeast(1)
                             val goalKm = if (weeklyGroupGoal != null) {
@@ -353,7 +401,6 @@ fun HealthGroupHome(
                             } else {
                                 member.goal.toDouble()
                             }
-                            // Int로 변환하되, 나중에 MemberRowHealth에서 소수점 표시 위해 원래 값 보존
                             (progressKm * 100.0).toInt() to (goalKm * 100.0).toInt() // 100배로 저장 (소수점 2자리 유지)
                         }
                         else -> {
@@ -387,8 +434,18 @@ fun HealthGroupHome(
                         else -> ""
                     }
 
+                    val charInfo = characterMap[item.memberInfo.userPk]
+                    val avatarUrl = charInfo?.mainCharacterImageUrl
+                    val bgUrl = charInfo?.mainBackgroundImageUrl
+                    val petName = charInfo?.petName
+                    Log.d("HealthGroupHome", "$charInfo, avatarUrl = $avatarUrl")
+
+
                     MemberRowHealth(
-                        m = member.copy(progresses = progress, goal = goal), // 실제 진행률과 목표로 업데이트
+                        m = member.copy(progresses = progress, goal = goal),
+                        avatarUrl = avatarUrl,
+                        backgroundUrl = bgUrl,
+                        petName = petName,
                         bubbleVisible = expandedMemberName == member.name,
                         onAvatarToggle = {
                             expandedMemberName =

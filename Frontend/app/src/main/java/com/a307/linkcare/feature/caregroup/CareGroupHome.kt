@@ -39,10 +39,15 @@ import com.a307.linkcare.feature.healthgroup.formatDuration
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
+import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
+
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -102,7 +107,8 @@ fun CareGroupHome(
     modifier: Modifier = Modifier,
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
-    syncViewModel: HealthSyncViewModel = hiltViewModel()
+    syncViewModel: HealthSyncViewModel = hiltViewModel(),
+    myPageViewModel: MyPageViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -115,11 +121,50 @@ fun CareGroupHome(
         healthPermissionViewModel.checkPermissions()
     }
 
+    val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
+    val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
+    val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
+
+    val characterMap = remember(groupChars) {
+        groupChars.associateBy({ it.userId }, { it })
+    }
+    LaunchedEffect(characterMap) {
+//        Log.d("CareGroupHome", "characterMap keys = ${characterMap.keys}")
+    }
+
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
+        myPageViewModel.loadGroupCharacters(groupSeq)
         groupViewModel.loadGroupDetail(groupSeq)
         healthViewModel.loadGroupStepStatistics(groupSeq)
     }
+
+    when {
+        groupLoad -> CircularProgressIndicator()
+
+        groupError != null -> Text("에러: $groupError")
+
+        groupChars.isNotEmpty() -> {
+            Column {
+                Text("그룹 캐릭터 ${groupChars.size}명:")
+
+                groupChars.forEach { char ->
+                    Text("• ${char.userName} / ${char.petName}")
+
+                    AsyncImage(
+                        model = char.mainCharacterImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp)
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    val groupCharResponse: List<GroupCharacterResponse> =
+        myPageViewModel.groupCharacters.collectAsState().value ?: emptyList()
 
 //    val context = LocalContext.current
     val currentUserName = remember {
@@ -144,7 +189,7 @@ fun CareGroupHome(
     }
 
     val detail by groupViewModel.detail.collectAsState()
-    val membersResponse by groupViewModel.members.collectAsState()   // groupDetail.members 매핑해둔 StateFlow
+    val membersResponse by groupViewModel.members.collectAsState()
     val groupName by groupViewModel.groupName.collectAsState()
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
@@ -169,22 +214,23 @@ fun CareGroupHome(
             healthViewModel.loadHealthFeedbackForMembers(userSeqs, selectedDate)
         }
     }
-
-    val members = remember(membersResponse, stepUiState, healthFeedbackMap, isLoadingHealthFeedback) {
-        Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
-
-        // 🔹 /step-statistics에서 가져온 값들
-        val totalSteps = stepUiState.goal                // = totalSteps
+    val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
+        // 총 거리
+        val totalSteps = stepUiState.goal
         val stepsByUserSeq = stepUiState.members.associateBy(
-            keySelector = { it.userSeq },               // DTO: userSeq
-            valueTransform = { it.steps }               // DTO: steps
+            keySelector = { it.userSeq },
+            valueTransform = { it.steps }
         )
 
         // step 통계가 아직 없을 때는 기존 더미값 유지할지 여부
         val hasStats = totalSteps > 0 && stepsByUserSeq.isNotEmpty()
 
         membersResponse.map { m ->
-            Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+            // 캐릭터
+            val charInfo = characterMap[m.userSeq]
+            val avatarUrl = charInfo?.mainCharacterImageUrl
+            val bgUrl = charInfo?.mainBackgroundImageUrl
+            val petName = charInfo?.petName
 
             val steps = if (hasStats) {
                 stepsByUserSeq[m.userSeq] ?: 0
@@ -206,6 +252,8 @@ fun CareGroupHome(
             } else {
                 feedback?.summary ?: "오늘 하루도 파이팅."
             }
+
+            Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
 
             Member(
                 name = m.userName,
@@ -271,9 +319,8 @@ fun CareGroupHome(
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }
-        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members on date $selectedDate")
-        if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
+      if (userPks.isNotEmpty()) {
+            healthViewModel.loadHealthDataForMembers(userPks)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -313,8 +360,7 @@ fun CareGroupHome(
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
     val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
-        Log.d("CareGroupHome", "healthData size = ${healthData.size}, keys = ${healthData.keys}")
-        todayMembers.associate { m ->
+       todayMembers.associate { m ->
             Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
             val health = if (m.userPk > 0) {
                 val apiData = healthData[m.userPk.toInt()]
@@ -401,8 +447,16 @@ fun CareGroupHome(
 
                 // 멤버 리스트
                 itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                    val charInfo = characterMap[m.userPk]
+                    val avatarUrl = charInfo?.mainCharacterImageUrl
+                    val bgUrl = charInfo?.mainBackgroundImageUrl
+                    val petName = charInfo?.petName
+
                     MemberRowCare(
                         m = m,
+                        avatarUrl = avatarUrl,
+                        backgroundUrl = bgUrl,
+                        petName = petName,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
                             expandedMemberName =
@@ -412,7 +466,6 @@ fun CareGroupHome(
                         isSelf = (m.name == currentUserName)
                     )
 
-                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
@@ -542,11 +595,9 @@ fun CareGroupHome(
 
             selectedMember?.let { m ->
 
-                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드 (선택된 날짜 기준)
-                LaunchedEffect(m.userPk, selectedDate) {
+                LaunchedEffect(m.userPk) {
                     if (m.userPk > 0) {
-                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}, date=$selectedDate")
-                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
+                        healthViewModel.loadHealthData(m.userPk.toInt())
                     }
                 }
 
