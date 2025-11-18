@@ -99,6 +99,10 @@ data class HealthToday(
     val heartRates: List<HeartRate> = emptyList()
 )
 
+internal enum class HealthStatus {
+    Good, Warning, Bad, Neutral
+}
+
 @Composable
 fun CareMemberDetail(
     member: Member,
@@ -417,11 +421,11 @@ fun CareMemberDetail(
 /* ---------- 아코디언 컴포넌트 ---------- */
 
 @Composable
-private fun HealthAccordion(
+internal fun HealthAccordion(
     icon: String,
     title: String,
     summary: String,
-    status: String?,
+    status: HealthStatus,
     content: @Composable ColumnScope.() -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -462,7 +466,7 @@ private fun HealthAccordion(
                                 fontWeight = FontWeight.Bold,
                                 color = black
                             )
-                            if (status != null) {
+                            if (status != HealthStatus.Neutral) {
                                 StatusBadge(status)
                             }
                         }
@@ -509,7 +513,7 @@ private fun HealthAccordion(
 }
 
 @Composable
-private fun ActivitySessionCard(session: ExerciseSession, index: Int) {
+internal fun ActivitySessionCard(session: ExerciseSession, index: Int) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFF8F9FA),
@@ -546,7 +550,7 @@ private fun ActivitySessionCard(session: ExerciseSession, index: Int) {
 }
 
 @Composable
-private fun MetricItem(label: String, value: String) {
+internal fun MetricItem(label: String, value: String) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -567,7 +571,7 @@ private fun MetricItem(label: String, value: String) {
 }
 
 @Composable
-private fun DetailRow(
+internal fun DetailRow(
     label: String,
     value: String,
     bold: Boolean = false,
@@ -593,7 +597,7 @@ private fun DetailRow(
 }
 
 @Composable
-private fun EmptyDataText() {
+internal fun EmptyDataText() {
     Text(
         "오늘 데이터가 없습니다",
         style = MaterialTheme.typography.bodyMedium,
@@ -603,103 +607,83 @@ private fun EmptyDataText() {
 }
 
 @Composable
-private fun StatusBadge(status: String) {
-    val (bgColor, textColor) = when {
-        status.contains("정상") || status.contains("적정") || status.contains("양호") ->
-            Color(0xFFDCFCE7) to Color(0xFF16A34A)
-        status.contains("주의") || status.contains("부족") || status.contains("미달") ->
-            Color(0xFFFEF3C7) to Color(0xFFEA580C)
-        status.contains("위험") || status.contains("과다") ->
-            Color(0xFFFEE2E2) to Color(0xFFDC2626)
-        else -> Color(0xFFE5E7EB) to Color(0xFF6B7280)
+internal fun StatusBadge(status: HealthStatus) {
+    val (text, color) = when (status) {
+        HealthStatus.Good -> "좋음" to Color(0xFF34C759)
+        HealthStatus.Warning -> "주의" to Color(0xFFFF9500)
+        HealthStatus.Bad -> "나쁨" to Color(0xFFFF3B30)
+        HealthStatus.Neutral -> "" to Color.Transparent
     }
-
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = bgColor
-    ) {
+    if (text.isNotEmpty()) {
         Text(
-            status,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = textColor,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 11.sp
+            text = text,
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .background(color.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 6.dp, vertical = 3.dp)
         )
+        Spacer(Modifier.width(8.dp))
     }
 }
 
 /* ---------- 요약 생성 함수 ---------- */
 
-private fun getBloodPressureSummary(bps: List<BloodPressure>): String {
+internal fun getBloodPressureSummary(bps: List<BloodPressure>): String {
     if (bps.isEmpty()) return "오늘 측정 기록이 없습니다"
     val avgSys = bps.map { it.systolic }.average().roundToInt()
     val avgDia = bps.map { it.diastolic }.average().roundToInt()
     return "평균 $avgSys/$avgDia mmHg (${bps.size}회 측정)"
 }
 
-private fun getBloodPressureStatus(bps: List<BloodPressure>): String? {
-    if (bps.isEmpty()) return null
+internal fun getBloodPressureStatus(bps: List<BloodPressure>): HealthStatus {
+    if (bps.isEmpty()) return HealthStatus.Neutral
     val avgSys = bps.map { it.systolic }.average().roundToInt()
     val avgDia = bps.map { it.diastolic }.average().roundToInt()
     return when {
-        avgSys < 120 && avgDia < 80 -> "정상"
-        avgSys < 140 && avgDia < 90 -> "주의"
-        else -> "위험"
+        avgSys < 120 && avgDia < 80 -> HealthStatus.Good
+        avgSys < 140 && avgDia < 90 -> HealthStatus.Warning
+        else -> HealthStatus.Bad
     }
 }
 
-//private fun getGlucoseSummary(logs: List<GlucoseLog>): String {
-//    if (logs.isEmpty()) return "오늘 측정 기록이 없습니다"
-//    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
-//    return "평균 $avgGlucose mg/dL (${logs.size}회 측정)"
-//}
-//
-//private fun getGlucoseStatus(logs: List<GlucoseLog>): String? {
-//    if (logs.isEmpty()) return null
-//    val avgGlucose = logs.map { it.mgDl }.average().roundToInt()
-//    return when {
-//        avgGlucose < 100 -> "정상"
-//        avgGlucose < 126 -> "주의"
-//        else -> "위험"
-//    }
-//}
 
-private fun getWaterSummary(intakes: List<WaterIntake>, goalMl: Int): String {
+internal fun getWaterSummary(intakes: List<WaterIntake>, goalMl: Int): String {
     if (intakes.isEmpty()) return "오늘 기록이 없습니다"
     val totalMl = intakes.sumOf { it.amount.toInt() }
     val percent = ((totalMl.toFloat() / goalMl) * 100).roundToInt()
     return "${(totalMl / 1000f).round1()} L 섭취 (목표의 $percent%)"
 }
 
-private fun getWaterStatus(intakes: List<WaterIntake>, goalMl: Int): String? {
-    if (intakes.isEmpty()) return null
+internal fun getWaterStatus(intakes: List<WaterIntake>, goalMl: Int): HealthStatus {
+    if (intakes.isEmpty()) return HealthStatus.Neutral
     val totalMl = intakes.sumOf { it.amount.toInt() }
     return when {
-        totalMl >= goalMl -> "양호"
-        totalMl >= goalMl * 0.7f -> "적정"
-        else -> "부족"
+        totalMl >= goalMl -> HealthStatus.Good
+        totalMl >= goalMl * 0.7f -> HealthStatus.Warning
+        else -> HealthStatus.Bad
     }
 }
 
-private fun getSleepSummary(sleeps: List<Sleep>): String {
+internal fun getSleepSummary(sleeps: List<Sleep>): String {
     if (sleeps.isEmpty()) return "오늘 수면 기록이 없습니다"
     val totalHours = getTotalSleepHours(sleeps)
     return "$totalHours 수면 (${sleeps.size}회)"
 }
 
-private fun getSleepStatus(sleeps: List<Sleep>): String? {
-    if (sleeps.isEmpty()) return null
+internal fun getSleepStatus(sleeps: List<Sleep>): HealthStatus {
+    if (sleeps.isEmpty()) return HealthStatus.Neutral
     val totalMillis = sleeps.sumOf { it.duration }
     val hours = totalMillis / 3600000f  // 밀리초 → 시간 (1000 * 60 * 60)
     return when {
-        hours >= 7 && hours <= 9 -> "적정"
-        hours < 7 -> "부족"
-        else -> "과다"
+        hours >= 7 && hours <= 9 -> HealthStatus.Good
+        hours < 7 -> HealthStatus.Warning
+        else -> HealthStatus.Bad
     }
 }
 
-private fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): String {
+internal fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): String {
     if (exercises.isEmpty() && steps == 0) return "오늘 운동 기록이 없습니다"
     val totalCalories = exercises.sumOf { it.calories.toInt() }
     val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
@@ -710,19 +694,19 @@ private fun getActivitySummary(exercises: List<ExerciseSession>, steps: Int): St
     }
 }
 
-private fun getActivityStatus(exercises: List<ExerciseSession>): String? {
-    if (exercises.isEmpty()) return null
+internal fun getActivityStatus(exercises: List<ExerciseSession>): HealthStatus {
+    if (exercises.isEmpty()) return HealthStatus.Neutral
     val totalMin = exercises.sumOf { it.duration } / 60000  // 밀리초 → 분 (1000 * 60)
     return when {
-        totalMin >= 30 -> "양호"
-        totalMin >= 15 -> "보통"
-        else -> "미달"
+        totalMin >= 30 -> HealthStatus.Good
+        totalMin >= 15 -> HealthStatus.Warning
+        else -> HealthStatus.Bad
     }
 }
 
 /* ---------- 유틸 함수 ---------- */
 
-private fun getTotalSleepHours(sleeps: List<Sleep>): String {
+internal fun getTotalSleepHours(sleeps: List<Sleep>): String {
     val totalSeconds = sleeps.sumOf { it.duration } / 1000  // 밀리초 → 초
     val totalMinutes = totalSeconds / 60  // 초 → 분
     val hours = totalMinutes / 60
@@ -730,18 +714,18 @@ private fun getTotalSleepHours(sleeps: List<Sleep>): String {
     return "${hours}시간 ${mins}분"
 }
 
-private fun formatDuration(millis: Long): String {
+internal fun formatDuration(millis: Long): String {
     val totalSeconds = millis / 1000
     val min = totalSeconds / 60
     val sec = totalSeconds % 60
     return "${min}분 ${sec}초"
 }
 
-private fun formatTotalDuration(millis: Long): String {
+internal fun formatTotalDuration(millis: Long): String {
     val totalSeconds = millis / 1000
     val hours = totalSeconds / 3600
     val min = (totalSeconds % 3600) / 60
     return if (hours > 0) "${hours}시간 ${min}분" else "${min}분"
 }
 
-private fun Float.round1() = (this * 10).roundToInt() / 10f
+internal fun Float.round1() = (this * 10).roundToInt() / 10f
