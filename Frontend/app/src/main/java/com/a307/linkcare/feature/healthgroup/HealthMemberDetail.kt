@@ -57,7 +57,7 @@ fun HealthMemberDetail(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .fillMaxHeight(0.75f)
                 .padding(horizontal = 20.dp)
         ) {
             Column(
@@ -243,7 +243,7 @@ private fun HealthAccordion(
     status: String?,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) }
     val rotationAngle by animateFloatAsState(if (expanded) 180f else 0f)
 
     Card(

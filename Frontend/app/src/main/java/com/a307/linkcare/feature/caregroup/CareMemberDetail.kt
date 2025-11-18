@@ -108,7 +108,7 @@ fun CareMemberDetail(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)  // 화면 높이의 85%만 차지
+                .fillMaxHeight(0.75f)  // 화면 높이의 85%만 차지
                 .padding(horizontal = 20.dp)
         ) {
             Column(
