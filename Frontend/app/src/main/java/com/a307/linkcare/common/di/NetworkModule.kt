@@ -3,6 +3,7 @@ package com.a307.linkcare.common.di
 import android.content.Context
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
+import com.a307.linkcare.feature.health.data.HealthSyncApi
 import com.a307.linkcare.feature.notification.data.NotificationApi
 import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
@@ -108,5 +109,10 @@ object NetworkModule {
     @Singleton
     fun provideWorkoutApi(retrofit: Retrofit): WorkoutApi =
         retrofit.create(WorkoutApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHealthSyncApi(retrofit: Retrofit): HealthSyncApi =
+        retrofit.create(HealthSyncApi::class.java)
 
 }
