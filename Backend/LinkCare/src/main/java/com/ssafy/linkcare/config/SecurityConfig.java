@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/api/health/**",
                                 "/api/groups/generate-weekly-stats",
-                                "/api/groups/*/goals"
+                                "/api/groups/*/goals",
+                                "/api/ai/**"
 
                 ).permitAll()
                         .anyRequest().authenticated()

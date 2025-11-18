@@ -149,16 +149,28 @@ fun CareGroupHome(
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
     val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
+    val isLoadingHealthFeedback by healthViewModel.isLoadingHealthFeedback.collectAsState()
 
-    // 멤버 변경 시 health feedback 로드
-    LaunchedEffect(membersResponse) {
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 날짜 변경 시 이전 health feedback 클리어
+    LaunchedEffect(selectedDate) {
+        healthViewModel.clearHealthFeedback()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 health feedback 로드
+    LaunchedEffect(membersResponse, selectedDate) {
         if (membersResponse.isNotEmpty()) {
             val userSeqs = membersResponse.map { it.userSeq.toInt() }
-            healthViewModel.loadHealthFeedbackForMembers(userSeqs)
+            healthViewModel.loadHealthFeedbackForMembers(userSeqs, selectedDate)
         }
     }
 
-    val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
+    val members = remember(membersResponse, stepUiState, healthFeedbackMap, isLoadingHealthFeedback) {
         Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
 
         // 🔹 /step-statistics에서 가져온 값들
@@ -184,8 +196,16 @@ fun CareGroupHome(
 
             // 건강 피드백 가져오기
             val feedback = healthFeedbackMap[m.userSeq.toInt()]
-            val status = feedback?.status?.name ?: "GOOD"
-            val summary = feedback?.summary ?: "활동이 안정적이에요."
+            val status = if (isLoadingHealthFeedback) {
+                "LOADING"
+            } else {
+                feedback?.status?.name ?: "GOOD"
+            }
+            val summary = if (isLoadingHealthFeedback) {
+                "건강 상태 분석 중입니다..."
+            } else {
+                feedback?.summary ?: "오늘 하루도 파이팅."
+            }
 
             Member(
                 name = m.userName,
@@ -200,12 +220,6 @@ fun CareGroupHome(
             )
         }
     }
-
-    // 날짜/리스트 상태
-    val today = remember { LocalDate.now() }
-    val minDate = remember { today.minusYears(1) }   // 1년 전
-    var selectedDate by rememberSaveable { mutableStateOf(today) }
-    var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
     var expandedMemberName by remember { mutableStateOf<String?>(null) }

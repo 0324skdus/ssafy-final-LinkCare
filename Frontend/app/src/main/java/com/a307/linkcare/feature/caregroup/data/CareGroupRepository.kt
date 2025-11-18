@@ -106,9 +106,9 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
         }
     }
 
-    suspend fun getHealthFeedback(userSeq: Int): HealthSummaryResponse? {
+    suspend fun getHealthFeedback(userSeq: Int, date: LocalDate): HealthSummaryResponse? {
         return try {
-            val response = healthFeedbackApi.getHealthFeedback(userSeq)
+            val response = healthFeedbackApi.getHealthFeedback(userSeq, date)
             if (response.isSuccessful) {
                 response.body()
             } else {
