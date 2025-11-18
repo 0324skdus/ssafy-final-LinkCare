@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -51,6 +52,7 @@ fun GroupList(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val processedNotifications by viewModel.processedNotifications.collectAsState()
+    val groupImages by viewModel.groupImages.collectAsState()
 
     // 디버깅: notifications 변경 감지
     LaunchedEffect(notifications.size) {
@@ -203,15 +205,31 @@ fun GroupList(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // 기본 아이콘
-                                Image(
-                                    painter = painterResource(R.drawable.ic_launcher_foreground),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(37.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Fit
-                                )
+                                // 그룹 이미지
+                                val imageUrl = notification.relatedGroupSeq?.let { groupSeq ->
+                                    groupImages[groupSeq]
+                                }
+
+                                if (imageUrl != null) {
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = "그룹 이미지",
+                                        modifier = Modifier
+                                            .size(37.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    // 기본 아이콘
+                                    Image(
+                                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(37.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
 
                                 Spacer(Modifier.width(12.dp))
 
