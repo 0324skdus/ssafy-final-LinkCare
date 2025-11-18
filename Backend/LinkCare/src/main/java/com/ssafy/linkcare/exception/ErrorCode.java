@@ -93,6 +93,10 @@ public enum ErrorCode {
     INSUFFICIENT_DATA(HttpStatus.CONFLICT, "데이터가 부족합니다. 최근 3주 데이터가 필요합니다"),
     GOAL_NOT_FOUND(HttpStatus.NOT_FOUND, "이번 주 목표를 찾을 수 없습니다"),
 
+    // AI 코멘트 관련 에러
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "한줄평을 찾을 수 없습니다"),
+    NOT_GROUP_MEMBER_FOR_COMMENT(HttpStatus.FORBIDDEN, "해당 그룹의 멤버만 한줄평을 작성할 수 있습니다"),
+
     // 그룹 헤더 관련 에러
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요"),
 
