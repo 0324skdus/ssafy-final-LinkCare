@@ -1,6 +1,7 @@
 package com.ssafy.linkcare.shop.controller;
 
-import com.ssafy.linkcare.shop.dto.ShopResponseDto;
+import com.ssafy.linkcare.shop.dto.ShopBackgroundResponseDto;
+import com.ssafy.linkcare.shop.dto.ShopCharacterResponseDto;
 import com.ssafy.linkcare.shop.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +16,19 @@ public class ShopController {
     private final ShopService shopService;
 
     @GetMapping("/characters")
-    public ResponseEntity<ShopResponseDto> getShopCharacterList(Authentication authentication) {
+    public ResponseEntity<ShopCharacterResponseDto> getShopCharacterList(Authentication authentication) {
         Long userPk = Long.parseLong(authentication.getName());
-        ShopResponseDto response = shopService.getShopCharacterList(userPk);
+        ShopCharacterResponseDto response = shopService.getShopCharacterList(userPk);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/backgrounds")
+    public ResponseEntity<ShopBackgroundResponseDto> getShopBackgroundList(Authentication authentication) {
+        Long userPk = Long.parseLong(authentication.getName());
+        ShopBackgroundResponseDto response = shopService.getShopBackgroundList(userPk);
+        return ResponseEntity.ok(response);
+    }
+
 
     @PostMapping("/buy/character/{characterId}")
     public ResponseEntity<Void> buyCharacter(

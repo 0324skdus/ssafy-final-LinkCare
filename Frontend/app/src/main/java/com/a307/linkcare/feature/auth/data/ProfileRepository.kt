@@ -13,14 +13,16 @@ class ProfileRepository @Inject constructor(
         height: Float?,
         weight: Float?,
         gender: String,
-        exerciseStartYear: Int?
+        exerciseStartYear: Int?,
+        petName: String?
     ) {
         val body = UpdateProfileRequest(
             birth = birth,
             height = height,
             weight = weight,
             gender = gender,
-            exerciseStartYear = exerciseStartYear
+            exerciseStartYear = exerciseStartYear,
+            petName = petName
         )
 
         val res = api.updateProfile(body)

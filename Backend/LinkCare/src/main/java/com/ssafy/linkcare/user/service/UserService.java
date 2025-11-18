@@ -112,8 +112,9 @@ public class UserService {
             request.height(),
             request.weight(),
             request.birth(),
-                request.gender(),
-            request.exerciseStartYear()
+            request.gender(),
+            request.exerciseStartYear(),
+            request.petName()
         );
 
         log.info("프로필 업데이트 완료: userId={}, birth={}", userPk, request.birth());
@@ -129,7 +130,8 @@ public class UserService {
                 user.getHeight(),
                 user.getWeight(),
                 user.getGender(),
-                user.getExerciseStartYear()
+                user.getExerciseStartYear(),
+                user.getPetName()
         );
     }
 
@@ -145,6 +147,12 @@ public class UserService {
         log.info("FCM 토큰 업데이트 요청: userId={}, userName={}, 토큰길이={}",
                 userId, user.getName(), fcmToken != null ? fcmToken.length() : 0);
 
+        if (fcmToken != null && !fcmToken.isBlank()) {
+            // 1️⃣ 같은 토큰을 쓰고 있던 "다른 유저들"의 토큰을 전부 null 처리
+            userRepository.clearFcmTokenFromOtherUsers(fcmToken, userId);
+        }
+
+        // 2️⃣ 내 토큰 저장
         user.updateFcmToken(fcmToken);
 
         log.info("✅ FCM 토큰 업데이트 완료: userId={}, userName={}", userId, user.getName());

@@ -28,4 +28,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "LinkCare"
 include(":app")
+include(":llama")
  

@@ -3,6 +3,7 @@ package com.a307.linkcare.common.component.atoms
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable // Added this import
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,7 +41,8 @@ fun NudgeBanner(
     contentColor: Color = white,
     focused: Boolean = false,
     onDismiss: () -> Unit,
-    @DrawableRes handIconRes: Int = R.drawable.tap
+    @DrawableRes handIconRes: Int = R.drawable.tap,
+    onIconClick: (() -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(12.dp)
 
@@ -80,7 +82,9 @@ fun NudgeBanner(
             Icon(
                 painter = painterResource(handIconRes),
                 contentDescription = null,
-                modifier = Modifier.size(30.dp),
+                modifier = Modifier
+                    .size(30.dp)
+                    .then(if (onIconClick != null) Modifier.clickable { onIconClick() } else Modifier),
                 tint = Color.Unspecified
             )
 
@@ -109,7 +113,8 @@ fun <T> NudgeHost(
     nameToBold: (T) -> String?,
     focused: (T) -> Boolean = { false },
     onDismiss: (T) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onIconClick: ((T) -> Unit)? = null
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items.forEach { item ->
@@ -122,7 +127,8 @@ fun <T> NudgeHost(
                     message = message(item),
                     nameToBold = nameToBold(item),
                     focused = focused(item),
-                    onDismiss = { onDismiss(item) }
+                    onDismiss = { onDismiss(item) },
+                    onIconClick = onIconClick?.let { { it(item) } }
                 )
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.black
@@ -19,27 +20,16 @@ import com.a307.linkcare.common.theme.white
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-private data class Nudge(
-    val id: String,
-    val text: String,
-    val sentAtMillis: Long,
-    val isRead: Boolean = false
-)
-
 @Composable
-fun NotiList() {
+fun NotiList(
+    viewModel: NotificationViewModel
+) {
     // 예: "11.06 14:35"
     val formatter = remember { SimpleDateFormat("MM.dd HH:mm", Locale.KOREA) }
     val readGray = Color(0xFF9E9E9E)
 
-    // 샘플 데이터 (실제론 서버/DB 데이터 넣으면 됨)
-    val nudges = remember {
-        mutableStateListOf(
-            Nudge("1", "정혜예: 파이팅!", System.currentTimeMillis() - 5 * 60 * 1000L),
-            Nudge("2", "김혜윤: 오늘도 힘내!", System.currentTimeMillis() - 60 * 60 * 1000L),
-            Nudge("3", "진혜예: 지금 뭐하고 있어?", System.currentTimeMillis() - 24 * 60 * 60 * 1000L + 10 * 60 * 1000L)
-        )
-    }
+    // ViewModel에서 콕 찌르기 데이터 가져오기
+    val pokeAlarms by viewModel.pokeAlarms.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -47,60 +37,72 @@ fun NotiList() {
                 .weight(1f)
                 .padding(horizontal = 8.dp)
         ) {
-            items(items = nudges, key = { it.id }) { nudge ->
-                val textColor = if (nudge.isRead) readGray else black
+            items(items = pokeAlarms, key = { it.alarmId }) { alarm ->
+                val textColor = if (alarm.read) readGray else black
 
-                Row(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)
-                        .clickable {
-                            // 3) 항목 터치 시 읽음 처리
-                            val idx = nudges.indexOfFirst { it.id == nudge.id }
-                            if (idx != -1 && !nudges[idx].isRead) {
-                                nudges[idx] = nudges[idx].copy(isRead = true)
-                            }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = white)
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.tap), // tap.png / tap.xml 있어야 함
-                        contentDescription = "콕 찌르기 아이콘",
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Unspecified // 원본 색 유지
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                // 항목 터치 시 읽음 처리
+                                if (!alarm.read) {
+                                    viewModel.markAlarmAsRead(alarm.alarmId)
+                                }
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.tap),
+                            contentDescription = "콕 찌르기 아이콘",
+                            modifier = Modifier.size(37.dp),
+                            tint = Color.Unspecified
+                        )
 
-                    Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(12.dp))
 
-                    // 본문
-                    Text(
-                        nudge.text,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = textColor,
-                        modifier = Modifier.weight(1f)
-                    )
+                        Column(modifier = Modifier.weight(1f)) {
+                            // 첫 번째 줄: 발신자 (볼드)
+                            Text(
+                                text = alarm.senderInfo.nickname,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            // 두 번째 줄: 내용
+                            Text(
+                                text = alarm.content,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textColor
+                            )
+                        }
 
-                    // 1) 오른쪽 날짜
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        formatter.format(nudge.sentAtMillis),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = textColor
-                    )
+                        Spacer(Modifier.width(12.dp))
+
+                        // 오른쪽 날짜
+                        Text(
+                            text = parseAndFormatDate(alarm.sentAt, formatter),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                 }
-
-                Divider(color = Color.LightGray.copy(alpha = 0.4f))
             }
         }
 
         // 2) 모두 읽음 버튼
         Button(
             onClick = {
-                for (i in nudges.indices) {
-                    if (!nudges[i].isRead) {
-                        nudges[i] = nudges[i].copy(isRead = true)
-                    }
-                }
+                viewModel.markAllAlarmsAsRead()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -113,5 +115,41 @@ fun NotiList() {
         ) {
             Text("모두 읽음")
         }
+    }
+}
+
+// ISO 8601 날짜 파싱 헬퍼 함수
+private fun parseAndFormatDate(isoDate: String, formatter: SimpleDateFormat): String {
+    return try {
+        // 여러 형식 시도
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // 마이크로초 포함 (Z 없음)
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",  // 밀리초 + Z
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",     // 밀리초 (Z 없음)
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",      // 초 + Z
+            "yyyy-MM-dd'T'HH:mm:ss"          // 초 (Z 없음)
+        )
+
+        var date: java.util.Date? = null
+        for (format in formats) {
+            try {
+                val isoFormatter = SimpleDateFormat(format, Locale.US)
+                isoFormatter.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                date = isoFormatter.parse(isoDate)
+                if (date != null) break
+            } catch (e: Exception) {
+                continue
+            }
+        }
+
+        // Date → "MM.dd HH:mm" (한국 시간대로)
+        if (date != null) {
+            formatter.timeZone = java.util.TimeZone.getTimeZone("Asia/Seoul")
+            formatter.format(date)
+        } else {
+            isoDate
+        }
+    } catch (e: Exception) {
+        isoDate
     }
 }

@@ -106,13 +106,14 @@ public class User {
     }
 
     // 프로필 정보 수정 (운동 시작 년도 포함!)
-    public void updateProfile(String name, Float height, Float weight, LocalDate birth, String gender, Integer exerciseStartYear) {
+    public void updateProfile(String name, Float height, Float weight, LocalDate birth, String gender, Integer exerciseStartYear, String petName) {
         this.name = name;
         this.height = height;
         this.weight = weight;
         this.birth = birth;
         this.gender = gender;
         this.exerciseStartYear = exerciseStartYear;
+        this.petName = petName;
     }
 
     // FCM 토큰 업데이트
