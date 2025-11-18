@@ -17,7 +17,9 @@ sealed interface MyPageApiState {
 }
 
 @HiltViewModel
-class MyPageViewModel @Inject constructor() : ViewModel() {
+class MyPageViewModel @Inject constructor(
+    private val repo: MyPageRepository
+) : ViewModel() {
 
     private val _apiState = MutableStateFlow<MyPageApiState>(MyPageApiState.Loading)
     val apiState: StateFlow<MyPageApiState> = _apiState
@@ -33,17 +35,15 @@ class MyPageViewModel @Inject constructor() : ViewModel() {
                 val response = RetrofitClient.userApi.getMyInfo()
                 if (response.isSuccessful && response.body() != null) {
                     val userData = response.body()!!
-
-                    // --- 로그 추가 ---
-                    Log.d("MyPageViewModel", "Character URL: ${userData.mainCharacterImageUrl}")
-                    Log.d("MyPageViewModel", "Background URL: ${userData.mainBackgroundImageUrl}")
+                    val avatarUrl = userData.mainCharacterImageUrl
+                    val avatarBgUrl = userData.mainBackgroundImageUrl
 
                     val uiState = MyPageUiState(
                         nickname = userData.nickname,
                         coinLabel = "보유 코인 ${userData.points}",
                         groupCountLabel = "그룹 조회",
-                        avatarUrl = userData.mainCharacterImageUrl,
-                        avatarBgUrl = userData.mainBackgroundImageUrl
+                        avatarUrl = avatarUrl,
+                        avatarBgUrl = avatarBgUrl
                     )
                     _apiState.value = MyPageApiState.Success(uiState)
                 } else {
@@ -58,4 +58,36 @@ class MyPageViewModel @Inject constructor() : ViewModel() {
             }
         }
     }
+
+    private val _groupCharacters = MutableStateFlow<List<GroupCharacterResponse>>(emptyList())
+    val groupCharacters: StateFlow<List<GroupCharacterResponse>> = _groupCharacters
+
+    private val _groupCharacterLoading = MutableStateFlow(false)
+    val groupCharacterLoading: StateFlow<Boolean> = _groupCharacterLoading
+
+    private val _groupCharacterError = MutableStateFlow<String?>(null)
+    val groupCharacterError: StateFlow<String?> = _groupCharacterError
+
+
+    fun loadGroupCharacters(groupSeq: Long) {
+        viewModelScope.launch {
+            _groupCharacterLoading.value = true
+            _groupCharacterError.value = null
+
+            try {
+                val res = repo.getMyGroupCharacters(groupSeq)
+
+                val uiList = res.members.map { it }
+
+                _groupCharacters.value = uiList
+
+            } catch (e: Exception) {
+                Log.e("MyPageViewModel", "loadGroupCharacters error", e)
+                _groupCharacterError.value = e.message
+            } finally {
+                _groupCharacterLoading.value = false
+            }
+        }
+    }
+
 }

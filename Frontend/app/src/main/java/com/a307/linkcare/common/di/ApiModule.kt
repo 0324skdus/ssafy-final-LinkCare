@@ -61,4 +61,5 @@ object HealthConnectModule {
     @Singleton
     fun provideMyPageRepository(api: MyPageApi): MyPageRepository =
         MyPageRepositoryImpl(api)
+
 }

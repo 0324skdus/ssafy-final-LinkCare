@@ -7,4 +7,5 @@ import com.a307.linkcare.feature.mypage.UpdateProfileRequest
 interface MyPageRepository {
     suspend fun getMyProfile(): MyProfileResponse
     suspend fun updateProfile(req: UpdateProfileRequest)
+    suspend fun getMyGroupCharacters(groupSeq: Long): GroupDetailResponse
 }

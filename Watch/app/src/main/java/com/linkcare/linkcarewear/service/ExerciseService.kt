@@ -108,9 +108,9 @@ class ExerciseService : LifecycleService() {
         val summary = WorkoutSummary(
             sessionId = currentSessionId,
             avgHeartRate = (metrics.heartRateAverage ?: 0.0).toInt(),
-            calories = (metrics.calories ?: 0.0).toInt(),
-            distance = (metrics.distance ?: 0.0).toInt(),
-            durationSec = durationSec,
+            calories = (metrics.calories ?: 0.0).toFloat(),      // 수정
+            distance = (metrics.distance ?: 0.0).toFloat(),      // 수정
+            durationSec = durationSec.toLong(),                  // 수정(혹은 이미 Long이면 OK)
             startTimestamp = startTimestamp,
             endTimestamp = endTimestamp
         )
