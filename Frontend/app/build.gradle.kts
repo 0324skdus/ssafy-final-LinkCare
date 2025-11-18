@@ -131,7 +131,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
 
     // image
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     // character
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
