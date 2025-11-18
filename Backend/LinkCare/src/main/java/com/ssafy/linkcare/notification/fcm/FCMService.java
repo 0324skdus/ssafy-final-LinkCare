@@ -61,6 +61,8 @@ public class FCMService {
                 data.put("body", body);
             }
 
+            data.put("userId", String.valueOf(user.getUserPk()));
+
             // FCM 메시지 생성
             Message message = Message.builder()
                     .setToken(user.getFcmToken())
