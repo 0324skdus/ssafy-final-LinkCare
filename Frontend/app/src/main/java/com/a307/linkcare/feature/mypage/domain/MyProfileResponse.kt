@@ -6,5 +6,6 @@ data class MyProfileResponse(
     val height: Double,
     val weight: Double,
     val gender: String,
-    val exerciseStartYear: Int? = null
+    val exerciseStartYear: Int? = null,
+    val petName: String?
 )

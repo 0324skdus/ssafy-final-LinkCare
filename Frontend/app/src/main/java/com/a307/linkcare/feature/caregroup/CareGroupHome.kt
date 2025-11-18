@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
@@ -175,19 +176,8 @@ fun CareGroupHome(
     // 동기화 상태 관찰
     val syncState by syncViewModel.syncState.collectAsState()
 
-    // 동기화 완료 시 토스트 표시
-    LaunchedEffect(syncState) {
-        when (syncState) {
-            is SyncState.Success -> {
-                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
-            }
-            is SyncState.Error -> {
-                val error = (syncState as SyncState.Error).message
-                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
-            }
-            else -> {}
-        }
-    }
+    // Pull-to-Refresh 상태
+    var isRefreshing by remember { mutableStateOf(false) }
 
     val detail by groupViewModel.detail.collectAsState()
     val membersResponse by groupViewModel.members.collectAsState()
@@ -202,6 +192,35 @@ fun CareGroupHome(
     val minDate = remember { today.minusYears(1) }   // 1년 전
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, membersResponse, selectedDate) {
+        when (syncState) {
+            is SyncState.Success -> {
+                isRefreshing = false
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // CareMemberDetail 데이터만 다시 로드
+                if (membersResponse.isNotEmpty()) {
+                    val userPks = membersResponse.mapNotNull {
+                        if (it.userSeq > 0) it.userSeq.toInt() else null
+                    }
+                    if (userPks.isNotEmpty()) {
+                        healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
+                        healthViewModel.loadHealthFeedbackForMembers(userPks, selectedDate)
+                    }
+                }
+            }
+            is SyncState.Error -> {
+                isRefreshing = false
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
+
 
     // 날짜 변경 시 이전 health feedback 클리어
     LaunchedEffect(selectedDate) {
@@ -388,22 +407,27 @@ fun CareGroupHome(
         }
     }
 
-
-    Scaffold(
-        floatingActionButton = {
-            CareGroupFab(
-                permissionState = permissionState,
-                onRequestPermission = {
-                    healthPermissionViewModel.requestPermissions(activity)
-                },
-                onSync = {
-                    syncViewModel.syncTodayData()
-                    Toast.makeText(context, "건강 데이터 동기화 중...", Toast.LENGTH_SHORT).show()
+    Scaffold { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                // 권한 체크 후 동기화
+                when (permissionState) {
+                    HealthPermissionViewModel.State.Granted -> {
+                        isRefreshing = true
+                        syncViewModel.syncTodayData()
+                    }
+                    else -> {
+                        Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
+                        healthPermissionViewModel.requestPermissions(activity)
+                    }
                 }
-            )
-        }
-    )  { _ ->
-        LazyColumn(Modifier.fillMaxSize()) {
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(Modifier.fillMaxSize()) {
 
             if (header != null) {
                 item {
@@ -598,7 +622,7 @@ fun CareGroupHome(
                     )
                 }
             }
-
+        }
         selectedMember?.let { info ->
 
             LaunchedEffect(info.member.userPk) {
@@ -621,28 +645,28 @@ fun CareGroupHome(
             )
         }
 
-            if (showCalendar) {
-                DatePickerDialog(
-                    onDismissRequest = { showCalendar = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                dpState.selectedDateMillis?.let {
-                                    selectedDate = epochMilliToLocalDate(it)
-                                }
-                                showCalendar = false
+        if (showCalendar) {
+            DatePickerDialog(
+                onDismissRequest = { showCalendar = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            dpState.selectedDateMillis?.let {
+                                selectedDate = epochMilliToLocalDate(it)
                             }
-                        ) { Text("확인") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showCalendar = false }) { Text("취소") }
-                    }
-                ) {
-                    DatePicker(state = dpState, showModeToggle = false)
+                            showCalendar = false
+                        }
+                    ) { Text("확인") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCalendar = false }) { Text("취소") }
                 }
+            ) {
+                DatePicker(state = dpState, showModeToggle = false)
             }
         }
     }
+}
 
 /* ---------- 컴포넌트 ---------- */
 @Composable

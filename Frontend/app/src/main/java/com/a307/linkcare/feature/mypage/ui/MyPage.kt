@@ -3,24 +3,39 @@
 package com.a307.linkcare.feature.mypage.ui
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,21 +53,34 @@ import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.caregroup.ActivitySessionCard
+import com.a307.linkcare.feature.caregroup.DetailRow
+import com.a307.linkcare.feature.caregroup.EmptyDataText
+import com.a307.linkcare.feature.caregroup.HealthStatus
+import com.a307.linkcare.feature.caregroup.HealthToday
+import com.a307.linkcare.feature.caregroup.formatTotalDuration
+import com.a307.linkcare.feature.caregroup.getActivityStatus
+import com.a307.linkcare.feature.caregroup.getActivitySummary
+import com.a307.linkcare.feature.caregroup.getBloodPressureStatus
+import com.a307.linkcare.feature.caregroup.getBloodPressureSummary
+import com.a307.linkcare.feature.caregroup.getSleepStatus
+import com.a307.linkcare.feature.caregroup.getSleepSummary
+import com.a307.linkcare.feature.caregroup.getTotalSleepHours
+import com.a307.linkcare.feature.caregroup.getWaterStatus
+import com.a307.linkcare.feature.caregroup.getWaterSummary
+import com.a307.linkcare.feature.caregroup.round1
 import kotlinx.coroutines.launch
 
-/* ---------- 앱 팔레트 ---------- */
-private val cardStroke = Color(0xFFE5E5EA)
-private val coinGold = Color(0xFFFFB800)
 private val shadowColor = Color(0x1A000000)
 
-/* ---------- 공개 API ---------- */
 
 data class MyPageUiState(
     val nickname: String,
     val coinLabel: String,
     val groupCountLabel: String,
     val avatarUrl: String?,
-    val avatarBgUrl: String? = null
+    val avatarBgUrl: String? = null,
+    val healthToday: HealthToday? = null
 )
 
 @Composable
@@ -67,6 +95,7 @@ fun MyPage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     val performLogout: () -> Unit = {
         scope.launch {
@@ -89,7 +118,7 @@ fun MyPage(
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(context, "서버 오류", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "서버 오류: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -102,6 +131,7 @@ fun MyPage(
         Column(
             Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(Modifier.height(20.dp))
@@ -161,7 +191,32 @@ fun MyPage(
                 onDecorateClick = onDecorateClick
             )
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(24.dp))
+
+            // 오늘의 건강 정보
+            Text(
+                "오늘 나의 건강 정보",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(Modifier.height(12.dp))
+
+            if (state.healthToday != null) {
+                HealthInfoSection(today = state.healthToday)
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -215,13 +270,18 @@ private fun ProfileCard(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ExitToApp,
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                 contentDescription = null,
                                 modifier = Modifier.size(11.dp),
                                 tint = Color(0xFF666666)
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text("로그아웃", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF666666))
+                            Text(
+                                "로그아웃",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF666666)
+                            )
                         }
                     }
                 }
@@ -398,5 +458,238 @@ private fun MenuButtonCard(
                 color = black
             )
         }
+    }
+}
+
+@Composable
+private fun HealthInfoSection(today: HealthToday) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // 혈압
+        HealthAccordion(
+            icon = "🫀",
+            title = "혈압",
+            summary = getBloodPressureSummary(today.bloodPressures),
+            status = getBloodPressureStatus(today.bloodPressures)
+        ) {
+            if (today.bloodPressures.isEmpty()) {
+                EmptyDataText()
+            } else {
+                today.bloodPressures.forEach { bp ->
+                    val time = if (bp.startTime.contains("T")) {
+                        bp.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                    } else bp.startTime
+                    DetailRow(time, "${bp.systolic.toInt()}/${bp.diastolic.toInt()} mmHg")
+                }
+            }
+        }
+
+        // 음수량
+        HealthAccordion(
+            icon = "💧",
+            title = "음수량",
+            summary = getWaterSummary(today.waterIntakes, today.waterGoalMl),
+            status = getWaterStatus(today.waterIntakes, today.waterGoalMl)
+        ) {
+            if (today.waterIntakes.isEmpty()) {
+                EmptyDataText()
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    today.waterIntakes.forEach { intake ->
+                        val time = if (intake.startTime.contains("T")) {
+                            intake.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                        } else intake.startTime
+                        DetailRow(time, "${intake.amount.toInt()} mL")
+                    }
+                    HorizontalDivider(
+                        color = Color(0xFFE5E7EB),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    DetailRow(
+                        "오늘 총 섭취",
+                        "${today.waterIntakes.sumOf { it.amount.toInt() }} mL",
+                        bold = true
+                    )
+                    DetailRow(
+                        "하루 목표",
+                        "${today.waterGoalMl} mL",
+                        color = Color(0xFF6B7280)
+                    )
+                }
+            }
+        }
+
+        // 수면
+        HealthAccordion(
+            icon = "😴",
+            title = "수면",
+            summary = getSleepSummary(today.sleeps),
+            status = getSleepStatus(today.sleeps)
+        ) {
+            if (today.sleeps.isEmpty()) {
+                EmptyDataText()
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    today.sleeps.forEachIndexed { idx, sleep ->
+                        val startTime = if (sleep.startTime.contains("T")) {
+                            sleep.startTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                        } else sleep.startTime
+                        val endTime = if (sleep.endTime.contains("T")) {
+                            sleep.endTime.substringAfter("T").substringBefore(".").substring(0, 5)
+                        } else sleep.endTime
+                        DetailRow(
+                            if (today.sleeps.size > 1) "수면 ${idx + 1}" else "수면 시간",
+                            "$startTime ~ $endTime"
+                        )
+                    }
+                    HorizontalDivider(
+                        color = Color(0xFFE5E7EB),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    DetailRow(
+                        "총 수면 시간",
+                        getTotalSleepHours(today.sleeps),
+                        bold = true
+                    )
+                }
+            }
+        }
+
+        // 일일 활동
+        val exercises = today.dailyActivitySummary?.exercises ?: emptyList()
+        HealthAccordion(
+            icon = "🏃",
+            title = "일일 활동",
+            summary = getActivitySummary(exercises, today.dailyActivitySummary?.steps ?: 0),
+            status = getActivityStatus(exercises)
+        ) {
+            if (exercises.isEmpty()) {
+                EmptyDataText()
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    exercises.forEachIndexed { idx, session ->
+                        ActivitySessionCard(session, idx + 1)
+                    }
+                    HorizontalDivider(
+                        color = Color(0xFFE5E7EB),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        DetailRow(
+                            "총 칼로리 소모",
+                            "${exercises.sumOf { it.calories.toInt() }} kcal",
+                            bold = true
+                        )
+                        DetailRow(
+                            "총 운동 시간",
+                            formatTotalDuration(exercises.sumOf { it.duration }),
+                            bold = true
+                        )
+                        DetailRow(
+                            "총 거리",
+                            "${(exercises.sumOf { it.distance.toDouble() } / 1000).toFloat().round1()} km",
+                            bold = true
+                        )
+                        today.dailyActivitySummary?.steps?.let { steps ->
+                            DetailRow(
+                                "걸음 수",
+                                "$steps 걸음",
+                                bold = true
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthAccordion(
+    icon: String,
+    title: String,
+    summary: String,
+    status: HealthStatus = HealthStatus.Neutral,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val rotationAngle by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "")
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFFF0F0F0)),
+        color = white,
+        onClick = { isExpanded = !isExpanded }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .animateContentSize()
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(icon, fontSize = 20.sp, modifier = Modifier.width(32.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                    if (summary.isNotEmpty()) {
+                        Text(summary, fontSize = 12.sp, color = Color(0xFF6B7280))
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                StatusBadge(status)
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "축소" else "확장",
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(rotationAngle),
+                    tint = Color.Gray
+                )
+            }
+
+            // Expandable Content
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = Color(0xFFF0F0F0)
+                    )
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusBadge(status: HealthStatus) {
+    val (text, color) = when (status) {
+        HealthStatus.Good -> "좋음" to Color(0xFF34C759)
+        HealthStatus.Warning -> "주의" to Color(0xFFFF9500)
+        HealthStatus.Bad -> "나쁨" to Color(0xFFFF3B30)
+        HealthStatus.Neutral -> "" to Color.Transparent
+    }
+
+    if (text.isNotEmpty()) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .background(color.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+        )
+        Spacer(Modifier.width(8.dp))
     }
 }

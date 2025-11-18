@@ -8,7 +8,8 @@ data class UpdateProfileRequest(
     val height: Int,
     val weight: Int,
     val gender: String,
-    val exerciseStartYear: Int? = null // 항상 null 보낼 거면 그대로
+    val exerciseStartYear: Int? = null, // 항상 null 보낼 거면 그대로
+    val petName: String?
 )
 
 fun Profile.toUpdateRequest(): UpdateProfileRequest =
@@ -20,5 +21,6 @@ fun Profile.toUpdateRequest(): UpdateProfileRequest =
             Gender.MALE -> "남"
             Gender.FEMALE -> "여"
         },
-        exerciseStartYear = null
+        exerciseStartYear = null,
+        petName = petName
     )

@@ -2,8 +2,10 @@
 
 package com.a307.linkcare.feature.healthgroup.ui
 
+import android.app.Activity
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -28,11 +31,14 @@ import coil.compose.AsyncImage
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 import kotlinx.coroutines.launch
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -86,9 +92,25 @@ fun HealthGroupHome(
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
-    myPageViewModel: MyPageViewModel = hiltViewModel()
+    myPageViewModel: MyPageViewModel = hiltViewModel(),
+    healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
+    syncViewModel: HealthSyncViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val activity = context as Activity
+
+    val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 화면 들어올 때 한 번 권한 상태 체크
+    LaunchedEffect(Unit) {
+        healthPermissionViewModel.checkPermissions()
+    }
+
+    // 동기화 상태 관찰
+    val syncState by syncViewModel.syncState.collectAsState()
+
+    // Pull-to-Refresh 상태
+    var isRefreshing by remember { mutableStateOf(false) }
     val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
     val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
     val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
@@ -207,6 +229,28 @@ fun HealthGroupHome(
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, members, selectedDate) {
+        when (syncState) {
+            is SyncState.Success -> {
+                isRefreshing = false
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // HealthMemberDetail 데이터만 다시 로드
+                if (members.isNotEmpty()) {
+                    val userSeqs = members.map { it.userPk.toInt() }
+                    goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+                }
+            }
+            is SyncState.Error -> {
+                isRefreshing = false
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
     // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {
         vm.loadGroupDetail(groupSeq)
@@ -321,7 +365,26 @@ fun HealthGroupHome(
     var goalError by rememberSaveable { mutableStateOf<String?>(null) }
 
     /** ---------------- 화면 렌더링 ---------------- */
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                // 권한 체크 후 동기화
+                when (permissionState) {
+                    HealthPermissionViewModel.State.Granted -> {
+                        isRefreshing = true
+                        syncViewModel.syncTodayData()
+                    }
+                    else -> {
+                        Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
+                        healthPermissionViewModel.requestPermissions(activity)
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
         Box(modifier = modifier.fillMaxSize()) {
 
             LazyColumn(Modifier.fillMaxSize()) {
@@ -743,6 +806,7 @@ fun HealthGroupHome(
                     }
                 )
             }
+        }
         }
     }
 }

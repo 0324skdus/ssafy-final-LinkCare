@@ -75,7 +75,7 @@ public class UserController {
     }
 
     @Operation(summary = "프로필 업데이트",
-        description = "사용자의 프로필 정보(생년월일, 키, 몸무게, 성별, 운동 시작 년도)를 업데이트합니다.")
+        description = "사용자의 프로필 정보(생년월일, 키, 몸무게, 성별, 운동 시작 년도, 펫 이름)를 업데이트합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "프로필 업데이트 성공"),
         @ApiResponse(responseCode = "400", description = "잘못된 요청 (필수 항목 누락 또는 유효성 검증 실패)"),

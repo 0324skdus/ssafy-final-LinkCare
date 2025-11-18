@@ -7,7 +7,10 @@ import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.mypage.data.MyPageRepository
 import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.ui.MyPageUiState
+import com.a307.linkcare.feature.caregroup.data.CareGroupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,6 +24,7 @@ sealed interface MyPageApiState {
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
+    private val careGroupRepository: CareGroupRepository,
     private val repo: MyPageRepository
 ) : ViewModel() {
 
@@ -35,24 +39,30 @@ class MyPageViewModel @Inject constructor(
         viewModelScope.launch {
             _apiState.value = MyPageApiState.Loading
             try {
-                val response = RetrofitClient.userApi.getMyInfo()
-                if (response.isSuccessful && response.body() != null) {
-                    val userData = response.body()!!
-                    val avatarUrl = userData.mainCharacterImageUrl
-                    val avatarBgUrl = userData.mainBackgroundImageUrl
+                coroutineScope {
+                    val userResponseDeferred = async { RetrofitClient.userApi.getMyInfo() }
+                    val healthResponseDeferred = async { careGroupRepository.getMyDailyHealthDetail() }
 
-                    val uiState = MyPageUiState(
-                        nickname = userData.nickname,
-                        coinLabel = "보유 코인 ${userData.points}",
-                        groupCountLabel = "그룹 조회",
-                        avatarUrl = avatarUrl,
-                        avatarBgUrl = avatarBgUrl
-                    )
-                    _apiState.value = MyPageApiState.Success(uiState)
-                } else {
-                    val errorMsg = "정보를 불러오지 못했습니다: ${response.code()}"
-                    Log.e("MyPageViewModel", errorMsg)
-                    _apiState.value = MyPageApiState.Error(errorMsg)
+                    val userResponse = userResponseDeferred.await()
+                    val healthData = healthResponseDeferred.await()
+
+                    if (userResponse.isSuccessful && userResponse.body() != null) {
+                        val userData = userResponse.body()!!
+
+                        val uiState = MyPageUiState(
+                            nickname = userData.nickname,
+                            coinLabel = "보유 코인 ${userData.points}",
+                            groupCountLabel = "그룹 조회",
+                            avatarUrl = userData.mainCharacterImageUrl,
+                            avatarBgUrl = userData.mainBackgroundImageUrl,
+                            healthToday = healthData
+                        )
+                        _apiState.value = MyPageApiState.Success(uiState)
+                    } else {
+                        val errorMsg = "사용자 정보를 불러오지 못했습니다: ${userResponse.code()}"
+                        Log.e("MyPageViewModel", errorMsg)
+                        _apiState.value = MyPageApiState.Error(errorMsg)
+                    }
                 }
             } catch (e: Exception) {
                 val errorMsg = "서버 통신 오류: ${e.message}"
