@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.healthgroup
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.data.HealthGroupRepository
 import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
+import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.MemberWithActivity
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
 import com.a307.linkcare.feature.caregroup.data.endOfWeek
@@ -49,6 +51,13 @@ class HealthGroupHomeViewModel @Inject constructor(
     private val _weeklyMembersWithActivity = MutableStateFlow<List<MemberWithActivity>>(emptyList())
     val weeklyMembersWithActivity: StateFlow<List<MemberWithActivity>> = _weeklyMembersWithActivity
     // --------------------------
+
+    // 일일 활동 데이터 저장
+    private val _dailyActivityData = MutableStateFlow<Map<Int, DailyActivitySummaryResponse>>(emptyMap())
+    val dailyActivityData: StateFlow<Map<Int, DailyActivitySummaryResponse>> = _dailyActivityData
+
+    private val _isLoadingDailyActivity = MutableStateFlow(false)
+    val isLoadingDailyActivity: StateFlow<Boolean> = _isLoadingDailyActivity
 
     fun fetchWeeklyMembersHealthData(members: List<Member>, date: LocalDate) = viewModelScope.launch {
         if (members.isEmpty()) return@launch
@@ -196,5 +205,60 @@ class HealthGroupHomeViewModel @Inject constructor(
 
     fun resetGoalState() {
         _goalState.value = GoalState.Idle
+    }
+
+    fun loadDailyActivity(userSeq: Int, date: LocalDate? = null) {
+        viewModelScope.launch {
+            try {
+                val targetDate = date ?: LocalDate.now()
+                Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$targetDate")
+                val data = repository.getDailyActivity(userSeq, targetDate)
+                if (data != null) {
+                    Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
+                    _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
+                } else {
+                    Log.d("HealthGroupHomeVM", "No daily activity for userSeq=$userSeq")
+                }
+            } catch (e: Exception) {
+                Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+            }
+        }
+    }
+
+    fun loadDailyActivityForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
+        // 이미 로딩 중이면 중복 요청 방지
+        if (_isLoadingDailyActivity.value) {
+            Log.d("HealthGroupHomeVM", "Already loading daily activity, skipping duplicate request")
+            return
+        }
+
+        Log.d("HealthGroupHomeVM", "loadDailyActivityForMembers called with ${userSeqs.size} members, date=$date")
+        _isLoadingDailyActivity.value = true
+
+        viewModelScope.launch {
+            try {
+                val targetDate = date ?: LocalDate.now()
+                userSeqs.forEach { userSeq ->
+                    try {
+                        Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$targetDate")
+                        val data = repository.getDailyActivity(userSeq, targetDate)
+                        if (data != null) {
+                            Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
+                            _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
+                        } else {
+                            Log.d("HealthGroupHomeVM", "No daily activity for userSeq=$userSeq")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+                    }
+                }
+            } finally {
+                _isLoadingDailyActivity.value = false
+            }
+        }
+    }
+
+    fun clearDailyActivity() {
+        _dailyActivityData.value = emptyMap()
     }
 }
