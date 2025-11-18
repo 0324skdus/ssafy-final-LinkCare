@@ -108,22 +108,6 @@ fun HealthGroupHome(
 
     // Pull-to-Refresh 상태
     var isRefreshing by remember { mutableStateOf(false) }
-
-    // 동기화 완료 시 토스트 표시 및 새로고침 종료
-    LaunchedEffect(syncState) {
-        when (syncState) {
-            is SyncState.Success -> {
-                isRefreshing = false
-                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
-            }
-            is SyncState.Error -> {
-                isRefreshing = false
-                val error = (syncState as SyncState.Error).message
-                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
-            }
-            else -> {}
-        }
-    }
     val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
     val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
     val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
@@ -241,6 +225,28 @@ fun HealthGroupHome(
     val minDate = remember { today.minusYears(1) }
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, members, selectedDate) {
+        when (syncState) {
+            is SyncState.Success -> {
+                isRefreshing = false
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // HealthMemberDetail 데이터만 다시 로드
+                if (members.isNotEmpty()) {
+                    val userSeqs = members.map { it.userPk.toInt() }
+                    goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+                }
+            }
+            is SyncState.Error -> {
+                isRefreshing = false
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
 
     // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {

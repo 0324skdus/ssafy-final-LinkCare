@@ -180,22 +180,6 @@ fun CareGroupHome(
     // Pull-to-Refresh 상태
     var isRefreshing by remember { mutableStateOf(false) }
 
-    // 동기화 완료 시 토스트 표시 및 새로고침 종료
-    LaunchedEffect(syncState) {
-        when (syncState) {
-            is SyncState.Success -> {
-                isRefreshing = false
-                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
-            }
-            is SyncState.Error -> {
-                isRefreshing = false
-                val error = (syncState as SyncState.Error).message
-                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
-            }
-            else -> {}
-        }
-    }
-
     val detail by groupViewModel.detail.collectAsState()
     val membersResponse by groupViewModel.members.collectAsState()
     val groupName by groupViewModel.groupName.collectAsState()
@@ -209,6 +193,35 @@ fun CareGroupHome(
     val minDate = remember { today.minusYears(1) }   // 1년 전
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, membersResponse, selectedDate) {
+        when (syncState) {
+            is SyncState.Success -> {
+                isRefreshing = false
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // CareMemberDetail 데이터만 다시 로드
+                if (membersResponse.isNotEmpty()) {
+                    val userPks = membersResponse.mapNotNull {
+                        if (it.userSeq > 0) it.userSeq.toInt() else null
+                    }
+                    if (userPks.isNotEmpty()) {
+                        healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
+                        healthViewModel.loadHealthFeedbackForMembers(userPks, selectedDate)
+                    }
+                }
+            }
+            is SyncState.Error -> {
+                isRefreshing = false
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
+
 
     // 날짜 변경 시 이전 health feedback 클리어
     LaunchedEffect(selectedDate) {
