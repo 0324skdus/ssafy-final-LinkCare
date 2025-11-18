@@ -9,12 +9,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
@@ -90,6 +94,7 @@ fun HealthGroupEdit(
     groupSeq: Long,
     viewModel: HealthGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    myPageViewModel: com.a307.linkcare.feature.mypage.MyPageViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
@@ -99,9 +104,16 @@ fun HealthGroupEdit(
     val memberActionState by viewModel.memberActionState.collectAsState()
     val context = LocalContext.current
 
+    // 그룹 캐릭터 정보 로드
+    val groupCharacters by myPageViewModel.groupCharacters.collectAsState()
+    val characterMap = remember(groupCharacters) {
+        groupCharacters.associateBy({ it.userId }, { it })
+    }
+
     // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
         viewModel.loadGroupDetail(groupSeq)
+        myPageViewModel.loadGroupCharacters(groupSeq)
     }
 
     // 위임하기 핸들러
@@ -244,6 +256,7 @@ fun HealthGroupEdit(
                 groupDetail = state.groupDetail,
                 viewModel = viewModel,
                 updateState = updateState,
+                characterMap = characterMap,
                 onDelegate = onDelegate,
                 onKick = onKick,
                 onLeave = onLeave,
@@ -261,6 +274,7 @@ private fun RenderHealthGroupEditForm(
     groupDetail: com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse,
     viewModel: HealthGroupEditViewModel,
     updateState: HealthGroupEditViewModel.UpdateState,
+    characterMap: Map<Long, com.a307.linkcare.feature.mypage.GroupCharacterResponse>,
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,
@@ -434,22 +448,23 @@ private fun RenderHealthGroupEditForm(
                 Spacer(Modifier.height(12.dp))
             }
             itemsIndexed(
-                groupDetail.members.map { member ->
-                    GroupMember(
-                        id = member.userSeq,
-                        name = member.userName,
-                        avatarRes = null,
-                        isLeader = member.isLeader,
-                        avatarUrl = member.mainCharacterBaseImageUrl
-                    )
-                },
-                key = { index, m -> m.id }
-            ) { _, m ->
+                groupDetail.members,
+                key = { index, m -> m.userSeq }
+            ) { _, member ->
+                val charInfo = characterMap[member.userSeq]
+                val groupMember = GroupMember(
+                    id = member.userSeq,
+                    name = member.userName,
+                    avatarRes = null,
+                    isLeader = member.isLeader,
+                    avatarUrl = charInfo?.mainCharacterImageUrl ?: member.mainCharacterBaseImageUrl
+                )
                 MemberRow(
-                    member = m,
+                    member = groupMember,
                     isLeader = isLeader,
-                    onDelegate = { onDelegate(m.id) },
-                    onKick = { onKick(m.id) }
+                    backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                    onDelegate = { onDelegate(member.userSeq) },
+                    onKick = { onKick(member.userSeq) }
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -627,6 +642,7 @@ private fun InviteLinkRow(
 private fun MemberRow(
     member: GroupMember,
     isLeader: Boolean,
+    backgroundUrl: String? = null,
     onDelegate: () -> Unit,
     onKick: () -> Unit
 ) {
@@ -645,8 +661,20 @@ private fun MemberRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 아바타
+                // 아바타 (배경 이미지 포함)
                 Box(modifier = Modifier.size(44.dp)) {
+                    // 배경 이미지
+                    if (backgroundUrl != null) {
+                        coil.compose.AsyncImage(
+                            model = backgroundUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
                     GroupAvatarChip(
                         avatarRes = member.avatarRes ?: R.drawable.main_duck,
                         avatarUrl = member.avatarUrl
@@ -674,25 +702,33 @@ private fun MemberRow(
                     )
                 }
 
-                // 오른쪽 작은 액션들
+                // 오른쪽 작은 액션들 (테두리 없는 Button으로 변경)
                 if (isLeader && !member.isLeader) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        AssistChip(
+                        Button(
                             onClick = onDelegate,
-                            label = { Text("위임하기") },
-                            colors = AssistChipDefaults.assistChipColors(
+                            colors = ButtonDefaults.buttonColors(
                                 containerColor = main,
-                                labelColor = white
-                            )
-                        )
-                        AssistChip(
+                                contentColor = white
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("위임하기", fontSize = 12.sp)
+                        }
+                        Button(
                             onClick = onKick,
-                            label = { Text("내보내기") },
-                            colors = AssistChipDefaults.assistChipColors(
+                            colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFF6B6B),
-                                labelColor = white
-                            )
-                        )
+                                contentColor = white
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("내보내기", fontSize = 12.sp)
+                        }
                     }
                 }
             }

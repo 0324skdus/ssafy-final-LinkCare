@@ -2,8 +2,10 @@
 
 package com.a307.linkcare.feature.healthgroup
 
+import android.app.Activity
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,11 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,11 +31,14 @@ import coil.compose.AsyncImage
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 import kotlinx.coroutines.launch
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -40,8 +47,8 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
-import com.a307.linkcare.feature.caregroup.data.endOfWeek
-import com.a307.linkcare.feature.caregroup.data.startOfWeek
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 
@@ -82,8 +89,25 @@ fun HealthGroupHome(
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
-    myPageViewModel: MyPageViewModel = hiltViewModel()
+    myPageViewModel: MyPageViewModel = hiltViewModel(),
+    healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
+    syncViewModel: HealthSyncViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val activity = context as Activity
+
+    val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 화면 들어올 때 한 번 권한 상태 체크
+    LaunchedEffect(Unit) {
+        healthPermissionViewModel.checkPermissions()
+    }
+
+    // 동기화 상태 관찰
+    val syncState by syncViewModel.syncState.collectAsState()
+
+    // Pull-to-Refresh 상태
+    var isRefreshing by remember { mutableStateOf(false) }
     val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
     val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
     val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
@@ -136,6 +160,8 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+    val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
+    val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
     // -------------------------
 
     val members = remember(membersResponse, characterMap) {
@@ -147,12 +173,12 @@ fun HealthGroupHome(
 
             Member(
                 name = m.userName,
-                avatarRes = R.drawable.char_bear_1, // TODO: 이미지 적용
+                avatarRes = R.drawable.char_bear_1,
                 isLeader = m.isLeader,
-                progresses = 0, // 이 값은 이제 membersWithActivity에서 가져옴
+                progresses = 0,
                 goal = detail?.goalCriteria?.minStep ?: 30000,
                 bubbleText = "AI 추천 메시지 준비중...",
-                userPk = m.userSeq // userPk 할당
+                userPk = m.userSeq
             )
         }
     }
@@ -171,7 +197,6 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
-    // --- 실제 데이터로 교체 ---
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     // 현재 metric 타입에 따른 진행도 계산
@@ -201,6 +226,28 @@ fun HealthGroupHome(
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, members, selectedDate) {
+        when (syncState) {
+            is SyncState.Success -> {
+                isRefreshing = false
+                Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // HealthMemberDetail 데이터만 다시 로드
+                if (members.isNotEmpty()) {
+                    val userSeqs = members.map { it.userPk.toInt() }
+                    goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+                }
+            }
+            is SyncState.Error -> {
+                isRefreshing = false
+                val error = (syncState as SyncState.Error).message
+                Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
     // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {
         vm.loadGroupDetail(groupSeq)
@@ -216,6 +263,19 @@ fun HealthGroupHome(
     LaunchedEffect(selectedDate.get(KOR_WEEK.weekOfWeekBasedYear()), members) {
         if (members.isNotEmpty()) {
             goalVm.fetchWeeklyMembersHealthData(members, selectedDate)
+        }
+    }
+
+    // 날짜 변경 시 이전 daily activity 클리어
+    LaunchedEffect(selectedDate) {
+        goalVm.clearDailyActivity()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 daily activity 로드
+    LaunchedEffect(members, selectedDate) {
+        if (members.isNotEmpty()) {
+            val userSeqs = members.map { it.userPk.toInt() }
+            goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
         }
     }
     // -------------------------
@@ -243,18 +303,15 @@ fun HealthGroupHome(
                     else -> 0
                 }
                 totalGroupGoal = currentGoalValue.toInt()
-
-                android.util.Log.d("HealthGroupHome", "  - 화면에 표시할 목표: $currentGoalValue")
             }
             is HealthGroupHomeViewModel.GoalState.Error -> {
-                android.util.Log.e("HealthGroupHome", "❌ 목표 조회 실패: ${state.msg}")
                 scope.launch { snackbar.showSnackbar("목표 조회 실패: ${state.msg}") }
             }
             is HealthGroupHomeViewModel.GoalState.Loading -> {
-                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
+//                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
             }
             is HealthGroupHomeViewModel.GoalState.Idle -> {
-                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
+//                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
             }
         }
     }
@@ -263,6 +320,13 @@ fun HealthGroupHome(
         members.firstOrNull { it.isLeader } ?: members.firstOrNull()
         ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
+
+    val leaderCharInfo = remember(leader, characterMap) {
+        characterMap[leader.userPk]
+    }
+
+    val leaderAvatarUrl = leaderCharInfo?.mainCharacterImageUrl
+    val leaderBgUrl = leaderCharInfo?.mainBackgroundImageUrl
 
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
 
@@ -280,9 +344,17 @@ fun HealthGroupHome(
         }
     )
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, membersWithActivity) {
         membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
+    }
+
+    val todayActivityByUserPk = remember(dailyActivityData, isLoadingDailyActivity) {
+        if (isLoadingDailyActivity) {
+            emptyMap()
+        } else {
+            dailyActivityData
+        }
     }
 
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
@@ -290,7 +362,26 @@ fun HealthGroupHome(
     var goalError by rememberSaveable { mutableStateOf<String?>(null) }
 
     /** ---------------- 화면 렌더링 ---------------- */
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                // 권한 체크 후 동기화
+                when (permissionState) {
+                    HealthPermissionViewModel.State.Granted -> {
+                        isRefreshing = true
+                        syncViewModel.syncTodayData()
+                    }
+                    else -> {
+                        Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
+                        healthPermissionViewModel.requestPermissions(activity)
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
         Box(modifier = modifier.fillMaxSize()) {
 
             LazyColumn(Modifier.fillMaxSize()) {
@@ -357,7 +448,9 @@ fun HealthGroupHome(
                     HealthGroupHeaderCard(
                         progress = todayGroupPercent.coerceIn(0f, 1f),
                         bgImgRes = R.drawable.background_1,
-                        leaderAvatarRes = leader.avatarRes
+                        leaderAvatarRes = leader.avatarRes,
+                        avatarUrl = leaderAvatarUrl,
+                        backgroundUrl = leaderBgUrl,
                     )
                     Spacer(Modifier.height(12.dp))
                 }
@@ -438,8 +531,6 @@ fun HealthGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
-                    Log.d("HealthGroupHome", "$charInfo, avatarUrl = $avatarUrl")
-
 
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
@@ -451,7 +542,16 @@ fun HealthGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
-                        onClick = { selectedMember = member },
+                        onClick = {
+                            val charInfo = characterMap[member.userPk]
+                            selectedMember = MemberDetailInfo(
+                                member = member,
+                                avatarUrl = charInfo?.mainCharacterImageUrl,
+                                backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                                petName = charInfo?.petName
+                            )
+                        },
+                        isSelf = (member.userPk == TokenStore(context).getUserPk()),
                         isDistanceMetric = currentMetricType == "DISTANCE",
                         unit = currentUnit
                     )
@@ -575,8 +675,9 @@ fun HealthGroupHome(
                     val summaryChips = remember(totalStats) {
                         val calories = totalStats?.totalCalories ?: 0.0
                         val steps = totalStats?.totalSteps ?: 0
+                        val durationMs = totalStats?.totalDuration ?: 0
                         val durationSec = totalStats?.totalDuration ?: 0
-                        val formattedDuration = formatDuration(durationSec)
+                        val formattedDuration = formatDuration((durationMs / 1000).toInt())
 
                         listOf(
                             "🔥 ${calories.toInt()} kcal 태웠어요",
@@ -595,11 +696,19 @@ fun HealthGroupHome(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            selectedMember?.let { m ->
+            selectedMember?.let { info ->
+                val myCharInfo = characterMap[mySeq]
+
                 HealthMemberDetail(
-                    member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    member = info.member,
+                    avatarUrl = info.avatarUrl,
+                    backgroundUrl = info.backgroundUrl,
+                    petName = info.petName,
+                    myCharInfo = myCharInfo,
+                    today = todayHealthByName[info.member.name] ?: HealthToday(),
+                    onDismiss = { selectedMember = null },
+                    dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
+                    isLoading = isLoadingDailyActivity
                 )
             }
 
@@ -694,6 +803,7 @@ fun HealthGroupHome(
                     }
                 )
             }
+        }
         }
     }
 }

@@ -12,6 +12,6 @@ interface HealthFeedbackApi {
     @GET("/api/health/feedback/{userSeq}/{date}")
     suspend fun getHealthFeedback(
         @Path("userSeq") userSeq: Int,
-        @Path("date") date: LocalDate?
+        @Path("date") date: LocalDate
     ): Response<HealthSummaryResponse>
 }
