@@ -7,6 +7,7 @@ import com.ssafy.linkcare.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -70,6 +71,30 @@ public class HealthController {
         DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetail(userSeq);
 
         return ResponseEntity.ok(dailyHealthDetailResponse);
+    }
+
+    @GetMapping("/{userSeq}/health/daily/{date}")
+    public ResponseEntity<DailyHealthDetailResponse> getUserHealthDetailDataByDate(
+            @PathVariable int userSeq,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        log.info("API 호출 - 특정 날짜 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetailByDate(userSeq, date);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
+    }
+
+    @GetMapping("/{userSeq}/health/daily-activity/{date}")
+    public ResponseEntity<DailyActivitySummaryResponse> getUserDailyActivityDataByDate(
+            @PathVariable int userSeq,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        log.info("API 호출 - 특정 날짜 daily activity detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = healthService.getDailyActivitySummaryByDate(userSeq, date);
+
+        return ResponseEntity.ok(dailyActivitySummaryResponse);
     }
 
     @GetMapping("/{userSeq}/today-activity/detail")

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
@@ -34,14 +35,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.healthgroup.formatDuration
+import com.a307.linkcare.feature.healthgroup.ui.formatDuration
 
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
+import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 import kotlinx.coroutines.launch
@@ -115,6 +122,8 @@ fun CareGroupHome(
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel(),
+    myPageViewModel: MyPageViewModel = hiltViewModel()
+    syncViewModel: HealthSyncViewModel = hiltViewModel(),
     aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑤ AI 제안 추가
 ) {
     val context = LocalContext.current
@@ -132,8 +141,20 @@ fun CareGroupHome(
         healthPermissionViewModel.checkPermissions()
     }
 
+    val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
+    val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
+    val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
+
+    val characterMap = remember(groupChars) {
+        groupChars.associateBy({ it.userId }, { it })
+    }
+    LaunchedEffect(characterMap) {
+//        Log.d("CareGroupHome", "characterMap keys = ${characterMap.keys}")
+    }
+
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
+        myPageViewModel.loadGroupCharacters(groupSeq)
         groupViewModel.loadGroupDetail(groupSeq)
         healthViewModel.loadGroupStepStatistics(groupSeq)
     }
@@ -145,6 +166,34 @@ fun CareGroupHome(
             TokenStoreEntryPoint::class.java
         ).tokenStore()
     }
+    when {
+        groupLoad -> CircularProgressIndicator()
+
+        groupError != null -> Text("에러: $groupError")
+
+        groupChars.isNotEmpty() -> {
+            Column {
+                Text("그룹 캐릭터 ${groupChars.size}명:")
+
+                groupChars.forEach { char ->
+                    Text("• ${char.userName} / ${char.petName}")
+
+                    AsyncImage(
+                        model = char.mainCharacterImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp)
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    val groupCharResponse: List<GroupCharacterResponse> =
+        myPageViewModel.groupCharacters.collectAsState().value ?: emptyList()
+
+//    val context = LocalContext.current
     val currentUserName = remember {
         tokenStore.getName() ?: "나"
     }
@@ -152,13 +201,43 @@ fun CareGroupHome(
     // 동기화 상태 관찰
     val syncState by syncViewModel.syncState.collectAsState()
 
-    // 동기화 완료 시 토스트 표시
-    LaunchedEffect(syncState) {
+    // Pull-to-Refresh 상태
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val detail by groupViewModel.detail.collectAsState()
+    val membersResponse by groupViewModel.members.collectAsState()
+    val groupName by groupViewModel.groupName.collectAsState()
+    val totalStats by groupViewModel.totalActivityStats.collectAsState()
+    val healthData by healthViewModel.healthData.collectAsState()
+    val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
+    val isLoadingHealthFeedback by healthViewModel.isLoadingHealthFeedback.collectAsState()
+
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
+    LaunchedEffect(syncState, membersResponse, selectedDate) {
         when (syncState) {
             is SyncState.Success -> {
+                isRefreshing = false
                 Toast.makeText(context, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+                // CareMemberDetail 데이터만 다시 로드
+                if (membersResponse.isNotEmpty()) {
+                    val userPks = membersResponse.mapNotNull {
+                        if (it.userSeq > 0) it.userSeq.toInt() else null
+                    }
+                    if (userPks.isNotEmpty()) {
+                        healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
+                        healthViewModel.loadHealthFeedbackForMembers(userPks, selectedDate)
+                    }
+                }
             }
             is SyncState.Error -> {
+                isRefreshing = false
                 val error = (syncState as SyncState.Error).message
                 Toast.makeText(context, "동기화 실패: $error", Toast.LENGTH_SHORT).show()
             }
@@ -173,29 +252,36 @@ fun CareGroupHome(
     val healthData by healthViewModel.healthData.collectAsState()
     val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
 
-    // 멤버 변경 시 health feedback 로드
-    LaunchedEffect(membersResponse) {
+    // 날짜 변경 시 이전 health feedback 클리어
+    LaunchedEffect(selectedDate) {
+        healthViewModel.clearHealthFeedback()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 health feedback 로드
+    LaunchedEffect(membersResponse, selectedDate) {
         if (membersResponse.isNotEmpty()) {
             val userSeqs = membersResponse.map { it.userSeq.toInt() }
-            healthViewModel.loadHealthFeedbackForMembers(userSeqs)
+            healthViewModel.loadHealthFeedbackForMembers(userSeqs, selectedDate)
         }
     }
 
     val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
-        Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
-
-        // 🔹 /step-statistics에서 가져온 값들
-        val totalSteps = stepUiState.goal                // = totalSteps
+        // 총 거리
+        val totalSteps = stepUiState.goal
         val stepsByUserSeq = stepUiState.members.associateBy(
-            keySelector = { it.userSeq },               // DTO: userSeq
-            valueTransform = { it.steps }               // DTO: steps
+            keySelector = { it.userSeq },
+            valueTransform = { it.steps }
         )
 
         // step 통계가 아직 없을 때는 기존 더미값 유지할지 여부
         val hasStats = totalSteps > 0 && stepsByUserSeq.isNotEmpty()
 
         membersResponse.map { m ->
-            Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+            // 캐릭터
+            val charInfo = characterMap[m.userSeq]
+            val avatarUrl = charInfo?.mainCharacterImageUrl
+            val bgUrl = charInfo?.mainBackgroundImageUrl
+            val petName = charInfo?.petName
 
             val steps = if (hasStats) {
                 stepsByUserSeq[m.userSeq] ?: 0
@@ -207,8 +293,18 @@ fun CareGroupHome(
 
             // 건강 피드백 가져오기
             val feedback = healthFeedbackMap[m.userSeq.toInt()]
-            val status = feedback?.status?.name ?: "GOOD"
-            val summary = feedback?.summary ?: "활동이 안정적이에요."
+            val status = if (isLoadingHealthFeedback) {
+                "LOADING"
+            } else {
+                feedback?.status?.name ?: "GOOD"
+            }
+            val summary = if (isLoadingHealthFeedback) {
+                "건강 상태 분석 중입니다..."
+            } else {
+                feedback?.summary ?: "오늘 하루도 파이팅."
+            }
+
+            Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
 
             Member(
                 name = m.userName,
@@ -275,14 +371,13 @@ fun CareGroupHome(
         todayMembers = weekMembers
     }
 
-    // 멤버 건강 데이터 로드
-    LaunchedEffect(todayMembers) {
+    // 멤버 건강 데이터 로드 (선택된 날짜 기준)
+    LaunchedEffect(todayMembers, selectedDate) {
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }
-        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
-        if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+      if (userPks.isNotEmpty()) {
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -320,17 +415,13 @@ fun CareGroupHome(
         sampleSummary(selectedDate.korLabel(), metricType)
     }
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
-        Log.d("CareGroupHome", "healthData size = ${healthData.size}, keys = ${healthData.keys}")
-        todayMembers.associate { m ->
-            Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
+       todayMembers.associate { m ->
             val health = if (m.userPk > 0) {
                 val apiData = healthData[m.userPk.toInt()]
-                Log.d("CareGroupHome", "API data for ${m.name}: ${if (apiData != null) "FOUND" else "NOT FOUND"}")
                 apiData ?: sampleHealthToday(m)
             } else {
-                Log.d("CareGroupHome", "userPk is 0 for ${m.name}, using dummy data")
                 sampleHealthToday(m)
             }
             m.name to health
@@ -353,22 +444,27 @@ fun CareGroupHome(
         }
     }
 
-
-    Scaffold(
-        floatingActionButton = {
-            CareGroupFab(
-                permissionState = permissionState,
-                onRequestPermission = {
-                    healthPermissionViewModel.requestPermissions(activity)
-                },
-                onSync = {
-                    syncViewModel.syncTodayData()
-                    Toast.makeText(context, "건강 데이터 동기화 중...", Toast.LENGTH_SHORT).show()
+    Scaffold { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                // 권한 체크 후 동기화
+                when (permissionState) {
+                    HealthPermissionViewModel.State.Granted -> {
+                        isRefreshing = true
+                        syncViewModel.syncTodayData()
+                    }
+                    else -> {
+                        Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
+                        healthPermissionViewModel.requestPermissions(activity)
+                    }
                 }
-            )
-        }
-    )  { _ ->
-        LazyColumn(Modifier.fillMaxSize()) {
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(Modifier.fillMaxSize()) {
 
             if (header != null) {
                 item {
@@ -413,15 +509,31 @@ fun CareGroupHome(
 
                 // 멤버 리스트
                 itemsIndexed(todayMembers, key = { index, _ -> index }) { index, m ->
+                    val charInfo = characterMap[m.userPk]
+                    val avatarUrl = charInfo?.mainCharacterImageUrl
+                    val bgUrl = charInfo?.mainBackgroundImageUrl
+                    val petName = charInfo?.petName
+
                     MemberRowCare(
                         m = m,
+                        avatarUrl = avatarUrl,
+                        backgroundUrl = bgUrl,
+                        petName = petName,
                         bubbleVisible = expandedMemberName == m.name,
                         onAvatarToggle = {
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
-                        onClick = { selectedMember = m },
-                        isSelf = (m.name == currentUserName),
+                        onClick = {
+                            val charInfo = characterMap[m.userPk]
+                            selectedMember = MemberDetailInfo(
+                                member = m,
+                                avatarUrl = charInfo?.mainCharacterImageUrl,
+                                backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                                petName = charInfo?.petName
+                            )
+                        },
+                        isSelf = (m.userPk == TokenStore(context).getUserPk()),
                         onTapIconClick = {
                             // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
                             scope.launch {
@@ -436,7 +548,6 @@ fun CareGroupHome(
                         }
                     )
 
-                    // 마지막 아이템이 아닌 경우에만 Divider 표시
                     if (index < todayMembers.lastIndex) {
                         Divider(color = Color(0x11000000))
                     }
@@ -563,47 +674,51 @@ fun CareGroupHome(
                     )
                 }
             }
+        }
+        selectedMember?.let { info ->
 
-            selectedMember?.let { m ->
-
-                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
-                LaunchedEffect(m.userPk) {
-                    if (m.userPk > 0) {
-                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
-                        healthViewModel.loadHealthData(m.userPk.toInt())
-                    }
+            LaunchedEffect(info.member.userPk) {
+                if (info.member.userPk > 0) {
+                    healthViewModel.loadHealthData(info.member.userPk.toInt())
                 }
-
-                CareMemberDetail(
-                    member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null },
-                    currentUserName = currentUserName
-                )
             }
 
-            if (showCalendar) {
-                DatePickerDialog(
-                    onDismissRequest = { showCalendar = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                dpState.selectedDateMillis?.let {
-                                    selectedDate = epochMilliToLocalDate(it)
-                                }
-                                showCalendar = false
+            val myCharInfo = characterMap.values.find { it.userId == TokenStore(context).getUserPk() }
+
+            CareMemberDetail(
+                member = info.member,
+                avatarUrl = info.avatarUrl,
+                backgroundUrl = info.backgroundUrl,
+                petName = info.petName,
+                myCharInfo = myCharInfo,
+                today = todayHealthByName[info.member.name] ?: HealthToday(),
+                onDismiss = { selectedMember = null },
+                currentUserName = currentUserName
+            )
+        }
+
+        if (showCalendar) {
+            DatePickerDialog(
+                onDismissRequest = { showCalendar = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            dpState.selectedDateMillis?.let {
+                                selectedDate = epochMilliToLocalDate(it)
                             }
-                        ) { Text("확인") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showCalendar = false }) { Text("취소") }
-                    }
-                ) {
-                    DatePicker(state = dpState, showModeToggle = false)
+                            showCalendar = false
+                        }
+                    ) { Text("확인") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCalendar = false }) { Text("취소") }
                 }
+            ) {
+                DatePicker(state = dpState, showModeToggle = false)
             }
         }
     }
+}
 
 /* ---------- 컴포넌트 ---------- */
 @Composable

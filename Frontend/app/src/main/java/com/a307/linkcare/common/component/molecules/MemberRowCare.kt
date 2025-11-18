@@ -29,6 +29,9 @@ import android.util.Log
 @Composable
 fun MemberRowCare(
     m: Member,
+    avatarUrl: String?,
+    backgroundUrl: String?,
+    petName: String?,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
@@ -45,18 +48,41 @@ fun MemberRowCare(
     ) {
         // 아바타
         Avatar(
-            imageRes = m.avatarRes,
+            avatarUrl = avatarUrl,
+            backgroundUrl = backgroundUrl,
+            petName = petName,
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
-            onBubbleVisibleChange = { showBubble = it },
-            bgImgRes = R.drawable.background_1
+            onBubbleVisibleChange = { showBubble = it }
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+                if (petName != null) {
+                    Text(petName, fontWeight = FontWeight.SemiBold, color = black)
+                }
+                else
+                    Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+
+
+                Spacer(Modifier.width(6.dp))
+
+                if (isSelf) {
+                    Surface(
+                        color = Color(0xFF4CAF50),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            "나",
+                            color = white,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+
                 if (m.isLeader) {
-                    Spacer(Modifier.width(6.dp))
                     Surface(
                         color = main,
                         shape = RoundedCornerShape(6.dp)

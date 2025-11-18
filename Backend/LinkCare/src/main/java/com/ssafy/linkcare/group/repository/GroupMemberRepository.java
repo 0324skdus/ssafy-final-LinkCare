@@ -56,4 +56,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "LEFT JOIN FETCH u.mainBackground mb " +
             "WHERE gm.group = :group")
     List<GroupMember> findMembersWithDetailsByGroup(@Param("group") Group group);
+
+    Optional<GroupMember> findByUser_UserPkAndGroup_GroupSeq(Long userPk, Long groupSeq);
 }

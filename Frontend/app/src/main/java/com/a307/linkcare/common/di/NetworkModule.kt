@@ -4,6 +4,8 @@ import android.content.Context
 import com.a307.linkcare.feature.ai.data.api.AiApi
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
+import com.a307.linkcare.feature.mypage.data.ShopApi
+import com.a307.linkcare.feature.mypage.data.ShopRepository
 import com.a307.linkcare.feature.notification.data.NotificationApi
 import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
@@ -115,4 +117,17 @@ object NetworkModule {
     fun provideAiApi(retrofit: Retrofit): AiApi =
         retrofit.create(AiApi::class.java)
 
+    @Provides
+    @Singleton
+    fun provideShopApi(retrofit: Retrofit): ShopApi {
+        return retrofit.create(ShopApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideShopRepository(
+        api: ShopApi
+    ): ShopRepository {
+        return ShopRepository(api)
+    }
 }

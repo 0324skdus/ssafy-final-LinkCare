@@ -51,9 +51,32 @@ class CareGroupRepository @Inject constructor(
 
 
 
-suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
+    suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
         return try {
             val response = api.getDailyHealthDetail(userSeq)
+            if (response.isSuccessful) {
+                response.body()?.toHealthToday()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * 현재 로그인한 사용자의 오늘 건강 정보를 가져옵니다.
+     * 내부적으로 userSeq와 오늘 날짜를 사용해 [getDailyHealthDetailByDate]를 호출합니다.
+     */
+    suspend fun getMyDailyHealthDetail(): HealthToday? {
+        val userPk = tokenStore.getUserPk()?.toInt() ?: return null
+        return getDailyHealthDetailByDate(userPk, LocalDate.now())
+    }
+
+    suspend fun getDailyHealthDetailByDate(userSeq: Int, date: LocalDate): HealthToday? {
+        return try {
+            val response = api.getDailyHealthDetailByDate(userSeq, date)
             if (response.isSuccessful) {
                 response.body()?.toHealthToday()
             } else {
@@ -92,9 +115,9 @@ suspend fun getDailyHealthDetail(userSeq: Int): HealthToday? {
         }
     }
 
-    suspend fun getHealthFeedback(userSeq: Int): HealthSummaryResponse? {
+    suspend fun getHealthFeedback(userSeq: Int, date: LocalDate): HealthSummaryResponse? {
         return try {
-            val response = healthFeedbackApi.getHealthFeedback(userSeq)
+            val response = healthFeedbackApi.getHealthFeedback(userSeq, date)
             if (response.isSuccessful) {
                 response.body()
             } else {

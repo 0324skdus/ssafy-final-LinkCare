@@ -58,46 +58,35 @@ import com.a307.linkcare.feature.caregroup.GroupMember
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.feature.commongroup.ui.GroupSearch
 import com.a307.linkcare.feature.commongroup.ui.MainWithNoGroup
-import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.healthgroup.HealthGroup
-import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
-import com.a307.linkcare.feature.healthgroup.HealthGroupEdit
-import com.a307.linkcare.feature.healthgroup.HealthGroupHome
-import com.a307.linkcare.feature.mypage.DecorateScreen
-import com.a307.linkcare.feature.mypage.MyGroups
-import com.a307.linkcare.feature.mypage.MyPage
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroup
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupCreate
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupEdit
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHome
+import com.a307.linkcare.feature.mypage.ui.DecorateScreen
+import com.a307.linkcare.feature.mypage.ui.MyGroups
+import com.a307.linkcare.feature.mypage.ui.MyPage
 import com.a307.linkcare.feature.mypage.MyPageApiState
 import com.a307.linkcare.feature.mypage.MyPageViewModel
-import com.a307.linkcare.feature.mypage.StoreItem
-import com.a307.linkcare.feature.mypage.StoreScreen
-import com.a307.linkcare.feature.mypage.StoreUiState
+import com.a307.linkcare.feature.mypage.ui.StoreItem
+import com.a307.linkcare.feature.mypage.ui.StoreScreen
+import com.a307.linkcare.feature.mypage.ui.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
 import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.a307.linkcare.common.component.molecules.HeaderBasic
 import com.a307.linkcare.feature.customize.CustomEntity
 import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
 import com.a307.linkcare.feature.customize.CustomizeRepository
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.mypage.Gender
-import com.a307.linkcare.feature.mypage.Profile
-import com.a307.linkcare.feature.mypage.ProfileEditScreen
+import com.a307.linkcare.feature.mypage.ui.ProfileEditScreen
 import com.a307.linkcare.feature.watch.data.DataLayerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.feature.mypage.MyPageEditViewModel
+import com.a307.linkcare.feature.mypage.StoreViewModel
+import com.a307.linkcare.feature.mypage.ui.StoreRoute
+import com.a307.linkcare.feature.mypage.ui.StoreTab
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -478,7 +467,8 @@ fun MainTabs(
                                         if (careSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(careSearchQuery)
                                         }
-                                        groupvm.loadCare() // 케어 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -500,7 +490,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     CareGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedCareGroup = null
+                            selectedIndexCare = 0
+                        }
                     )
                 }
             }
@@ -547,7 +542,8 @@ fun MainTabs(
                                         if (healthSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(healthSearchQuery)
                                         }
-                                        groupvm.loadHealth() // 헬스 그룹 목록 새로고침
+                                        // SharedFlow 이벤트 발행으로 실시간 업데이트
+                                        groupvm.notifyGroupApplicationSubmitted()
                                     }
                                     .onFailure { error ->
                                         Toast.makeText(context, "가입 신청 실패: ${error.message}", Toast.LENGTH_SHORT).show()
@@ -569,7 +565,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     HealthGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedHealthGroup = null
+                            selectedIndexHealth = 0
+                        }
                     )
                 }
             }
@@ -671,32 +672,12 @@ fun MainTabs(
                     MyGroups(navController = navController)
                 }
 
-                // 상점
-                val dummyState = StoreUiState(
-                    coins = 300,
-                    characterItems = listOf(
-                        StoreItem(1, R.drawable.char_bear_1, price = 100, owned = true),
-                        StoreItem(2, R.drawable.char_duck_1, price = 150, owned = false)
-                    ),
-                    backgroundItems = listOf(
-                        StoreItem(1, R.drawable.background_1, price = 80, owned = true),
-                        StoreItem(2, R.drawable.background_2, price = 120, owned = false),
-                        StoreItem(3, R.drawable.background_3, price = 120, owned = false),
-                        StoreItem(4, R.drawable.background_4, price = 120, owned = false),
-                        StoreItem(5, R.drawable.background_5, price = 120, owned = false),
-                        StoreItem(6, R.drawable.background_6, price = 120, owned = false),
-                        StoreItem(7, R.drawable.background_7, price = 120, owned = false),
-                        StoreItem(8, R.drawable.background_8, price = 120, owned = false)
-                    ),
-                    equippedBackground = R.drawable.background_1,
-                    equippedCharacter = R.drawable.char_bear_1
-                )
                 composable(Route.Store.route) {
-                    StoreScreen(
-                        state = dummyState,
-                        onBuy = { /* TODO: 구매 처리 */ }
+                    StoreRoute(
+                        onBack = { navController.popBackStack() }
                     )
                 }
+
 
                 // 꾸미기
                 composable(Route.Decorate.route) {

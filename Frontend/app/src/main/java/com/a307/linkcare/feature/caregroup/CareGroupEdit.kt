@@ -7,6 +7,10 @@ import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,6 +33,7 @@ import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -82,19 +87,112 @@ fun CareGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
     viewModel: CareGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    onDelegate: (memberId: Long) -> Unit = {},
-    onKick: (memberId: Long) -> Unit = {},
-    onLeave: () -> Unit = {},
+    groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    myPageViewModel: com.a307.linkcare.feature.mypage.MyPageViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
     onBack: () -> Unit = { navController.popBackStack() }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val memberActionState by viewModel.memberActionState.collectAsState()
     val context = LocalContext.current
+
+    // 그룹 캐릭터 정보 로드
+    val groupCharacters by myPageViewModel.groupCharacters.collectAsState()
+    val characterMap = remember(groupCharacters) {
+        groupCharacters.associateBy({ it.userId }, { it })
+    }
 
     // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
         viewModel.loadGroupDetail(groupSeq)
+        myPageViewModel.loadGroupCharacters(groupSeq)
+    }
+
+    // 위임하기 핸들러
+    val onDelegate: (Long) -> Unit = { memberUserSeq ->
+        viewModel.delegateLeader(groupSeq, memberUserSeq)
+    }
+
+    // 내보내기 핸들러
+    val onKick: (Long) -> Unit = { memberUserSeq ->
+        viewModel.kickMember(groupSeq, memberUserSeq)
+    }
+
+    // 탈퇴하기 핸들러
+    val onLeave: () -> Unit = {
+        viewModel.leaveGroup(groupSeq)
+    }
+
+    // 그룹 삭제 핸들러
+    val onDelete: () -> Unit = {
+        viewModel.deleteGroup(groupSeq)
+    }
+
+    // Handle member action state
+    LaunchedEffect(memberActionState) {
+        when (memberActionState) {
+            is CareGroupEditViewModel.MemberActionState.DelegateSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.DelegateSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is CareGroupEditViewModel.MemberActionState.KickSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.KickSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            is CareGroupEditViewModel.MemberActionState.LeaveSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.LeaveSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                // 그룹 목록 새로고침 후 care 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadCare()
+                    onGroupDeleted()
+                    navController.navigate("care/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            is CareGroupEditViewModel.MemberActionState.DeleteSuccess -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.DeleteSuccess).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+                // 그룹 목록 새로고침 후 care 탭의 루트로 이동
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    groupvm?.loadCare()
+                    onGroupDeleted()
+                    navController.navigate("care/main") {
+                        popUpTo(0) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            is CareGroupEditViewModel.MemberActionState.Error -> {
+                Toast.makeText(
+                    context,
+                    (memberActionState as CareGroupEditViewModel.MemberActionState.Error).msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetMemberActionState()
+            }
+            else -> {}
+        }
     }
 
     // Handle update success
@@ -152,9 +250,11 @@ fun CareGroupEdit(
                 groupDetail = state.groupDetail,
                 viewModel = viewModel,
                 updateState = updateState,
+                characterMap = characterMap,
                 onDelegate = onDelegate,
                 onKick = onKick,
                 onLeave = onLeave,
+                onDelete = onDelete,
                 onCopyInvite = onCopyInvite,
                 onBack = onBack
             )
@@ -162,21 +262,25 @@ fun CareGroupEdit(
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 private fun RenderCareGroupEditForm(
     navController: NavHostController,
     groupDetail: com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse,
     viewModel: CareGroupEditViewModel,
     updateState: CareGroupEditViewModel.UpdateState,
+    characterMap: Map<Long, GroupCharacterResponse>,
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,
+    onDelete: () -> Unit,
     onCopyInvite: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val groupSeq = groupDetail.groupSeq
-    val isLeader = groupDetail.members.find { it.isLeader }?.userSeq == groupDetail.members.firstOrNull()?.userSeq // TODO: check current user
+    // 현재 로그인한 사용자가 그룹장인지 확인
+    val isLeader = groupDetail.members.find { it.userSeq == groupDetail.currentUserSeq }?.isLeader ?: false
 
     // ---- 내부 상태: 초기값 프리필 ----
     var name by remember { mutableStateOf(groupDetail.groupName) }
@@ -320,22 +424,23 @@ private fun RenderCareGroupEditForm(
                 Spacer(Modifier.height(12.dp))
             }
             itemsIndexed(
-                groupDetail.members.map { member ->
-                    GroupMember(
-                        id = member.userSeq,
-                        name = member.userName,
-                        avatarRes = null,
-                        isLeader = member.isLeader,
-                        avatarUrl = member.mainCharacterBaseImageUrl
-                    )
-                },
-                key = { index, m -> m.id }
-            ) { _, m ->
+                groupDetail.members,
+                key = { index, m -> m.userSeq }
+            ) { _, member ->
+                val charInfo = characterMap[member.userSeq]
+                val groupMember = GroupMember(
+                    id = member.userSeq,
+                    name = member.userName,
+                    avatarRes = null,
+                    isLeader = member.isLeader,
+                    avatarUrl = charInfo?.mainCharacterImageUrl ?: member.mainCharacterBaseImageUrl
+                )
                 MemberRow(
-                    member = m,
+                    member = groupMember,
                     isLeader = isLeader,
-                    onDelegate = { onDelegate(m.id) },
-                    onKick = { onKick(m.id) }
+                    backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                    onDelegate = { onDelegate(member.userSeq) },
+                    onKick = { onKick(member.userSeq) }
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -399,34 +504,49 @@ private fun RenderCareGroupEditForm(
             // 하단 버튼
             item {
                 if (isLeader) {
-                    // 그룹장: [수정하기] 단일 버튼
-                    LcBtn(
-                        text = "수정하기",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        buttonColor = main,
-                        buttonTextColor = white,
-                        isEnabled = canSubmit && updateState !is CareGroupEditViewModel.UpdateState.Loading,
-                        onClick = {
-                            val imageAction = if (selectedImageUri != null) "update" else "keep"
-                            val imageFile = selectedImageUri?.let { uri ->
-                                uriToFile(context, uri)
-                            }
+                    // 그룹장: [수정하기]/[그룹 삭제하기]
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LcBtn(
+                            text = "수정하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = main,
+                            buttonTextColor = white,
+                            isEnabled = canSubmit && updateState !is CareGroupEditViewModel.UpdateState.Loading,
+                            onClick = {
+                                val imageAction = if (selectedImageUri != null) "update" else "keep"
+                                val imageFile = selectedImageUri?.let { uri ->
+                                    uriToFile(context, uri)
+                                }
 
-                            viewModel.updateGroup(
-                                groupSeq = groupSeq,
-                                groupName = name.trim(),
-                                groupDescription = desc.trim(),
-                                imageAction = imageAction,
-                                imageFile = imageFile,
-                                isSleepRequired = shareSleep,
-                                isWaterIntakeRequired = shareWater,
-                                isBloodPressureRequired = shareBp,
-                                isBloodSugarRequired = shareSugar
-                            )
-                        }
-                    )
+                                viewModel.updateGroup(
+                                    groupSeq = groupSeq,
+                                    groupName = name.trim(),
+                                    groupDescription = desc.trim(),
+                                    imageAction = imageAction,
+                                    imageFile = imageFile,
+                                    isSleepRequired = shareSleep,
+                                    isWaterIntakeRequired = shareWater,
+                                    isBloodPressureRequired = shareBp,
+                                    isBloodSugarRequired = shareSugar
+                                )
+                            }
+                        )
+                        LcBtn(
+                            text = "그룹 삭제하기",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            buttonColor = Color(0xFFFF6B6B),
+                            buttonTextColor = white,
+                            isEnabled = true,
+                            onClick = onDelete
+                        )
+                    }
                 } else {
                     // 일반 구성원: [돌아가기]/[탈퇴하기]
                     Row(
@@ -507,6 +627,7 @@ private fun InviteLinkRow(
 private fun MemberRow(
     member: GroupMember,
     isLeader: Boolean,
+    backgroundUrl: String? = null,
     onDelegate: () -> Unit,
     onKick: () -> Unit
 ) {
@@ -525,8 +646,18 @@ private fun MemberRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 아바타
+                // 아바타 (배경 이미지 포함)
                 Box(modifier = Modifier.size(44.dp)) {
+                    // 배경 이미지
+                    if (backgroundUrl != null) {
+                        coil.compose.AsyncImage(
+                            model = backgroundUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    // 캐릭터 이미지
                     GroupAvatarChip(
                         avatarRes = member.avatarRes ?: R.drawable.main_duck,
                         avatarUrl = member.avatarUrl
@@ -557,22 +688,30 @@ private fun MemberRow(
                 // 오른쪽 작은 액션들
                 if (isLeader && !member.isLeader) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        AssistChip(
+                        Button(
                             onClick = onDelegate,
-                            label = { Text("위임하기") },
-                            colors = AssistChipDefaults.assistChipColors(
+                            colors = ButtonDefaults.buttonColors(
                                 containerColor = main,
-                                labelColor = white
-                            )
-                        )
-                        AssistChip(
+                                contentColor = white
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("위임하기", fontSize = 12.sp)
+                        }
+                        Button(
                             onClick = onKick,
-                            label = { Text("내보내기") },
-                            colors = AssistChipDefaults.assistChipColors(
+                            colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFF6B6B),
-                                labelColor = white
-                            )
-                        )
+                                contentColor = white
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("내보내기", fontSize = 12.sp)
+                        }
                     }
                 }
             }

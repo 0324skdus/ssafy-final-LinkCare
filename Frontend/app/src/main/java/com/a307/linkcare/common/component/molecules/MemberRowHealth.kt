@@ -32,6 +32,9 @@ import android.util.Log
 @Composable
 fun MemberRowHealth(
     m: Member,
+    avatarUrl: String?,
+    backgroundUrl: String?,
+    petName: String?,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
@@ -50,18 +53,40 @@ fun MemberRowHealth(
     ) {
         // 아바타
         Avatar(
-            imageRes = m.avatarRes,
+            avatarUrl = avatarUrl,
+            backgroundUrl = backgroundUrl,
+            petName = petName,
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
             onBubbleVisibleChange = { showBubble = it },
-            bgImgRes = R.drawable.background_1
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+                if (petName != null) {
+                    Text(petName, fontWeight = FontWeight.SemiBold, color = black)
+                }
+                else
+                    Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+
+                Spacer(Modifier.width(6.dp))
+
+                if (isSelf) {
+                    Surface(
+                        color = Color(0xFF4CAF50),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            "나",
+                            color = white,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+
                 if (m.isLeader) {
-                    Spacer(Modifier.width(6.dp))
                     Surface(
                         color = main,
                         shape = RoundedCornerShape(6.dp)
@@ -90,20 +115,20 @@ fun MemberRowHealth(
         Spacer(Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.End) {
             val progressText = if (isDistanceMetric) {
-                String.format("%.2f", m.progresses / 100.0) // 100배 한 값을 다시 복원
+                String.format("%.2f", m.progresses / 100.0)
             } else {
                 m.progresses.toString()
             }
             val goalText = if (isDistanceMetric) {
-                String.format("%.2f", m.goal / 100.0) // 100배 한 값을 다시 복원
+                String.format("%.2f", m.goal / 100.0)
             } else {
                 m.goal.toString()
             }
             val progressAnnotated = buildAnnotatedString {
-                append(progressText)   // 원래 크기 유지
+                append(progressText)
 
-                pushStyle(SpanStyle(fontSize = 12.sp))  // unit만 크기 줄이기
-                append(" "+unit)
+                pushStyle(SpanStyle(fontSize = 12.sp))
+                append(unit)
                 pop()
 
                 append(" 달성")        // 다시 원래 크기

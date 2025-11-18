@@ -180,6 +180,29 @@ public class HealthService {
                 .build();
     }
 
+    public DailyHealthDetailResponse getDailyHealthDetailByDate(int userSeq, LocalDate date) {
+
+        List<BloodPressureResponse> bloodPressureResponses = bloodPressureService.getBloodPressureByDate(userSeq, date, date);
+        List<SleepResponse> sleepResponse = sleepService.getSleepsByDate(userSeq, date, date);
+        List<WaterIntakeResponse> waterIntakeResponses = waterIntakeService.getWaterIntakeByDate(userSeq, date, date);
+        List<HeartRateResponse> heartRateResponses = heartRateService.getHeartRatesByPeriod(userSeq, date, date);
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, date, date);
+
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+
+        return DailyHealthDetailResponse.builder()
+                .bloodPressures(bloodPressureResponses)
+                .sleeps(sleepResponse)
+                .waterIntakes(waterIntakeResponses)
+                .heartRates(heartRateResponses)
+                .dailyActivitySummary(dailyActivitySummaryResponse)
+                .build();
+    }
+
     public DailyActivitySummaryResponse getDailyActivitySummary(int userSeq) {
         LocalDate today = LocalDate.now();
         List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
@@ -187,6 +210,15 @@ public class HealthService {
         return DailyActivitySummaryResponse.builder()
                 .exercises(exerciseSessionResponses)
                 .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+    }
+
+    public DailyActivitySummaryResponse getDailyActivitySummaryByDate(int userSeq, LocalDate date) {
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, date, date);
+
+        return DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getStepsByDate(userSeq, date))
                 .build();
     }
 
