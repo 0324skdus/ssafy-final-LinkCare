@@ -3,6 +3,7 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -77,7 +79,8 @@ fun HealthGroupHome(
     groupSeq: Long,
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
-    goalVm: HealthGroupHomeViewModel = hiltViewModel()
+    goalVm: HealthGroupHomeViewModel = hiltViewModel(),
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑥ AI 제안 추가
 ) {
     val today = remember { LocalDate.now() }
 
@@ -90,6 +93,9 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+
+    // ⑥ AI 빠른 넛지 메시지
+    val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
     // -------------------------
 
     val members = remember(membersResponse) {
@@ -380,7 +386,19 @@ fun HealthGroupHome(
                         },
                         onClick = { selectedMember = member },
                         isDistanceMetric = currentMetricType == "DISTANCE",
-                        unit = currentUnit
+                        unit = currentUnit,
+                        onTapIconClick = {
+                            // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
+                            scope.launch {
+                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
+                                // AI 생성 후 로그 출력
+                                if (quickNudgeMessage.isNotEmpty()) {
+                                    Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
+                                } else {
+                                    Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
+                                }
+                            }
+                        }
                     )
                     if (index < membersWithActivity.lastIndex) {
                         Divider(color = Color(0x11000000))
@@ -500,7 +518,8 @@ fun HealthGroupHome(
                 HealthMemberDetail(
                     member = m,
                     today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    onDismiss = { selectedMember = null },
+                    goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
                 )
             }
 

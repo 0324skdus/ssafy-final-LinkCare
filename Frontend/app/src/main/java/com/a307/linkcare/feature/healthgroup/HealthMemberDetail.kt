@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.healthgroup
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -27,14 +28,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.caregroup.ExerciseSession
 import com.a307.linkcare.feature.caregroup.HealthToday
+import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.commongroup.ui.NudgeLetterCard
 import com.a307.linkcare.feature.commongroup.ui.Suggestion
 import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -43,7 +48,8 @@ fun HealthMemberDetail(
     today: HealthToday,
     onDismiss: () -> Unit,
     currentUserName: String = "나",
-    maxWidth: Dp = 380.dp
+    maxWidth: Dp = 380.dp,
+    goalCriteria: GoalCriteria? = null
 ) {
     val isSelf = remember(member.name, currentUserName) {
         member.name == currentUserName
@@ -167,10 +173,22 @@ fun HealthMemberDetail(
                 }
 
                 var showLetter by remember { mutableStateOf(false) }
+
+                // ④ AI 제안 로드 (wellness-other)
+                val suggestionViewModel: AiSuggestionViewModel = hiltViewModel()
+                val aiSuggestions by suggestionViewModel.healthGroupSuggestions.collectAsState()
+                val scope = rememberCoroutineScope()
+
                 // 편지쓰기 버튼
                 Button(
                     enabled = !isSelf,
-                    onClick = { showLetter = true },
+                    onClick = {
+                        showLetter = true
+                        // AI 제안 로드 (목표값 포함)
+                        scope.launch {
+                            suggestionViewModel.loadHealthGroupSuggestions(member.userPk, goalCriteria)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -188,14 +206,25 @@ fun HealthMemberDetail(
 
                 if (showLetter) {
                     androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
+                        // AI 생성 제안 또는 기본 제안 사용
+                        val suggestions = remember(aiSuggestions) {
+                            if (aiSuggestions.isNotEmpty()) {
+                                aiSuggestions.mapIndexed { index, text ->
+                                    Suggestion(index + 1, text)
+                                }
+                            } else {
+                                listOf(
+                                    Suggestion(1, "오늘 컨디션 좋아 보여요!"),
+                                    Suggestion(2, "물 자주 마셔요 💧"),
+                                    Suggestion(3, "이따 운동하러 같이 가요 🏃‍♀️")
+                                )
+                            }
+                        }
+
                         NudgeLetterCard(
                             sender = User(currentUserName, member.avatarRes),
                             receiver = User(member.name, member.avatarRes),
-                            suggestions = listOf(
-                                Suggestion(1, "오늘 컨디션 좋아 보여요!"),
-                                Suggestion(2, "물 자주 마셔요 💧"),
-                                Suggestion(3, "이따 운동하러 같이 가요 🏃‍♀️")
-                            ),
+                            suggestions = suggestions,
                             onClose = { showLetter = false },
                             onSend = { suggestion, custom ->
                                 println("보낼 내용: ${suggestion?.text ?: custom}")

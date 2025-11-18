@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.feature.ai.domain.worker.AiWorkManager
 import com.a307.linkcare.feature.auth.OnboardingViewModel
 import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.domain.SendVerificationCodeRequest
@@ -34,9 +35,18 @@ import com.a307.linkcare.feature.auth.ui.SignupGenderScreen
 import com.a307.linkcare.feature.auth.ui.SignupHeightScreen
 import com.a307.linkcare.feature.auth.ui.SignupScreen
 import com.a307.linkcare.feature.intro.IntroTourScreen
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AiWorkManagerEntryPoint {
+    fun aiWorkManager(): AiWorkManager
+}
 
 @Composable
 fun AppNavGraph(
@@ -47,6 +57,16 @@ fun AppNavGraph(
     // 딥링크 토큰을 remember로 저장
     val deepLinkToken = remember { mutableStateOf(initialDeepLinkToken) }
 
+    // Context로부터 AiWorkManager 가져오기
+    val context = LocalContext.current
+    val aiWorkManager = remember {
+        val app = context.applicationContext as com.a307.linkcare.LinkCareApp
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            app,
+            AiWorkManagerEntryPoint::class.java
+        ).aiWorkManager()
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -56,6 +76,10 @@ fun AppNavGraph(
             LoginScreen(
                 navController = navController,
                 onLoginSuccess = { isFirstLogin ->
+                    // 로그인 성공 → AI 코멘트 생성 즉시 실행
+                    Log.d("AppNavGraph", "🤖 로그인 성공 - AI WorkManager 즉시 실행")
+                    aiWorkManager.runNow()
+
                     // 딥링크가 있으면 초대 화면으로, 아니면 일반 플로우
                     val token = deepLinkToken.value
                     if (!token.isNullOrEmpty()) {

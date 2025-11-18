@@ -39,6 +39,7 @@ sealed class Route(val route: String) {
     object Decorate : Route("mypage/decorate")
     object Store : Route("mypage/store")
     object EditProfile : Route("mypage/edit_profile")
+    object AiChat : Route("mypage/ai_chat")
 
     companion object {
         const val CareSearch = "care/search"

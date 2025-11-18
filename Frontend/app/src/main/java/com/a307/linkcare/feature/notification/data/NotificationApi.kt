@@ -1,10 +1,13 @@
 package com.a307.linkcare.feature.notification.data
 
 import com.a307.linkcare.feature.notification.domain.NotificationResponse
+import com.a307.linkcare.feature.notification.domain.SaveNotificationRequest
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -30,5 +33,11 @@ interface NotificationApi {
     @DELETE("/api/notifications/{notificationId}")
     suspend fun deleteNotification(
         @Path("notificationId") notificationId: Long
+    ): Response<Unit>
+
+    // 알림 저장 (콕 찌르기)
+    @POST("/api/alarms/save")
+    suspend fun saveNotification(
+        @Body request: SaveNotificationRequest
     ): Response<Unit>
 }

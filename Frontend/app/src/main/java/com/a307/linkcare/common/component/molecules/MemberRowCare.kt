@@ -24,6 +24,7 @@ import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
+import android.util.Log
 
 @Composable
 fun MemberRowCare(
@@ -31,7 +32,8 @@ fun MemberRowCare(
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
-    isSelf: Boolean = false
+    isSelf: Boolean = false,
+    onTapIconClick: (() -> Unit)? = null
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -125,7 +127,9 @@ fun MemberRowCare(
             Image(
                 painter = painterResource(R.drawable.tap),
                 contentDescription = null,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier
+                    .size(30.dp)
+                    .then(if (onTapIconClick != null) Modifier.clickable { onTapIconClick() } else Modifier)
             )
         } else {
             Spacer(Modifier.width(8.dp))

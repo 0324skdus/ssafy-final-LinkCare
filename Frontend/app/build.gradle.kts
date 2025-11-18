@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     id("com.google.gms.google-services")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
 
@@ -140,13 +140,22 @@ dependencies {
     implementation("androidx.datastore:datastore-core:1.1.1")
 
     // hilt
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("com.google.dagger:hilt-android:2.57.1")
-    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
+    implementation("com.google.dagger:hilt-android:2.57.2")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.2")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Hilt-WorkManager Integration
+    implementation("androidx.hilt:hilt-work:1.3.0")
+    ksp("androidx.hilt:hilt-compiler:1.3.0")
 
     // LocalBroadcastManager for FCM notification events
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     implementation(files("libs/samsung-health-data-api-1.0.0.aar"))
     implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+
+    // Llama on-device AI model
+    implementation(project(":llama"))
 }

@@ -41,6 +41,15 @@ import com.a307.linkcare.feature.auth.data.RetrofitClient
 import com.a307.linkcare.feature.auth.data.TokenStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface MyPageTokenStoreEntryPoint {
+    fun tokenStore(): TokenStore
+}
 
 /* ---------- 앱 팔레트 ---------- */
 private val cardStroke = Color(0xFFE5E5EA)
@@ -63,10 +72,19 @@ fun MyPage(
     onGroupsClick: () -> Unit = {},
     onStoreClick: () -> Unit = {},
     onDecorateClick: () -> Unit = {},
+    onAiChatClick: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // TokenStore를 Hilt를 통해 가져옴
+    val tokenStore = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            MyPageTokenStoreEntryPoint::class.java
+        ).tokenStore()
+    }
 
     Box(
         modifier = modifier
@@ -107,8 +125,10 @@ fun MyPage(
             MenuRow(
                 context = context,
                 scope = scope,
+                tokenStore = tokenStore,
                 onStoreClick = onStoreClick,
                 onDecorateClick = onDecorateClick,
+                onAiChatClick = onAiChatClick,
                 onLogout = onLogout
             )
 
@@ -225,8 +245,10 @@ private fun ProfileCard(
 private fun MenuRow(
     context: Context,
     scope: CoroutineScope,
+    tokenStore: TokenStore,
     onStoreClick: () -> Unit,
     onDecorateClick: () -> Unit,
+    onAiChatClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
@@ -249,6 +271,24 @@ private fun MenuRow(
 
         Spacer(Modifier.height(8.dp))
 
+        // 중간: AI 채팅 버튼
+        Row(Modifier.fillMaxWidth()) {
+            MenuButtonCard(
+                title = "AI 상담",
+                icon = {
+                    Text(
+                        "🤖",
+                        fontSize = 24.sp,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onAiChatClick
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         // 하단
         Row(Modifier.fillMaxWidth()) {
             Text(
@@ -259,7 +299,7 @@ private fun MenuRow(
                     .clickable {
                         scope.launch {
                             try {
-                                val access = TokenStore(context).getAccess()
+                                val access = tokenStore.getAccess()
                                 if (access == null) {
                                     Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
                                     return@launch
@@ -268,7 +308,7 @@ private fun MenuRow(
                                 val res = RetrofitClient.authApi.logout("Bearer $access")
 
                                 if (res.isSuccessful) {
-                                    TokenStore(context).clear()
+                                    tokenStore.clear()
                                     Toast.makeText(context, "로그아웃되었습니다.", Toast.LENGTH_SHORT).show()
 
                                     onLogout()

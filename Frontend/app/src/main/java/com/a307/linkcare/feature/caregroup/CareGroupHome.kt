@@ -39,10 +39,22 @@ import com.a307.linkcare.feature.healthgroup.formatDuration
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
+import kotlinx.coroutines.launch
+import com.a307.linkcare.feature.auth.data.TokenStore
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface TokenStoreEntryPoint {
+    fun tokenStore(): TokenStore
+}
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -102,13 +114,18 @@ fun CareGroupHome(
     modifier: Modifier = Modifier,
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
-    syncViewModel: HealthSyncViewModel = hiltViewModel()
+    syncViewModel: HealthSyncViewModel = hiltViewModel(),
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑤ AI 제안 추가
 ) {
     val context = LocalContext.current
     val activity = context as Activity
 
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
+
+    // ⑤ AI 빠른 넛지 메시지
+    val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -121,9 +138,15 @@ fun CareGroupHome(
         healthViewModel.loadGroupStepStatistics(groupSeq)
     }
 
-//    val context = LocalContext.current
+    // TokenStore를 Hilt를 통해 가져옴
+    val tokenStore = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            TokenStoreEntryPoint::class.java
+        ).tokenStore()
+    }
     val currentUserName = remember {
-        com.a307.linkcare.feature.auth.data.TokenStore(context).getName() ?: "나"
+        tokenStore.getName() ?: "나"
     }
 
     // 동기화 상태 관찰
@@ -370,7 +393,10 @@ fun CareGroupHome(
                         nameToBold = { it.name },
                         focused = { it.focused },
                         onDismiss = { taps.remove(it) },
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        onIconClick = { tapItem ->
+                            Log.d("NudgeIconClick", "Nudge icon clicked for item: ${tapItem.text}")
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -395,7 +421,19 @@ fun CareGroupHome(
                                 if (expandedMemberName == m.name) null else m.name
                         },
                         onClick = { selectedMember = m },
-                        isSelf = (m.name == currentUserName)
+                        isSelf = (m.name == currentUserName),
+                        onTapIconClick = {
+                            // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
+                            scope.launch {
+                                aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
+                                // AI 생성 후 로그 출력
+                                if (quickNudgeMessage.isNotEmpty()) {
+                                    Log.d("MemberRowCare", "[AI 넛지] 그룹$groupSeq ${m.name}: $quickNudgeMessage")
+                                } else {
+                                    Log.d("MemberRowCare", "Tap icon clicked for member: ${m.name}")
+                                }
+                            }
+                        }
                     )
 
                     // 마지막 아이템이 아닌 경우에만 Divider 표시
