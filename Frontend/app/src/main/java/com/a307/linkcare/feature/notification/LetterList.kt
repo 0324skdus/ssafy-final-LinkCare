@@ -25,47 +25,15 @@ import com.a307.linkcare.common.util.painterResourceCropped
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-enum class GroupType { CARE, HEALTH }
-
-data class LetterItem(
-    val id: String,
-    val title: String,
-    val sender: String,
-    val content: String,
-    val group: GroupType,
-    val sentAtMillis: Long,
-    @DrawableRes val avatarRes: Int,
-    val isRead: Boolean = false
-)
-
 @Composable
-fun LetterList() {
+fun LetterList(
+    viewModel: NotificationViewModel
+) {
     val formatter = remember { SimpleDateFormat("MM.dd HH:mm", Locale.KOREA) }
     val readGray = Color(0xFF9E9E9E)
 
-    // 샘플 데이터
-    val letters = remember {
-        mutableStateListOf(
-            LetterItem(
-                id = "1",
-                title = "라연언전가",
-                sender = "장혜예",
-                content = "너가 요즘 블루베리도 먹고...",
-                group = GroupType.CARE,
-                sentAtMillis = System.currentTimeMillis() - 5 * 60 * 1000L,
-                avatarRes = R.drawable.char_bear_1
-            ),
-            LetterItem(
-                id = "2",
-                title = "곡연안전가",
-                sender = "장혜예",
-                content = "너가 요즘 블루베리도 먹고...",
-                group = GroupType.HEALTH,
-                sentAtMillis = System.currentTimeMillis() - 60 * 60 * 1000L,
-                avatarRes = R.drawable.char_bear_2
-            )
-        )
-    }
+    // ViewModel에서 편지 데이터 가져오기
+    val letterAlarms by viewModel.letterAlarms.collectAsState()
 
     Column(
         modifier = Modifier
@@ -77,55 +45,54 @@ fun LetterList() {
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            items(items = letters, key = { it.id }) { letter ->
-                val label = if (letter.group == GroupType.CARE) "[케어]" else "[헬스]"
-                val textColor = if (letter.isRead) readGray else black
-                val subTextColor = if (letter.isRead) readGray else black
+            items(items = letterAlarms, key = { it.alarmId }) { letter ->
+                val textColor = if (letter.read) readGray else black
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                        .clickable {
-                            // 항목 탭 → 읽음 처리
-                            val idx = letters.indexOfFirst { it.id == letter.id }
-                            if (idx != -1 && !letters[idx].isRead) {
-                                letters[idx] = letters[idx].copy(isRead = true)
-                            }
-                        },
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = white)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable {
+                                // 항목 탭 → 읽음 처리
+                                if (!letter.read) {
+                                    viewModel.markAlarmAsRead(letter.alarmId)
+                                }
+                            }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 1) 편지 아이콘 → 보낸 사람 캐릭터 이미지
-                        Image(
-                            painter = painterResourceCropped(letter.avatarRes),
-                            contentDescription = "${letter.sender} 캐릭터",
+                        // 1) 편지 아이콘 (기본 아이콘 사용)
+                        Icon(
+                            painter = painterResource(R.drawable.ic_launcher_foreground),
+                            contentDescription = "${letter.senderInfo.nickname} 캐릭터",
                             modifier = Modifier
                                 .size(37.dp)
-                                .clip(CircleShape)
+                                .clip(CircleShape),
+                            tint = Color.Unspecified
                         )
 
                         Spacer(Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
-                            // 상단: [그룹] 제목 - 보낸이
+                            // 첫 번째 줄: 발신자 (볼드)
                             Text(
-                                text = "$label ${letter.title} - ${letter.sender}",
+                                text = letter.senderInfo.nickname,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor
                             )
                             Spacer(Modifier.height(4.dp))
-                            // 본문 (두 줄)
+                            // 두 번째 줄: 내용 (2줄까지)
                             Text(
                                 text = letter.content,
+                                style = MaterialTheme.typography.bodySmall,
                                 maxLines = 2,
-                                color = subTextColor
+                                color = textColor
                             )
                         }
 
@@ -133,12 +100,13 @@ fun LetterList() {
 
                         // 2) 우측 끝 날짜
                         Text(
-                            text = formatter.format(letter.sentAtMillis),
+                            text = parseAndFormatDate(letter.sentAt, formatter),
                             style = MaterialTheme.typography.bodySmall,
-                            color = subTextColor
+                            color = textColor
                         )
                     }
-                    Divider(color = Color.LightGray.copy(alpha = 0.4f))
+
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                 }
             }
         }
@@ -146,9 +114,7 @@ fun LetterList() {
         // 3) 모두 읽음 버튼
         Button(
             onClick = {
-                for (i in letters.indices) {
-                    if (!letters[i].isRead) letters[i] = letters[i].copy(isRead = true)
-                }
+                viewModel.markAllAlarmsAsRead()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -159,5 +125,41 @@ fun LetterList() {
                 contentColor = white
             )
         ) { Text("모두 읽음") }
+    }
+}
+
+// ISO 8601 날짜 파싱 헬퍼 함수
+private fun parseAndFormatDate(isoDate: String, formatter: SimpleDateFormat): String {
+    return try {
+        // 여러 형식 시도
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // 마이크로초 포함 (Z 없음)
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",  // 밀리초 + Z
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",     // 밀리초 (Z 없음)
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",      // 초 + Z
+            "yyyy-MM-dd'T'HH:mm:ss"          // 초 (Z 없음)
+        )
+
+        var date: java.util.Date? = null
+        for (format in formats) {
+            try {
+                val isoFormatter = SimpleDateFormat(format, Locale.US)
+                isoFormatter.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                date = isoFormatter.parse(isoDate)
+                if (date != null) break
+            } catch (e: Exception) {
+                continue
+            }
+        }
+
+        // Date → "MM.dd HH:mm" (한국 시간대로)
+        if (date != null) {
+            formatter.timeZone = java.util.TimeZone.getTimeZone("Asia/Seoul")
+            formatter.format(date)
+        } else {
+            isoDate
+        }
+    } catch (e: Exception) {
+        isoDate
     }
 }

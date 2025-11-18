@@ -95,13 +95,19 @@ class StepReader @Inject constructor(
         start: LocalDate,
         end: LocalDate
     ): Int = withContext(Dispatchers.IO) {
-        val readRequest = DataType.StepsGoalType.LAST
-            .requestBuilder
-            .setLocalDateFilter(LocalDateFilter.of(start, end))
-            .build()
-        val result = store.aggregateData(readRequest)
+        try {
+            val readRequest = DataType.StepsGoalType.LAST
+                .requestBuilder
+                .setLocalDateFilter(LocalDateFilter.of(start, end))
+                .build()
+            val result = store.aggregateData(readRequest)
 
-        result.dataList.firstOrNull()?.value ?: 0
+            result.dataList.firstOrNull()?.value ?: 0
+        } catch (e: Exception) {
+            // steps_goal 권한이 없는 경우 0 반환
+            android.util.Log.w("StepReader", "StepGoal 읽기 실패 (권한 없음?): ${e.message}")
+            0
+        }
     }
 
     private suspend fun readSteps(
