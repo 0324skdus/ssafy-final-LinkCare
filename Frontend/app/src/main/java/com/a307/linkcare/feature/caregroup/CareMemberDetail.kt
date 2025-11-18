@@ -41,6 +41,7 @@ import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
 import kotlin.math.roundToInt
 import com.a307.linkcare.R
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 
 /* ---------- 모델 ---------- */
@@ -110,11 +111,11 @@ fun CareMemberDetail(
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp
 ) {
-    val isSelf = remember(member.name, currentUserName) {
-        member.name == currentUserName
-    }
 
     val context = LocalContext.current
+    val isSelf = remember(member.userPk, TokenStore(context).getUserPk()) {
+        member.userPk == TokenStore(context).getUserPk()
+    }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(

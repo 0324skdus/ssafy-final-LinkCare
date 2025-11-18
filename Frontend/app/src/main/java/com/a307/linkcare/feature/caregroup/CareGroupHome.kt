@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
@@ -468,7 +469,7 @@ fun CareGroupHome(
                                 petName = charInfo?.petName
                             )
                         },
-                        isSelf = (m.name == currentUserName)
+                        isSelf = (m.userPk == TokenStore(context).getUserPk())
                     )
 
                     if (index < todayMembers.lastIndex) {
@@ -606,7 +607,7 @@ fun CareGroupHome(
                 }
             }
 
-            val myCharInfo = characterMap.values.find { it.userName == currentUserName }
+            val myCharInfo = characterMap.values.find { it.userId == TokenStore(context).getUserPk() }
 
             CareMemberDetail(
                 member = info.member,

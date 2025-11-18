@@ -35,6 +35,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.ExerciseSession
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.commongroup.ui.NudgeLetterCard
@@ -56,11 +57,11 @@ fun HealthMemberDetail(
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp
 ) {
-    val isSelf = remember(member.name, currentUserName) {
-        member.name == currentUserName
-    }
 
     val context = LocalContext.current
+    val isSelf = remember(member.userPk, TokenStore(context).getUserPk()) {
+        member.userPk == TokenStore(context).getUserPk()
+    }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
