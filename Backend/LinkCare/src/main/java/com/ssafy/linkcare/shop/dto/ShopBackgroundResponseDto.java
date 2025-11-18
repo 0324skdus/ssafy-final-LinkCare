@@ -9,7 +9,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShopResponseDto {
+public class ShopBackgroundResponseDto {
     private int userPoints;
-    private List<ShopCharacterDto> characters;
+    private List<ShopBackgroundDto> backgrounds;
+
 }
