@@ -27,5 +27,7 @@ public record ProfileUpdateRequest(
 
     @Min(value = 1900, message = "운동 시작 년도가 올바르지 않습니다")
     @Max(value = 2100, message = "운동 시작 년도가 올바르지 않습니다")
-    Integer exerciseStartYear
+    Integer exerciseStartYear,
+
+    String petName
 ) {}

@@ -127,7 +127,7 @@ fun CareMemberDetail(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .fillMaxHeight(0.75f)
                 .padding(horizontal = 20.dp)
         ) {
             Column(
