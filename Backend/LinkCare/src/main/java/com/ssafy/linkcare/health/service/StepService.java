@@ -113,6 +113,22 @@ public class StepService {
         return convertToResponse(step);
     }
 
+
+    // 특정 날짜 걸음수 데이터 조회
+    public int getStepsByDate(int userSeq, LocalDate date) {
+        User user = validateUser(userSeq);
+
+        Step step = stepRepository
+                .findByUserAndStartTime(user, timeStampUtil.getDateStartTimestamp(date))
+                .orElse(null);
+
+        if(step == null) {
+            return 0;
+        } else {
+            return step.getCount();
+        }
+    }
+
     // 당일 데이터 총 걸음 수 조회
     public int getTodayStepCount(int userSeq) {
         User user = validateUser(userSeq);
