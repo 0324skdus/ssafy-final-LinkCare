@@ -1,5 +1,6 @@
 package com.ssafy.linkcare.shop.service;
 
+import com.ssafy.linkcare.background.entity.Background;
 import com.ssafy.linkcare.background.service.BackgroundService;
 import com.ssafy.linkcare.character.entity.Character;
 import com.ssafy.linkcare.character.repository.CharacterRepository;
@@ -8,8 +9,10 @@ import com.ssafy.linkcare.exception.CustomException;
 import com.ssafy.linkcare.exception.ErrorCode;
 import com.ssafy.linkcare.point.service.PointService;
 import com.ssafy.linkcare.s3.S3Service;
+import com.ssafy.linkcare.shop.dto.ShopBackgroundDto;
+import com.ssafy.linkcare.shop.dto.ShopBackgroundResponseDto;
 import com.ssafy.linkcare.shop.dto.ShopCharacterDto;
-import com.ssafy.linkcare.shop.dto.ShopResponseDto;
+import com.ssafy.linkcare.shop.dto.ShopCharacterResponseDto;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +45,7 @@ public class ShopService {
         backgroundService.unlockBackground(userPk, backgroundId);
     }
 
-    public ShopResponseDto getShopCharacterList(Long userPk) {
+    public ShopCharacterResponseDto getShopCharacterList(Long userPk) {
         // 1. 사용자 조회
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -77,6 +80,41 @@ public class ShopService {
                 .collect(Collectors.toList());
 
         // 6. 최종 응답 DTO 생성 및 반환
-        return new ShopResponseDto(userPoints, shopCharacters);
+        return new ShopCharacterResponseDto(userPoints, shopCharacters);
+    }
+
+    public ShopBackgroundResponseDto getShopBackgroundList(Long userPk) {
+        // 1. 사용자 조회
+        User user = userRepository.findById(userPk)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 사용자 포인트 조회
+        int userPoints = pointService.getPointBalance(userPk);
+        
+        // 3. 모든 배경 목록 조회
+        List<Background> allBackgrounds = backgroundService.getAllBackgrounds();
+
+        // 4. 사용자가 보유한 배경 ID 목록 조회
+        Set<Long> unlockedBackgroundIds = user.getBackgrounds().stream()
+                .map(ub -> ub.getBackground().getBackgroundId())
+                .collect(Collectors.toSet());
+
+        // 5. ShopBackgroundDto 목록 생성
+        List<ShopBackgroundDto> shopBackgrounds = allBackgrounds.stream()
+                .map(background -> {
+                    String imageUrl = s3Service.generatePresignedGetUrl(background.getS3Key());
+                    return ShopBackgroundDto.builder()
+                            .backgroundId(background.getBackgroundId())
+                            .name(background.getName())
+                            .description(background.getDescription())
+                            .imageUrl(imageUrl)
+                            .price(background.getPrice())
+                            .isUnlocked(unlockedBackgroundIds.contains(background.getBackgroundId()))
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 6. 최종 응답 DTO 생성 및 반환
+        return new ShopBackgroundResponseDto(userPoints, shopBackgrounds);
     }
 }
