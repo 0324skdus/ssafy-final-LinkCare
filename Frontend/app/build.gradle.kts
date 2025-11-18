@@ -22,6 +22,15 @@ android {
     compileSdk {
         version = release(36)
     }
+    //실물기기 연동을 위한 서명키 설정
+    signingConfigs {
+        create("debugKey") {
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.a307.linkcare"
@@ -44,12 +53,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            /** debug 빌드시 생성한 debugKey 사용 */
+            signingConfig = signingConfigs.getByName("debugKey")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            /** release 빌드도 같은 키로 서명되도록 설정 */
+            signingConfig = signingConfigs.getByName("debugKey")
         }
     }
     compileOptions {
@@ -131,7 +146,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
 
     // image
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     // character
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 

@@ -139,10 +139,10 @@ class CareGroupHomeViewModel @Inject constructor(
         _healthFeedbackMap.value = emptyMap()
     }
 
-    fun loadHealthFeedback(userSeq: Int, date: LocalDate? = null) {
+    fun loadHealthFeedback(userSeq: Int, date: LocalDate) {
         viewModelScope.launch {
             try {
-                val targetDate = date ?: LocalDate.now()
+                val targetDate = date
                 Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq, date=$targetDate")
                 val feedback = repo.getHealthFeedback(userSeq, targetDate)
                 if (feedback != null) {
@@ -158,13 +158,13 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    fun loadHealthFeedbackForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
+    fun loadHealthFeedbackForMembers(userSeqs: List<Int>, date: LocalDate) {
         Log.d("CareGroupHomeVM", "loadHealthFeedbackForMembers called with ${userSeqs.size} members, date=$date")
         _isLoadingHealthFeedback.value = true
 
         viewModelScope.launch {
             try {
-                val targetDate = date ?: LocalDate.now()
+                val targetDate = date
                 userSeqs.forEach { userSeq ->
                     try {
                         Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq, date=$targetDate")
