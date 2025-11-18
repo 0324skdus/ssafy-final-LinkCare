@@ -28,6 +28,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"),
     CHARACTER_NOT_FOUND(HttpStatus.NOT_FOUND, "캐릭터를 찾을 수 없습니다"),
     BACKGROUND_NOT_FOUND(HttpStatus.NOT_FOUND, "배경을 찾을 수 없습니다"),
+    ALARM_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다"), // 추가
 
     // 409 Conflict
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 존재하는 이메일입니다"),
@@ -63,6 +64,7 @@ public enum ErrorCode {
     NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
     ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버임"),
     CANNOT_KICK_LEADER(HttpStatus.FORBIDDEN, "그룹장은 내보낼 수 없습니다"),
+    FORBIDDEN_ACCESS(HttpStatus.FORBIDDEN, "접근 권한이 없습니다"), // 추가
 
     // 409 Conflict
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
