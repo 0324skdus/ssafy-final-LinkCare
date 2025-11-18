@@ -66,8 +66,25 @@ fun MemberRowHealth(
                 }
                 else
                     Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+
+                Spacer(Modifier.width(6.dp))
+
+                if (isSelf) {
+                    Surface(
+                        color = Color(0xFF4CAF50),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            "나",
+                            color = white,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+
                 if (m.isLeader) {
-                    Spacer(Modifier.width(6.dp))
                     Surface(
                         color = main,
                         shape = RoundedCornerShape(6.dp)

@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.healthgroup
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -23,17 +24,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.ExerciseSession
+import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.commongroup.ui.NudgeLetterCard
 import com.a307.linkcare.feature.commongroup.ui.Suggestion
 import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
+import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.ExerciseSessionResponse
 import kotlin.math.roundToInt
@@ -41,14 +50,21 @@ import kotlin.math.roundToInt
 @Composable
 fun HealthMemberDetail(
     member: Member,
+    avatarUrl: String?,
+    backgroundUrl: String?,
+    petName: String?,
+    myCharInfo: GroupCharacterResponse?,
+    today: HealthToday,
     dailyActivity: DailyActivitySummaryResponse?,
     onDismiss: () -> Unit,
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp,
     isLoading: Boolean = false
 ) {
-    val isSelf = remember(member.name, currentUserName) {
-        member.name == currentUserName
+
+    val context = LocalContext.current
+    val isSelf = remember(member.userPk, TokenStore(context).getUserPk()) {
+        member.userPk == TokenStore(context).getUserPk()
     }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -57,7 +73,7 @@ fun HealthMemberDetail(
             tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.75f)
+                .fillMaxHeight(0.85f)
                 .padding(horizontal = 20.dp)
         ) {
             Column(
@@ -81,22 +97,40 @@ fun HealthMemberDetail(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Image(
-                                painter = painterResourceCropped(member.avatarRes),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(50.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Column {
-                                Text(
-                                    member.name,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = white,
-                                    fontWeight = FontWeight.Bold
+                            if (!avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(avatarUrl)
+                                        .transformations(CropTransparentTransformation())
+                                        .size(coil.size.Size.ORIGINAL)
+                                        .build(),
+                                    contentDescription = petName,
+                                    modifier = Modifier
+                                        .size(35.dp),
+                                    contentScale = ContentScale.Fit,
+                                    onError = { error ->
+                                        Log.e("Avatar", "image load error: $avatarUrl", error.result.throwable)
+                                    }
                                 )
+                            } else {
+                                Image(
+                                    painter = painterResourceCropped(resId = member.avatarRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(35.dp)
+                                )
+                            }
+
+                            Column {
+                                if (petName != null) {
+                                    Text(
+                                        petName,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = white,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                                 Text(
-                                    "${currentUserName}님의 오늘의 건강 정보",
+                                    "${member.name}님의 오늘의 건강 정보",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = white.copy(alpha = 0.9f)
                                 )
@@ -112,7 +146,7 @@ fun HealthMemberDetail(
                     }
                 }
 
-                // 건강 정보 아코디언 리스트 (스크롤 가능)
+                // 건강 정보
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -211,10 +245,26 @@ fun HealthMemberDetail(
                 }
 
                 if (showLetter) {
+                    val senderUser = User(
+                        name = currentUserName,
+                        avatarRes = R.drawable.char_bear_1,
+                        avatarUrl = myCharInfo?.mainCharacterImageUrl,
+                        backgroundUrl = myCharInfo?.mainBackgroundImageUrl,
+                        petName = myCharInfo?.petName
+                    )
+
+                    val receiverUser = User(
+                        name = member.name,
+                        avatarRes = member.avatarRes,
+                        avatarUrl = avatarUrl,
+                        backgroundUrl = backgroundUrl,
+                        petName = petName
+                    )
+
                     androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
                         NudgeLetterCard(
-                            sender = User(currentUserName, member.avatarRes),
-                            receiver = User(member.name, member.avatarRes),
+                            sender = senderUser,
+                            receiver = receiverUser,
                             suggestions = listOf(
                                 Suggestion(1, "오늘 컨디션 좋아 보여요!"),
                                 Suggestion(2, "물 자주 마셔요 💧"),
@@ -256,7 +306,7 @@ private fun HealthAccordion(
         onClick = { expanded = !expanded }
     ) {
         Column(Modifier.fillMaxWidth()) {
-            // 헤더 (항상 보임)
+            // 헤더
             Row(
                 Modifier
                     .fillMaxWidth()

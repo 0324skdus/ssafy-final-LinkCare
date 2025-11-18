@@ -46,7 +46,7 @@ fun Avatar(
 
     Box(
         modifier = modifier
-            .size(48.dp) // 🔹 전체 아바타를 살짝 키움 (44 → 48)
+            .size(48.dp)
             .clip(CircleShape)
             .border(1.dp, Color(0x11000000), CircleShape)
             .clickable { onBubbleVisibleChange(!bubbleVisible) },
