@@ -1,17 +1,14 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -24,18 +21,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.a307.linkcare.R
-import com.a307.linkcare.common.component.molecules.HeaderBack
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
-import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.common.theme.white
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 
 enum class GroupType { CARE, HEALTH }
@@ -77,7 +72,7 @@ fun MyGroups (
     modifier: Modifier = Modifier,
     onGroupClick: (GroupSummary) -> Unit = {}
 ) {
-    val viewModel: com.a307.linkcare.feature.commongroup.MyGroupsViewModel = hiltViewModel()
+    val viewModel: MyGroupsViewModel = hiltViewModel()
 
     val careGroups by viewModel.careGroups.collectAsState()
     val healthGroups by viewModel.healthGroups.collectAsState()
@@ -88,7 +83,7 @@ fun MyGroups (
     LaunchedEffect(Unit) {
         while (true) {
             delay(10000) // 10초마다
-            android.util.Log.d("MyGroups", "주기적 자동 새로고침 시작")
+            Log.d("MyGroups", "주기적 자동 새로고침 시작")
             viewModel.loadCare()
             viewModel.loadHealth()
             viewModel.loadCarePending()
@@ -98,7 +93,7 @@ fun MyGroups (
 
     // 데이터 로드 - 화면이 표시될 때마다 새로고침
     LaunchedEffect(key1 = navController.currentBackStackEntry) {
-        android.util.Log.d("MyGroups", "화면 진입 - 데이터 새로고침 시작")
+        Log.d("MyGroups", "화면 진입 - 데이터 새로고침 시작")
         viewModel.loadCare()
         viewModel.loadHealth()
         viewModel.loadCarePending()
@@ -108,7 +103,7 @@ fun MyGroups (
     // SharedFlow 이벤트 구독 - 그룹 신청 시 실시간 업데이트
     LaunchedEffect(Unit) {
         viewModel.refreshEvent.collect {
-            android.util.Log.d("MyGroups", "그룹 신청 이벤트 수신 - 목록 새로고침")
+            Log.d("MyGroups", "그룹 신청 이벤트 수신 - 목록 새로고침")
             viewModel.loadCare()
             viewModel.loadHealth()
             viewModel.loadCarePending()
@@ -119,14 +114,14 @@ fun MyGroups (
     // MEMBER 상태 그룹 (내 그룹)
     val myGroups = remember(careGroups, healthGroups) {
         val groups = (careGroups + healthGroups).map { it.toGroupSummary() }
-        android.util.Log.d("MyGroups", "내 그룹: ${groups.size}개")
+        Log.d("MyGroups", "내 그룹: ${groups.size}개")
         groups
     }
 
     // PENDING 상태 그룹 (신청 목록)
     val pendingGroups = remember(carePendingGroups, healthPendingGroups) {
         val groups = (carePendingGroups + healthPendingGroups).map { it.toGroupSummary() }
-        android.util.Log.d("MyGroups", "신청 목록: ${groups.size}개")
+        Log.d("MyGroups", "신청 목록: ${groups.size}개")
         groups
     }
 

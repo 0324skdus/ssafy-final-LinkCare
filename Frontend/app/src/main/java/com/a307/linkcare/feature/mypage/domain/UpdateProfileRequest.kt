@@ -1,4 +1,8 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.domain
+
+import com.a307.linkcare.feature.mypage.ui.Gender
+import com.a307.linkcare.feature.mypage.ui.Profile
+
 data class UpdateProfileRequest(
     val birth: String,
     val height: Int,

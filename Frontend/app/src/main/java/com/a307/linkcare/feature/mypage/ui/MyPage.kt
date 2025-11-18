@@ -1,9 +1,8 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
 import android.widget.Toast
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -159,6 +156,7 @@ fun MyPage(
 
             // 하단 카드 2열
             MenuRow(
+                state = state,
                 onStoreClick = onStoreClick,
                 onDecorateClick = onDecorateClick
             )
@@ -327,11 +325,13 @@ private fun ProfileCard(
 
 @Composable
 private fun MenuRow(
+    state: MyPageUiState,
     onStoreClick: () -> Unit,
     onDecorateClick: () -> Unit
 ) {
     Row(Modifier.fillMaxWidth()) {
         MenuButtonCard(
+            state = state,
             title = "상점",
             icon = { Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(24.dp)) },
             modifier = Modifier.weight(1f),
@@ -340,7 +340,8 @@ private fun MenuRow(
         )
         Spacer(Modifier.width(16.dp))
         MenuButtonCard(
-            title = "꾸미기",
+            state = state,
+            title = "보관함",
             icon = { Icon(Icons.Default.Lock, null, modifier = Modifier.size(24.dp)) },
             modifier = Modifier.weight(1f),
             onClick = onDecorateClick,
@@ -351,6 +352,7 @@ private fun MenuRow(
 
 @Composable
 private fun MenuButtonCard(
+    state: MyPageUiState,
     title: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},

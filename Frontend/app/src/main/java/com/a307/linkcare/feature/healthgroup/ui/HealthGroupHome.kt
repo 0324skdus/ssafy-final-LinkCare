@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.os.Build
 import android.util.Log
@@ -42,10 +42,12 @@ import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
 import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.feature.caregroup.CareMemberDetail
+import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.healthgroup.HealthGroupHomeViewModel
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
+import kotlin.collections.get
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -368,7 +370,7 @@ fun HealthGroupHome(
                             "목표 미설정"
                         },
                         onEditClick = {
-                            android.util.Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
+                            Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
                             if (!isLeader) {
                                 scope.launch { snackbar.showSnackbar("그룹장만 목표를 수정할 수 있어요.") }
                                 return@ScreenTitleRow
@@ -841,7 +843,7 @@ private fun GoalEditSheet(
     errorText: String?,
     aiGoals: WeeklyGroupGoalResponse?,
     currentMetricIndex: Int,
-    goalCriteria: com.a307.linkcare.feature.commongroup.domain.GoalCriteria?,
+    goalCriteria: GoalCriteria?,
     isLoading: Boolean,
     onTextChange: (String) -> Unit,
     onMetricChange: (GoalMetricType) -> Unit,

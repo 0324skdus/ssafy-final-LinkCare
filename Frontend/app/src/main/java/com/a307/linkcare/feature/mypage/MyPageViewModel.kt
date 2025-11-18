@@ -4,6 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.data.RetrofitClient
+import com.a307.linkcare.feature.mypage.data.MyPageRepository
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.ui.MyPageUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

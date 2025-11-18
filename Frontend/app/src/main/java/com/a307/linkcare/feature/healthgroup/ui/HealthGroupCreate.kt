@@ -1,14 +1,12 @@
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +23,7 @@ import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
 import com.a307.linkcare.R
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.healthgroup.HealthGroupCreateViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
