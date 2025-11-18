@@ -3,6 +3,7 @@
 package com.a307.linkcare.feature.healthgroup
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,11 +18,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
@@ -38,8 +41,11 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
-import com.a307.linkcare.feature.caregroup.data.endOfWeek
-import com.a307.linkcare.feature.caregroup.data.startOfWeek
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.caregroup.CareMemberDetail
+import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
+import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -77,31 +83,81 @@ fun HealthGroupHome(
     groupSeq: Long,
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
-    goalVm: HealthGroupHomeViewModel = hiltViewModel()
+    goalVm: HealthGroupHomeViewModel = hiltViewModel(),
+    myPageViewModel: MyPageViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
+    val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
+    val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
+
+    val characterMap = remember(groupChars) {
+        groupChars.associateBy({ it.userId }, { it })
+    }
+    LaunchedEffect(characterMap) {
+        Log.d("HealthGroupHome", "characterMap keys = ${characterMap.keys}")
+    }
+
+    LaunchedEffect(groupSeq) {
+        myPageViewModel.loadGroupCharacters(groupSeq)
+    }
+
+    when {
+        groupLoad -> CircularProgressIndicator()
+
+        groupError != null -> Text("에러: $groupError")
+
+        groupChars.isNotEmpty() -> {
+            Column {
+                Text("그룹 캐릭터 ${groupChars.size}명:")
+
+                groupChars.forEach { char ->
+                    Text("• ${char.userName} / ${char.petName}")
+
+                    AsyncImage(
+                        model = char.mainCharacterImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp)
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
     val today = remember { LocalDate.now() }
 
     val detail by vm.detail.collectAsStateWithLifecycle()
     val membersResponse = detail?.members ?: emptyList()
     val goalCriteria = detail?.goalCriteria
+    val groupCharResponse: List<GroupCharacterResponse> =
+        myPageViewModel.groupCharacters.collectAsState().value ?: emptyList()
 
     // --- ViewModel 상태 구독 ---
     val totalStats by goalVm.totalStats.collectAsStateWithLifecycle()
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+    val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
+    val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
     // -------------------------
 
-    val members = remember(membersResponse) {
+    val members = remember(membersResponse, characterMap) {
         membersResponse.map { m ->
+            val charInfo = characterMap[m.userSeq]
+            val avatarUrl = charInfo?.mainCharacterImageUrl
+            val bgUrl = charInfo?.mainBackgroundImageUrl
+            val petName = charInfo?.petName
+
             Member(
                 name = m.userName,
-                avatarRes = R.drawable.char_bear_1, // TODO: 이미지 적용
+                avatarRes = R.drawable.char_bear_1,
                 isLeader = m.isLeader,
-                progresses = 0, // 이 값은 이제 membersWithActivity에서 가져옴
+                progresses = 0,
                 goal = detail?.goalCriteria?.minStep ?: 30000,
                 bubbleText = "AI 추천 메시지 준비중...",
-                userPk = m.userSeq // userPk 할당
+                userPk = m.userSeq
             )
         }
     }
@@ -120,7 +176,6 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
-    // --- 실제 데이터로 교체 ---
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     // 현재 metric 타입에 따른 진행도 계산
@@ -167,14 +222,25 @@ fun HealthGroupHome(
             goalVm.fetchWeeklyMembersHealthData(members, selectedDate)
         }
     }
+
+    // 날짜 변경 시 이전 daily activity 클리어
+    LaunchedEffect(selectedDate) {
+        goalVm.clearDailyActivity()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 daily activity 로드
+    LaunchedEffect(members, selectedDate) {
+        if (members.isNotEmpty()) {
+            val userSeqs = members.map { it.userPk.toInt() }
+            goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+        }
+    }
     // -------------------------
 
     // GoalState 변화 감지
     LaunchedEffect(goalState) {
-        android.util.Log.d("HealthGroupHome", "📱 UI: GoalState 변화 감지 - ${goalState::class.simpleName}")
         when (val state = goalState) {
             is HealthGroupHomeViewModel.GoalState.Success -> {
-                android.util.Log.d("HealthGroupHome", "✅ UI: Success 상태 처리")
                 aiGoals = state.goals
 
                 val metricType = state.goals.selectedMetricType
@@ -194,18 +260,15 @@ fun HealthGroupHome(
                     else -> 0
                 }
                 totalGroupGoal = currentGoalValue.toInt()
-
-                android.util.Log.d("HealthGroupHome", "  - 화면에 표시할 목표: $currentGoalValue")
             }
             is HealthGroupHomeViewModel.GoalState.Error -> {
-                android.util.Log.e("HealthGroupHome", "❌ 목표 조회 실패: ${state.msg}")
                 scope.launch { snackbar.showSnackbar("목표 조회 실패: ${state.msg}") }
             }
             is HealthGroupHomeViewModel.GoalState.Loading -> {
-                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
+//                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
             }
             is HealthGroupHomeViewModel.GoalState.Idle -> {
-                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
+//                android.util.Log.d("HealthGroupHome", "💤 UI: Idle 상태")
             }
         }
     }
@@ -214,6 +277,13 @@ fun HealthGroupHome(
         members.firstOrNull { it.isLeader } ?: members.firstOrNull()
         ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
+
+    val leaderCharInfo = remember(leader, characterMap) {
+        characterMap[leader.userPk]
+    }
+
+    val leaderAvatarUrl = leaderCharInfo?.mainCharacterImageUrl
+    val leaderBgUrl = leaderCharInfo?.mainBackgroundImageUrl
 
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
 
@@ -231,9 +301,17 @@ fun HealthGroupHome(
         }
     )
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, membersWithActivity) {
         membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
+    }
+
+    val todayActivityByUserPk = remember(dailyActivityData, isLoadingDailyActivity) {
+        if (isLoadingDailyActivity) {
+            emptyMap()
+        } else {
+            dailyActivityData
+        }
     }
 
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
@@ -308,7 +386,9 @@ fun HealthGroupHome(
                     HealthGroupHeaderCard(
                         progress = todayGroupPercent.coerceIn(0f, 1f),
                         bgImgRes = R.drawable.background_1,
-                        leaderAvatarRes = leader.avatarRes
+                        leaderAvatarRes = leader.avatarRes,
+                        avatarUrl = leaderAvatarUrl,
+                        backgroundUrl = leaderBgUrl,
                     )
                     Spacer(Modifier.height(12.dp))
                 }
@@ -344,8 +424,7 @@ fun HealthGroupHome(
 
                     val (progress, goal) = when (currentMetricType) {
                         "DISTANCE" -> {
-                            // 이동거리는 Double로 유지하여 소수점 표시
-                            val progressKm = (activity.totalDistances / 1000.0) // m -> km 변환
+                            val progressKm = (activity.totalDistances / 1000.0)
                             val weeklyGroupGoal = goals?.goalDistance
                             val numberOfMembers = membersWithActivity.size.coerceAtLeast(1)
                             val goalKm = if (weeklyGroupGoal != null) {
@@ -353,7 +432,6 @@ fun HealthGroupHome(
                             } else {
                                 member.goal.toDouble()
                             }
-                            // Int로 변환하되, 나중에 MemberRowHealth에서 소수점 표시 위해 원래 값 보존
                             (progressKm * 100.0).toInt() to (goalKm * 100.0).toInt() // 100배로 저장 (소수점 2자리 유지)
                         }
                         else -> {
@@ -387,14 +465,31 @@ fun HealthGroupHome(
                         else -> ""
                     }
 
+                    val charInfo = characterMap[item.memberInfo.userPk]
+                    val avatarUrl = charInfo?.mainCharacterImageUrl
+                    val bgUrl = charInfo?.mainBackgroundImageUrl
+                    val petName = charInfo?.petName
+
                     MemberRowHealth(
-                        m = member.copy(progresses = progress, goal = goal), // 실제 진행률과 목표로 업데이트
+                        m = member.copy(progresses = progress, goal = goal),
+                        avatarUrl = avatarUrl,
+                        backgroundUrl = bgUrl,
+                        petName = petName,
                         bubbleVisible = expandedMemberName == member.name,
                         onAvatarToggle = {
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
-                        onClick = { selectedMember = member },
+                        onClick = {
+                            val charInfo = characterMap[member.userPk]
+                            selectedMember = MemberDetailInfo(
+                                member = member,
+                                avatarUrl = charInfo?.mainCharacterImageUrl,
+                                backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                                petName = charInfo?.petName
+                            )
+                        },
+                        isSelf = (member.userPk == TokenStore(context).getUserPk()),
                         isDistanceMetric = currentMetricType == "DISTANCE",
                         unit = currentUnit
                     )
@@ -518,8 +613,9 @@ fun HealthGroupHome(
                     val summaryChips = remember(totalStats) {
                         val calories = totalStats?.totalCalories ?: 0.0
                         val steps = totalStats?.totalSteps ?: 0
+                        val durationMs = totalStats?.totalDuration ?: 0
                         val durationSec = totalStats?.totalDuration ?: 0
-                        val formattedDuration = formatDuration(durationSec)
+                        val formattedDuration = formatDuration((durationMs / 1000).toInt())
 
                         listOf(
                             "🔥 ${calories.toInt()} kcal 태웠어요",
@@ -538,11 +634,19 @@ fun HealthGroupHome(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
 
-            selectedMember?.let { m ->
+            selectedMember?.let { info ->
+                val myCharInfo = characterMap[mySeq]
+
                 HealthMemberDetail(
-                    member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    member = info.member,
+                    avatarUrl = info.avatarUrl,
+                    backgroundUrl = info.backgroundUrl,
+                    petName = info.petName,
+                    myCharInfo = myCharInfo,
+                    today = todayHealthByName[info.member.name] ?: HealthToday(),
+                    onDismiss = { selectedMember = null },
+                    dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
+                    isLoading = isLoadingDailyActivity
                 )
             }
 

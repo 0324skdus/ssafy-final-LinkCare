@@ -1,7 +1,11 @@
 package com.a307.linkcare.feature.commongroup.ui
 
+import android.util.Log
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,8 +29,21 @@ import com.a307.linkcare.common.util.painterResourceCropped
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.a307.linkcare.R
+import com.a307.linkcare.common.util.CropTransparentTransformation
 
-data class User(val name: String, val avatarRes: Int)
+data class User(
+    val name: String,
+    @DrawableRes val avatarRes: Int?,   // 기본 이미지
+    val avatarUrl: String? = null,      // 서버 캐릭터 이미지
+    val backgroundUrl: String? = null,  // 배경
+    val petName: String? = null         // 펫 이름
+)
+
 data class Suggestion(val id: Int, val text: String)
 
 private val MainBlue = Color(0xFF4A89F6)
@@ -84,7 +101,7 @@ fun NudgeLetterCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ProfileAvatar(sender)
+                            ProfileAvatar(sender, Modifier)
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
                                     Icons.Outlined.Email,
@@ -100,7 +117,7 @@ fun NudgeLetterCard(
                                     tint = MainBlue
                                 )
                             }
-                            ProfileAvatar(receiver)
+                            ProfileAvatar(receiver, Modifier)
                         }
 
                         Spacer(Modifier.height(24.dp))
@@ -182,24 +199,45 @@ fun NudgeLetterCard(
 }
 
 @Composable
-private fun ProfileAvatar(user: User) {
+private fun ProfileAvatar(user: User, modifier: Modifier) {
+    val context = LocalContext.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier
-                .size(60.dp)
+            modifier = modifier
+                .size(48.dp)
                 .clip(CircleShape)
-                .background(AvatarBg),
+                .border(1.dp, Color(0x11000000), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResourceCropped(user.avatarRes),
-                contentDescription = null,
-                modifier = Modifier.size(50.dp),
-                contentScale = ContentScale.Fit
-            )
+            // 배경
+            if (!user.backgroundUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = user.backgroundUrl,
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // 캐릭터
+            if (!user.avatarUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(user.avatarUrl)
+                        .transformations(CropTransparentTransformation())
+                        .size(coil.size.Size.ORIGINAL)
+                        .build(),
+                    contentDescription = user.petName,
+                    modifier = Modifier
+                        .size(35.dp)
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
-        Text(user.name, fontSize = 14.sp, color = Color.Black)
+        user.petName?.let { Text(it, fontSize = 14.sp, color = Color.Black) }
+        Text("(${user.name})", fontSize = 12.sp, color = Color.Black)
     }
 }
 

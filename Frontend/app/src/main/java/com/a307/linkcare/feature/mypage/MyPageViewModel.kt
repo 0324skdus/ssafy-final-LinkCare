@@ -21,7 +21,8 @@ sealed interface MyPageApiState {
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
-    private val careGroupRepository: CareGroupRepository
+    private val careGroupRepository: CareGroupRepository,
+    private val repo: MyPageRepository
 ) : ViewModel() {
 
     private val _apiState = MutableStateFlow<MyPageApiState>(MyPageApiState.Loading)
@@ -67,4 +68,36 @@ class MyPageViewModel @Inject constructor(
             }
         }
     }
+
+    private val _groupCharacters = MutableStateFlow<List<GroupCharacterResponse>>(emptyList())
+    val groupCharacters: StateFlow<List<GroupCharacterResponse>> = _groupCharacters
+
+    private val _groupCharacterLoading = MutableStateFlow(false)
+    val groupCharacterLoading: StateFlow<Boolean> = _groupCharacterLoading
+
+    private val _groupCharacterError = MutableStateFlow<String?>(null)
+    val groupCharacterError: StateFlow<String?> = _groupCharacterError
+
+
+    fun loadGroupCharacters(groupSeq: Long) {
+        viewModelScope.launch {
+            _groupCharacterLoading.value = true
+            _groupCharacterError.value = null
+
+            try {
+                val res = repo.getMyGroupCharacters(groupSeq)
+
+                val uiList = res.members.map { it }
+
+                _groupCharacters.value = uiList
+
+            } catch (e: Exception) {
+                Log.e("MyPageViewModel", "loadGroupCharacters error", e)
+                _groupCharacterError.value = e.message
+            } finally {
+                _groupCharacterLoading.value = false
+            }
+        }
+    }
+
 }
