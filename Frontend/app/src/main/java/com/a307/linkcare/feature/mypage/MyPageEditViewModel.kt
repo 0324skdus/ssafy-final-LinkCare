@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.mypage.data.MyPageRepository
 import com.a307.linkcare.feature.mypage.domain.UpdateProfileRequest
+import com.a307.linkcare.feature.mypage.domain.toUpdateRequest
 import com.a307.linkcare.feature.mypage.ui.Gender
 import com.a307.linkcare.feature.mypage.ui.Profile
 import com.a307.linkcare.feature.mypage.ui.toProfile
