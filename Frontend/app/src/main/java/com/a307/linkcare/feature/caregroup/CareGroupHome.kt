@@ -320,7 +320,7 @@ fun CareGroupHome(
             if (it.userPk > 0) it.userPk.toInt() else null
         }
       if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -595,9 +595,9 @@ fun CareGroupHome(
 
             selectedMember?.let { m ->
 
-                LaunchedEffect(m.userPk) {
+                LaunchedEffect(m.userPk, selectedDate) {
                     if (m.userPk > 0) {
-                        healthViewModel.loadHealthData(m.userPk.toInt())
+                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
                     }
                 }
 

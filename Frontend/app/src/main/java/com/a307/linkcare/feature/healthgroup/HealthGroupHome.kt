@@ -136,6 +136,8 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+    val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
+    val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
     // -------------------------
 
     val members = remember(membersResponse, characterMap) {
@@ -218,6 +220,19 @@ fun HealthGroupHome(
             goalVm.fetchWeeklyMembersHealthData(members, selectedDate)
         }
     }
+
+    // 날짜 변경 시 이전 daily activity 클리어
+    LaunchedEffect(selectedDate) {
+        goalVm.clearDailyActivity()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 daily activity 로드
+    LaunchedEffect(members, selectedDate) {
+        if (members.isNotEmpty()) {
+            val userSeqs = members.map { it.userPk.toInt() }
+            goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+        }
+    }
     // -------------------------
 
     // GoalState 변화 감지
@@ -281,8 +296,14 @@ fun HealthGroupHome(
     )
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
-    val todayHealthByName = remember(selectedDate, membersWithActivity) {
-        membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
+
+    // API 데이터 또는 로딩 중인 경우 빈 데이터 사용
+    val todayActivityByUserPk = remember(dailyActivityData, isLoadingDailyActivity) {
+        if (isLoadingDailyActivity) {
+            emptyMap()
+        } else {
+            dailyActivityData
+        }
     }
 
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
@@ -598,8 +619,9 @@ fun HealthGroupHome(
             selectedMember?.let { m ->
                 HealthMemberDetail(
                     member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    dailyActivity = todayActivityByUserPk[m.userPk.toInt()],
+                    onDismiss = { selectedMember = null },
+                    isLoading = isLoadingDailyActivity
                 )
             }
 
