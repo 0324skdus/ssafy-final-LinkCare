@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.domain
 
 data class GroupCharacterResponse(
     val userId: Long,

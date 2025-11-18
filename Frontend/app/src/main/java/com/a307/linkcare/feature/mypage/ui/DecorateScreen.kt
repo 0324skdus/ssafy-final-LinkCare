@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -107,6 +107,7 @@ fun DecorateScreen(
                             selChar = ownedCharacters[(idx - 1).takeIf { it >= 0 }
                                 ?: ownedCharacters.lastIndex]
                         }
+
                         StoreTab.BACKGROUND -> {
                             val idx = ownedBackgrounds.indexOf(selBg).coerceAtLeast(0)
                             selBg = ownedBackgrounds[(idx - 1).takeIf { it >= 0 }
@@ -121,6 +122,7 @@ fun DecorateScreen(
                             val idx = ownedCharacters.indexOf(selChar).coerceAtLeast(0)
                             selChar = ownedCharacters[(idx + 1) % ownedCharacters.size]
                         }
+
                         StoreTab.BACKGROUND -> {
                             val idx = ownedBackgrounds.indexOf(selBg).coerceAtLeast(0)
                             selBg = ownedBackgrounds[(idx + 1) % ownedBackgrounds.size]
@@ -132,10 +134,10 @@ fun DecorateScreen(
                 val selPainter = charPainters[selChar]
                     ?: rememberCroppedPainter(toCharDrawable(selChar))
 
-                CirclePreview(
-                    backgroundRes = toBgDrawable(selBg),
-                    characterPainter = selPainter,
-                )
+//                CirclePreview(
+//                    backgroundRes = toBgDrawable(selBg),
+//                    characterPainter = selPainter,
+//                )
             }
 
             Spacer(Modifier.height(12.dp))

@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
@@ -29,20 +29,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.common.util.painterResourceCropped
 import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.feature.caregroup.ExerciseSession
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.commongroup.ui.NudgeLetterCard
 import com.a307.linkcare.feature.commongroup.ui.Suggestion
 import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.ExerciseSessionResponse
 import kotlin.math.roundToInt
@@ -67,7 +68,7 @@ fun HealthMemberDetail(
         member.userPk == TokenStore(context).getUserPk()
     }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             tonalElevation = 8.dp,
@@ -102,7 +103,7 @@ fun HealthMemberDetail(
                                     model = ImageRequest.Builder(context)
                                         .data(avatarUrl)
                                         .transformations(CropTransparentTransformation())
-                                        .size(coil.size.Size.ORIGINAL)
+                                        .size(Size.ORIGINAL)
                                         .build(),
                                     contentDescription = petName,
                                     modifier = Modifier
@@ -261,7 +262,7 @@ fun HealthMemberDetail(
                         petName = petName
                     )
 
-                    androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
+                    Dialog(onDismissRequest = { showLetter = false }) {
                         NudgeLetterCard(
                             sender = senderUser,
                             receiver = receiverUser,

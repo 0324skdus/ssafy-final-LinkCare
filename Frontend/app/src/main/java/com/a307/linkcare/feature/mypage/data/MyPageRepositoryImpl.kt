@@ -1,5 +1,8 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.data
 
+import com.a307.linkcare.feature.mypage.domain.GroupDetailResponse
+import com.a307.linkcare.feature.mypage.domain.MyProfileResponse
+import com.a307.linkcare.feature.mypage.domain.UpdateProfileRequest
 import javax.inject.Inject
 
 class MyPageRepositoryImpl @Inject constructor(

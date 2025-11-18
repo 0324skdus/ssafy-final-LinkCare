@@ -42,7 +42,7 @@ import com.a307.linkcare.feature.commongroup.domain.Member
 import kotlin.math.roundToInt
 import com.a307.linkcare.R
 import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 
 /* ---------- 모델 ---------- */
 
