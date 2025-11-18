@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.healthgroup.data
 
 import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
+import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.HealthGroupResponse
 import com.a307.linkcare.feature.healthgroup.domain.UpdateGoalRequest
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
@@ -16,6 +17,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
+import java.time.LocalDate
 
 
 interface HealthGroupApi {
@@ -67,4 +69,10 @@ interface HealthGroupApi {
         @Query("startDate") startDate: String,
         @Query("endDate") endDate: String
     ): Response<ActualActivity>
+
+    @GET("/api/health/{userSeq}/health/daily-activity/{date}")
+    suspend fun getDailyActivity(
+        @Path("userSeq") userSeq: Int,
+        @Path("date") date: LocalDate
+    ): Response<DailyActivitySummaryResponse>
 }

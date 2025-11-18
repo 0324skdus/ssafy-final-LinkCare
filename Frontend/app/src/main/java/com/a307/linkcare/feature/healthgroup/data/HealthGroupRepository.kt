@@ -2,11 +2,13 @@ package com.a307.linkcare.feature.healthgroup.data
 
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
+import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.UpdateGoalRequest
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.time.LocalDate
 import javax.inject.Inject
 
 class HealthGroupRepository @Inject constructor(
@@ -214,6 +216,20 @@ class HealthGroupRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun getDailyActivity(userSeq: Int, date: LocalDate): DailyActivitySummaryResponse? {
+        return try {
+            val response = api.getDailyActivity(userSeq, date)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("HealthGroupRepository", "Error getting daily activity", e)
+            null
         }
     }
 }
