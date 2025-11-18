@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +41,7 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.CareMemberDetail
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
@@ -84,6 +86,7 @@ fun HealthGroupHome(
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
     myPageViewModel: MyPageViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val groupChars by myPageViewModel.groupCharacters.collectAsStateWithLifecycle()
     val groupLoad by myPageViewModel.groupCharacterLoading.collectAsStateWithLifecycle()
     val groupError by myPageViewModel.groupCharacterError.collectAsStateWithLifecycle()
@@ -463,6 +466,7 @@ fun HealthGroupHome(
                                 petName = charInfo?.petName
                             )
                         },
+                        isSelf = (member.userPk == TokenStore(context).getUserPk()),
                         isDistanceMetric = currentMetricType == "DISTANCE",
                         unit = currentUnit
                     )
