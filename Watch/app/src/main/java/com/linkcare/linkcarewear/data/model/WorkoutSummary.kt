@@ -1,11 +1,11 @@
 package com.linkcare.linkcarewear.data.model
 
 data class WorkoutSummary(
-    val sessionId: Long = 0L,
+    val sessionId: Long,
     val avgHeartRate: Int,
-    val calories: Int,
-    val distance: Int,
-    val durationSec: Int,
+    val calories: Float,
+    val distance: Float,
+    val durationSec: Long,
     val startTimestamp: Long = 0L,
     val endTimestamp: Long = 0L
 )
