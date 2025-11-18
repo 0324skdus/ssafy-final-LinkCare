@@ -5,5 +5,6 @@ data class UpdateProfileRequest(
     val height: Float?,
     val weight: Float?,
     val gender: String,
-    val exerciseStartYear: Int?
+    val exerciseStartYear: Int?,
+    val petName: String?
 )

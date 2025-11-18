@@ -32,7 +32,8 @@ data class Profile(
     val gender: Gender,
     val birthDate: String,   // yyyy-MM-dd
     val heightCm: Int,
-    val weightKg: Int
+    val weightKg: Int,
+    val petName: String?
 )
 
 fun MyProfileResponse.toProfile(): Profile =
@@ -41,7 +42,8 @@ fun MyProfileResponse.toProfile(): Profile =
         gender = if (gender == "남") Gender.MALE else Gender.FEMALE,
         birthDate = birth,
         heightCm = height.toInt(),
-        weightKg = weight.toInt()
+        weightKg = weight.toInt(),
+        petName = petName
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +58,7 @@ fun ProfileEditScreen(
     var gender by rememberSaveable { mutableStateOf(initial.gender) }
     var height by rememberSaveable { mutableStateOf(initial.heightCm.toString()) }
     var weight by rememberSaveable { mutableStateOf(initial.weightKg.toString()) }
+    var petName by rememberSaveable { mutableStateOf(initial.petName ?: "") }
 
     // 생년월일 파싱
     val (initY, initM, initD) = remember(initial.birthDate) {
@@ -80,7 +83,8 @@ fun ProfileEditScreen(
         gender != initial.gender ||
                 newBirthDate != initial.birthDate ||
                 heightInt != initial.heightCm ||
-                weightInt != initial.weightKg
+                weightInt != initial.weightKg ||
+                petName != initial.petName
 
     val isValid = validBirth && validHeight && validWeight
 
@@ -100,7 +104,8 @@ fun ProfileEditScreen(
                                 gender = gender,
                                 birthDate = newBirthDate,
                                 heightCm = heightInt ?: initial.heightCm,
-                                weightKg = weightInt ?: initial.weightKg
+                                weightKg = weightInt ?: initial.weightKg,
+                                petName = petName
                             )
                         )
                     },
@@ -141,6 +146,15 @@ fun ProfileEditScreen(
                         fontSize = 14.sp
                     )
                 }
+
+                // ----- 펫 이름 -----
+                Text("펫 이름", color = black, style = MaterialTheme.typography.labelLarge)
+                LcInputField(
+                    value = petName,
+                    onValueChange = { petName = it },
+                    placeholder = "펫 이름 입력",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 // ----- 성별 -----
                 Text("성별", color = black, style = MaterialTheme.typography.labelLarge)
