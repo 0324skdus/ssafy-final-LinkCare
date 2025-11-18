@@ -30,11 +30,24 @@ class CareGroupEditViewModel @Inject constructor(
         data class Error(val msg: String) : UpdateState()
     }
 
+    sealed class MemberActionState {
+        object Idle : MemberActionState()
+        object Loading : MemberActionState()
+        data class DelegateSuccess(val msg: String) : MemberActionState()
+        data class KickSuccess(val msg: String) : MemberActionState()
+        data class LeaveSuccess(val msg: String) : MemberActionState()
+        data class DeleteSuccess(val msg: String) : MemberActionState()
+        data class Error(val msg: String) : MemberActionState()
+    }
+
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState
+
+    private val _memberActionState = MutableStateFlow<MemberActionState>(MemberActionState.Idle)
+    val memberActionState: StateFlow<MemberActionState> = _memberActionState
 
     fun loadGroupDetail(groupSeq: Long) {
         viewModelScope.launch {
@@ -87,5 +100,93 @@ class CareGroupEditViewModel @Inject constructor(
 
     fun resetUpdateState() {
         _updateState.value = UpdateState.Idle
+    }
+
+    fun resetMemberActionState() {
+        _memberActionState.value = MemberActionState.Idle
+    }
+
+    fun delegateLeader(groupSeq: Long, newLeaderUserSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.delegateLeader(groupSeq, newLeaderUserSeq)
+            result.fold(
+                onSuccess = {
+                    android.util.Log.d("CareGroupEditViewModel", "그룹장 위임 성공")
+                    _memberActionState.value = MemberActionState.DelegateSuccess("그룹장을 위임했습니다")
+                    // 그룹 상세 정보 다시 로드 (백그라운드에서)
+                    refreshGroupDetailSilently(groupSeq)
+                },
+                onFailure = { error ->
+                    android.util.Log.e("CareGroupEditViewModel", "그룹장 위임 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹장 위임에 실패했습니다")
+                }
+            )
+        }
+    }
+
+    fun kickMember(groupSeq: Long, targetUserSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.kickMember(groupSeq, targetUserSeq)
+            result.fold(
+                onSuccess = {
+                    android.util.Log.d("CareGroupEditViewModel", "그룹원 내보내기 성공")
+                    _memberActionState.value = MemberActionState.KickSuccess("그룹원을 내보냈습니다")
+                    // 그룹 상세 정보 다시 로드 (백그라운드에서)
+                    refreshGroupDetailSilently(groupSeq)
+                },
+                onFailure = { error ->
+                    android.util.Log.e("CareGroupEditViewModel", "그룹원 내보내기 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹원 내보내기에 실패했습니다")
+                }
+            )
+        }
+    }
+
+    private suspend fun refreshGroupDetailSilently(groupSeq: Long) {
+        try {
+            val detail = repo.getGroupDetail(groupSeq)
+            // UiState가 Success일 때만 업데이트 (Loading 상태로 전환하지 않음)
+            if (_uiState.value is UiState.Success) {
+                _uiState.value = UiState.Success(detail)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CareGroupEditViewModel", "그룹 상세 정보 갱신 실패: ${e.message}")
+        }
+    }
+
+    fun leaveGroup(groupSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.leaveGroup(groupSeq)
+            result.fold(
+                onSuccess = {
+                    android.util.Log.d("CareGroupEditViewModel", "그룹 탈퇴 성공")
+                    _memberActionState.value = MemberActionState.LeaveSuccess("그룹에서 탈퇴했습니다")
+                },
+                onFailure = { error ->
+                    android.util.Log.e("CareGroupEditViewModel", "그룹 탈퇴 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹 탈퇴에 실패했습니다")
+                }
+            )
+        }
+    }
+
+    fun deleteGroup(groupSeq: Long) {
+        viewModelScope.launch {
+            _memberActionState.value = MemberActionState.Loading
+            val result = repo.deleteGroup(groupSeq)
+            result.fold(
+                onSuccess = {
+                    android.util.Log.d("CareGroupEditViewModel", "그룹 삭제 성공")
+                    _memberActionState.value = MemberActionState.DeleteSuccess("그룹을 삭제했습니다")
+                },
+                onFailure = { error ->
+                    android.util.Log.e("CareGroupEditViewModel", "그룹 삭제 실패: ${error.message}")
+                    _memberActionState.value = MemberActionState.Error(error.message ?: "그룹 삭제에 실패했습니다")
+                }
+            )
+        }
     }
 }

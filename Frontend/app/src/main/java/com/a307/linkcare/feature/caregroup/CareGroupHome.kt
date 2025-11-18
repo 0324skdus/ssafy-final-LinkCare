@@ -30,6 +30,7 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -114,6 +115,7 @@ fun CareGroupHome(
 
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
+
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
         healthPermissionViewModel.checkPermissions()
@@ -192,12 +194,24 @@ fun CareGroupHome(
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
     val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
+    val isLoadingHealthFeedback by healthViewModel.isLoadingHealthFeedback.collectAsState()
 
-    // 멤버 변경 시 health feedback 로드
-    LaunchedEffect(membersResponse) {
+    // 날짜/리스트 상태
+    val today = remember { LocalDate.now() }
+    val minDate = remember { today.minusYears(1) }   // 1년 전
+    var selectedDate by rememberSaveable { mutableStateOf(today) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
+
+    // 날짜 변경 시 이전 health feedback 클리어
+    LaunchedEffect(selectedDate) {
+        healthViewModel.clearHealthFeedback()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 health feedback 로드
+    LaunchedEffect(membersResponse, selectedDate) {
         if (membersResponse.isNotEmpty()) {
             val userSeqs = membersResponse.map { it.userSeq.toInt() }
-            healthViewModel.loadHealthFeedbackForMembers(userSeqs)
+            healthViewModel.loadHealthFeedbackForMembers(userSeqs, selectedDate)
         }
     }
     val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
@@ -228,8 +242,16 @@ fun CareGroupHome(
 
             // 건강 피드백 가져오기
             val feedback = healthFeedbackMap[m.userSeq.toInt()]
-            val status = feedback?.status?.name ?: "GOOD"
-            val summary = feedback?.summary ?: "활동이 안정적이에요."
+            val status = if (isLoadingHealthFeedback) {
+                "LOADING"
+            } else {
+                feedback?.status?.name ?: "GOOD"
+            }
+            val summary = if (isLoadingHealthFeedback) {
+                "건강 상태 분석 중입니다..."
+            } else {
+                feedback?.summary ?: "오늘 하루도 파이팅."
+            }
 
             Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
 
@@ -246,12 +268,6 @@ fun CareGroupHome(
             )
         }
     }
-
-    // 날짜/리스트 상태
-    val today = remember { LocalDate.now() }
-    val minDate = remember { today.minusYears(1) }   // 1년 전
-    var selectedDate by rememberSaveable { mutableStateOf(today) }
-    var showCalendar by rememberSaveable { mutableStateOf(false) }
 
     // 하나의 확장 상태만 유지 (리스트 공통)
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
@@ -298,8 +314,8 @@ fun CareGroupHome(
         todayMembers = weekMembers
     }
 
-    // 멤버 건강 데이터 로드
-    LaunchedEffect(todayMembers) {
+    // 멤버 건강 데이터 로드 (선택된 날짜 기준)
+    LaunchedEffect(todayMembers, selectedDate) {
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }

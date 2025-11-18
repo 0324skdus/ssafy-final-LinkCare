@@ -256,4 +256,72 @@ class GroupRepository @Inject constructor(
             endDate = endDate.toString()
         )
     }
+
+    // 그룹장 위임하기
+    suspend fun delegateLeader(groupSeq: Long, newLeaderUserSeq: Long): Result<Unit> {
+        return try {
+            val response = api.delegateLeader(groupSeq, newLeaderUserSeq)
+            if (response.isSuccessful) {
+                android.util.Log.d("GroupRepository", "그룹장 위임 성공: groupSeq=$groupSeq, newLeader=$newLeaderUserSeq")
+                Result.success(Unit)
+            } else {
+                android.util.Log.e("GroupRepository", "그룹장 위임 실패: HTTP ${response.code()}")
+                Result.failure(Exception("Failed to delegate leader: HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "그룹장 위임 예외: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // 그룹원 내보내기
+    suspend fun kickMember(groupSeq: Long, targetUserSeq: Long): Result<Unit> {
+        return try {
+            val response = api.kickMember(groupSeq, targetUserSeq)
+            if (response.isSuccessful) {
+                android.util.Log.d("GroupRepository", "그룹원 내보내기 성공: groupSeq=$groupSeq, target=$targetUserSeq")
+                Result.success(Unit)
+            } else {
+                android.util.Log.e("GroupRepository", "그룹원 내보내기 실패: HTTP ${response.code()}")
+                Result.failure(Exception("Failed to kick member: HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "그룹원 내보내기 예외: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // 그룹 탈퇴
+    suspend fun leaveGroup(groupSeq: Long): Result<Unit> {
+        return try {
+            val response = api.leaveGroup(groupSeq)
+            if (response.isSuccessful) {
+                android.util.Log.d("GroupRepository", "그룹 탈퇴 성공: groupSeq=$groupSeq")
+                Result.success(Unit)
+            } else {
+                android.util.Log.e("GroupRepository", "그룹 탈퇴 실패: HTTP ${response.code()}")
+                Result.failure(Exception("Failed to leave group: HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "그룹 탈퇴 예외: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // 그룹 삭제
+    suspend fun deleteGroup(groupSeq: Long): Result<Unit> {
+        return try {
+            val response = api.deleteGroup(groupSeq)
+            if (response.isSuccessful) {
+                android.util.Log.d("GroupRepository", "그룹 삭제 성공: groupSeq=$groupSeq")
+                Result.success(Unit)
+            } else {
+                android.util.Log.e("GroupRepository", "그룹 삭제 실패: HTTP ${response.code()}")
+                Result.failure(Exception("Failed to delete group: HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "그룹 삭제 예외: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 }

@@ -112,7 +112,7 @@ fun MemberRowHealth(
                 append(unit)
                 pop()
 
-                append(" 달성")
+                append(" 달성")        // 다시 원래 크기
             }
 
             Text(
