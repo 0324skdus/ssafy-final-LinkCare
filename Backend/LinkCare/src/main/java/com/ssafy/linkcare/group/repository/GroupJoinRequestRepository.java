@@ -13,6 +13,9 @@ import java.util.Optional;
 @Repository
 public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinRequest, Long> {
 
+    // 특정 그룹의 모든 신청 목록 조회
+    List<GroupJoinRequest> findByGroup(Group group);
+
     // 특정 그룹의 신청 목록 조회 (상태별)
     List<GroupJoinRequest> findByGroupAndStatus(Group group, RequestStatus status);
 

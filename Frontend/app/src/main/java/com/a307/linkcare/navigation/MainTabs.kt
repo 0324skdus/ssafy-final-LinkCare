@@ -501,7 +501,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     CareGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedCareGroup = null
+                            selectedIndexCare = 0
+                        }
                     )
                 }
             }
@@ -571,7 +576,12 @@ fun MainTabs(
                     val groupSeq = groupId?.toLongOrNull() ?: return@composable
                     HealthGroupEdit(
                         navController = navController,
-                        groupSeq = groupSeq
+                        groupSeq = groupSeq,
+                        groupvm = groupvm,
+                        onGroupDeleted = {
+                            selectedHealthGroup = null
+                            selectedIndexHealth = 0
+                        }
                     )
                 }
             }
