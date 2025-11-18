@@ -993,6 +993,9 @@ public class GroupService {
 
         // 6. 신청자에게 거절 알림 전송
         User applicant = joinRequest.getUser();
+        log.info("🔍 거절 알림 전송 대상 확인: 그룹장userId={}, 신청자userId={}, 신청자이름={}",
+                userId, applicant.getUserPk(), applicant.getName());
+
         String rejectionContent = "참가 신청이 거절되었습니다.";
         notificationService.createNotification(
                 applicant,
@@ -1003,7 +1006,7 @@ public class GroupService {
                 null
         );
 
-        log.info("참가 신청 거절 완료: requestSeq={}, userId={}, groupSeq={}",
+        log.info("참가 신청 거절 완료: requestSeq={}, 신청자userId={}, groupSeq={}",
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());
     }
 
