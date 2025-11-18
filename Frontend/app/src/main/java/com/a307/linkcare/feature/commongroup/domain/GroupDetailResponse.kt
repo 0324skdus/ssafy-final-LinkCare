@@ -12,7 +12,8 @@ data class GroupDetailResponse(
     val imageUrl: String,
     val createdAt: String,
     val goalCriteria: GoalCriteria?,
-    val members: List<GroupMemberResponse>
+    val members: List<GroupMemberResponse>,
+    val currentUserSeq: Long  // 현재 로그인한 사용자의 userSeq
 )
 
 data class GoalCriteria(

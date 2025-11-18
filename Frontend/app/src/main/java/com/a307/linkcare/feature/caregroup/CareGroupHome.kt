@@ -40,6 +40,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
 fun sampleHealthToday(m: Member): HealthToday =
@@ -107,6 +108,7 @@ fun CareGroupHome(
     val activity = context as Activity
 
     val permissionState by healthPermissionViewModel.state.collectAsState()
+    val stepUiState by healthViewModel.stepUiState.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -116,6 +118,7 @@ fun CareGroupHome(
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
         groupViewModel.loadGroupDetail(groupSeq)
+        healthViewModel.loadGroupStepStatistics(groupSeq)
     }
 
 //    val context = LocalContext.current
@@ -145,20 +148,55 @@ fun CareGroupHome(
     val groupName by groupViewModel.groupName.collectAsState()
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
     val healthData by healthViewModel.healthData.collectAsState()
+    val healthFeedbackMap by healthViewModel.healthFeedbackMap.collectAsState()
 
-    // API에서 가져온 멤버를 Member 객체로 변환
-    val members = remember(membersResponse) {
+    // 멤버 변경 시 health feedback 로드
+    LaunchedEffect(membersResponse) {
+        if (membersResponse.isNotEmpty()) {
+            val userSeqs = membersResponse.map { it.userSeq.toInt() }
+            healthViewModel.loadHealthFeedbackForMembers(userSeqs)
+        }
+    }
+
+    val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
         Log.d("CareGroupHome", "Converting ${membersResponse.size} members from API")
+
+        // 🔹 /step-statistics에서 가져온 값들
+        val totalSteps = stepUiState.goal                // = totalSteps
+        val stepsByUserSeq = stepUiState.members.associateBy(
+            keySelector = { it.userSeq },               // DTO: userSeq
+            valueTransform = { it.steps }               // DTO: steps
+        )
+
+        // step 통계가 아직 없을 때는 기존 더미값 유지할지 여부
+        val hasStats = totalSteps > 0 && stepsByUserSeq.isNotEmpty()
+
         membersResponse.map { m ->
             Log.d("CareGroupHome", "Member: ${m.userName}, userSeq=${m.userSeq}")
+
+            val steps = if (hasStats) {
+                stepsByUserSeq[m.userSeq] ?: 0
+            } else {
+                0
+            }
+
+            val goal = if (hasStats) totalSteps else 0
+
+            // 건강 피드백 가져오기
+            val feedback = healthFeedbackMap[m.userSeq.toInt()]
+            val status = feedback?.status?.name ?: "GOOD"
+            val summary = feedback?.summary ?: "활동이 안정적이에요."
+
             Member(
                 name = m.userName,
-                progresses = 10000,                  // TODO: 헬스데이터 나오면 실제 값으로 교체
-                goal = 30000,                        // TODO: 그룹 총 걸음수 값으로 교체
-                avatarRes = R.drawable.char_bear_1,  // TODO: m.mainCharacterBaseImageUrl 매핑
+                progresses = steps,
+                goal = goal,
+                avatarRes = R.drawable.char_bear_1,   // TODO: m.mainCharacterBaseImageUrl 매핑
                 bubbleText = "",
                 isLeader = m.isLeader,
-                userPk = m.userSeq
+                userPk = m.userSeq,
+                status = status,
+                summary = summary
             )
         }
     }
@@ -214,14 +252,14 @@ fun CareGroupHome(
         todayMembers = weekMembers
     }
 
-    // 멤버 건강 데이터 로드
-    LaunchedEffect(todayMembers) {
+    // 멤버 건강 데이터 로드 (선택된 날짜 기준)
+    LaunchedEffect(todayMembers, selectedDate) {
         val userPks = todayMembers.mapNotNull {
             if (it.userPk > 0) it.userPk.toInt() else null
         }
-        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members: $userPks")
+        Log.d("CareGroupHome", "Loading health data for ${userPks.size} members on date $selectedDate")
         if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
@@ -276,6 +314,22 @@ fun CareGroupHome(
         }
     }
 
+    val header = healthViewModel.headerMessage
+
+    val sleepStatistics by healthViewModel.sleepStatistics.collectAsState()
+
+    LaunchedEffect(Unit) {
+        healthViewModel.loadHeader(groupSeq)
+    }
+
+    LaunchedEffect(metricType, selectedDate) {
+        if (metricType == MetricType.SLEEP) {
+            val start = selectedDate.startOfWeek()
+            val end = selectedDate.endOfWeek()
+            healthViewModel.loadSleepStatistics(groupSeq, start, end)
+        }
+    }
+
 
     Scaffold(
         floatingActionButton = {
@@ -293,14 +347,20 @@ fun CareGroupHome(
     )  { _ ->
         LazyColumn(Modifier.fillMaxSize()) {
 
+            if (header != null) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     ScreenTitleOnlyRow(
                         title = "이번주,",
-                        txt = "걷기에 더 신경써볼까요?"
+                        txt = header,
+                        onClick = {
+                            healthViewModel.regenerateHeader(groupSeq)
+                            Toast.makeText(context, "문구 만드는 중...", Toast.LENGTH_SHORT).show()
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+            }
 
                 item {
                     NudgeHost(
@@ -334,7 +394,8 @@ fun CareGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
-                        onClick = { selectedMember = m }
+                        onClick = { selectedMember = m },
+                        isSelf = (m.name == currentUserName)
                     )
 
                     // 마지막 아이템이 아닌 경우에만 Divider 표시
@@ -393,9 +454,10 @@ fun CareGroupHome(
                     item {
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
+                            title = "활동 요약",
                             members = todayMembers,
-                            totalSteps = todayGroupProgress,
-                            totalGoal = totalGroupGoal,
+//                            totalSteps = stepUiState.goal,
+//                            totalGoal = stepUiState.goal,
                             modifier = Modifier
                         )
                     }
@@ -403,8 +465,13 @@ fun CareGroupHome(
                     // 혈압/수면: 멤버별 라인 + 전체 평균 라인
                     item {
                         Spacer(Modifier.height(6.dp))
-                        val chartData = remember(selectedDate, weekMembers, metricType) {
-                            buildWeeklyChartData(metricType, selectedDate, weekMembers)
+                        val chartData = remember(selectedDate, weekMembers, metricType, sleepStatistics) {
+                            buildWeeklyChartData(
+                                type = metricType,
+                                anchorDate = selectedDate,
+                                members = weekMembers,
+                                sleepStats = sleepStatistics
+                            )
                         }
                         MetricChartCard(
                             title = when (metricType) {
@@ -425,12 +492,18 @@ fun CareGroupHome(
                 item {
                     Spacer(Modifier.height(8.dp))
 
-                    val summaryChips = remember(metricType, summary, totalStats) {
+                    val summaryChips = remember(metricType, selectedDate, summary, totalStats, sleepStatistics, members) {
                         if (metricType == MetricType.ACTIVITY) {
                             val calories = totalStats?.totalCalories?.toInt() ?: 0
                             val steps = totalStats?.totalSteps ?: 0
-                            val durationSec = totalStats?.totalDuration ?: 0
+                            val rawDuration = totalStats?.totalDuration ?: 0L
+                            val durationSec = (rawDuration.toFloat() / 1000f).toInt()
                             val durationStr = formatDuration(durationSec)
+                            val start = selectedDate.startOfWeek()
+                            val end = selectedDate.endOfWeek()
+
+
+                            groupViewModel.loadTotalActivityStats(groupSeq, start, end)
 
                             listOf(
                                 "🔥 ${calories} kcal 태웠어요",
@@ -438,8 +511,12 @@ fun CareGroupHome(
                                 "⏱️ $durationStr 운동했어요"
                             )
                         } else {
-                            // 수면 탭
-                            buildSummaryChips(metricType, summary)
+                            buildSummaryChips(
+                                type = metricType,
+                                s = summary,
+                                sleepStats = sleepStatistics,
+                                members = members
+                            )
                         }
                     }
 
@@ -451,11 +528,11 @@ fun CareGroupHome(
 
             selectedMember?.let { m ->
 
-                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드
-                LaunchedEffect(m.userPk) {
+                // 🔥 디테일 열릴 때 해당 멤버 건강 데이터 한 번 더 로드 (선택된 날짜 기준)
+                LaunchedEffect(m.userPk, selectedDate) {
                     if (m.userPk > 0) {
-                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}")
-                        healthViewModel.loadHealthData(m.userPk.toInt())
+                        Log.d("CareGroupHome", "Reload health data for userPk=${m.userPk}, date=$selectedDate")
+                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
                     }
                 }
 
@@ -566,11 +643,13 @@ private fun HeaderCard(
 @Composable
 fun ScreenTitleOnlyRow(
     title: String,
-    txt: String
+    txt: String,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom
@@ -584,7 +663,8 @@ fun ScreenTitleOnlyRow(
 }
 
 // 요약칩 텍스트를 만들어주는 함수
-fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when (type) {
+fun buildSummaryChips(type: MetricType, s: CareWeekSummary, sleepStats: SleepStatisticsResponse?,
+                      members: List<Member>): List<String> = when (type) {
     MetricType.ACTIVITY -> listOfNotNull(
         s.calories?.let { "🔥 ${it} kcal 태웠어요" },
         s.steps?.let { "👣 ${it} 걸음 걸었어요" },
@@ -598,11 +678,21 @@ fun buildSummaryChips(type: MetricType, s: CareWeekSummary): List<String> = when
         s.eveningBp?.let { (sys, dia) -> "🌇 저녁 ${sys}/${dia} mmHg" }
     )
 
-    MetricType.SLEEP -> listOfNotNull(
-        s.sleepMinutes?.let { "😴 총 수면 ${it}분" },
-        s.deepMinutes?.let { "🌙 깊은 수면 ${it}분" },
-        s.sleepScore?.let { "⭐ 수면 점수 ${it}점" }
+    MetricType.SLEEP -> buildSleepSummaryMessages(
+        stats = sleepStats,
+        members = members
     )
+}
+
+fun formatMinutesToHourMin(totalMinutes: Int): String {
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
+        hours > 0 -> "${hours}시간"
+        else -> "${minutes}분"
+    }
 }
 
 // 날짜+타입에 맞는 요약 더미 데이터
@@ -686,3 +776,49 @@ private fun clampDate(
     date.isAfter(max) -> max
     else -> date
 }
+
+fun buildSleepSummaryMessages(
+    stats: SleepStatisticsResponse?,
+    members: List<Member>
+): List<String> {
+    if (stats == null) return emptyList()
+
+    val nameByUserSeq = members.associateBy({ it.userPk }, { it.name })
+
+    val allSleepMinutes: List<Int> = stats.members.flatMap { m ->
+        m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+    }
+
+    val avgMinutes = if (allSleepMinutes.isNotEmpty()) {
+        allSleepMinutes.average().toInt()
+    } else 0
+
+    val avgLine = "😴 평균 수면 ${formatMinutesToHourMin(avgMinutes)}"
+
+    data class MemberAvg(val userSeq: Long, val avgMinutes: Int)
+
+    val memberAverages: List<MemberAvg> = stats.members.map { m ->
+        val mins = m.dailySleepMinutes
+            .filter { it > 0 }
+            .map { msToMinutes(it.toLong()) }
+
+        val avg = if (mins.isNotEmpty()) mins.average().toInt() else 0
+        MemberAvg(userSeq = m.userSeq, avgMinutes = avg)
+    }
+
+    val ranked = memberAverages.sortedByDescending { it.avgMinutes }
+
+    val rankLines = ranked
+        .mapIndexed { index, mAvg ->
+            val name = nameByUserSeq[mAvg.userSeq] ?: "멤버${index + 1}"
+            val sleepText = formatMinutesToHourMin(mAvg.avgMinutes)
+            "${index + 1}위 $name · $sleepText"
+        }
+
+    return listOf(avgLine) + rankLines
+}
+
+
+fun msToMinutes(ms: Long): Int = (ms / 60000L).toInt()

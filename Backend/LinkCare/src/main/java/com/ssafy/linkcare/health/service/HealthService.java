@@ -42,8 +42,7 @@ public class HealthService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
-    private final FirebaseMessaging firebaseMessaging;  // 이거 추가!
-
+    private final FirebaseMessaging firebaseMessaging;
 
     private final ObjectMapper objectMapper;
     private final TimeStampUtil timeStampUtil;
@@ -61,18 +60,21 @@ public class HealthService {
     }
 
     // 데일리 데이터 동기화 (매일 1회)
-    public void syncDailyHealthData(DailyHealthData dto, int userSeq) {
-        activitySummaryService.saveDailyActivitySummaryData(dto.getActivitySummary(), userSeq);
-        bloodPressureService.saveDailyBloodPressureData(dto.getBloodPressure(), userSeq);
-        exerciseService.saveDailyExerciseData(dto.getExercise(), userSeq);
-        heartRateService.saveDailyHeartRateData(dto.getHeartRate(), userSeq);
-        stepService.saveDailyStepData(dto.getStep(), userSeq);
-        waterIntakeService.saveDailyWaterIntakeData(dto.getWaterIntake(), userSeq);
-        sleepService.saveDailySleepData(dto.getSleep(), userSeq);
-
-        // 마지막 동기화 시간 업데이트
-        updateUserLastSyncTime(userSeq);
-    }
+//    public void syncDailyHealthData(DailyHealthData dto, int userSeq) {
+//        activitySummaryService.saveDailyActivitySummaryData(dto.getActivitySummary(), userSeq);
+//        bloodPressureService.saveDailyBloodPressureData(dto.getBloodPressure(), userSeq);
+//        exerciseService.saveDailyExerciseData(dto.getExercise(), userSeq);
+//        heartRateService.saveDailyHeartRateData(dto.getHeartRate(), userSeq);
+//        stepService.saveDailyStepData(dto.getStep(), userSeq);
+//        waterIntakeService.saveDailyWaterIntakeData(dto.getWaterIntake(), userSeq);
+//        sleepService.saveDailySleepData(dto.getSleep(), userSeq);
+//
+//        // 마지막 동기화 시간 업데이트
+//        updateUserLastSyncTime(userSeq);
+//
+//        userHealthFeedbackService.generateFeedbackAsync(userSeq);
+//
+//    }
 
     // 당일 건강 데이터 조회
     public DailyHealthResponse getTodayHealthData(int userSeq) {
@@ -92,6 +94,7 @@ public class HealthService {
     public HealthStaticsResponse getHealthStaticsData(int userSeq, LocalDate startDate, LocalDate endDate) {
         return HealthStaticsResponse.builder()
                 .activitySummaryStats(activitySummaryService.getActivitySummaryStatsByDate(userSeq, startDate, endDate))
+                .bloodPressureStats(bloodPressureService.getBloodPressureStatsByPeriod(userSeq,startDate,endDate))
                 .exerciseStats(exerciseService.getExerciseStatisticsByDate(userSeq, startDate, endDate))
                 .heartRateStats(heartRateService.getHeartRateStatsByDate(userSeq, startDate, endDate))
                 .stepStats(stepService.getWeekStepStatisticsByDate(userSeq, startDate, endDate))
@@ -161,6 +164,29 @@ public class HealthService {
         List<WaterIntakeResponse> waterIntakeResponses = waterIntakeService.getWaterIntakeByDate(userSeq, today, today);
         List<HeartRateResponse> heartRateResponses = heartRateService.getHeartRatesByPeriod(userSeq, today, today);
         List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, today, today);
+
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getTodayStepCount(userSeq))
+                .build();
+
+        return DailyHealthDetailResponse.builder()
+                .bloodPressures(bloodPressureResponses)
+                .sleeps(sleepResponse)
+                .waterIntakes(waterIntakeResponses)
+                .heartRates(heartRateResponses)
+                .dailyActivitySummary(dailyActivitySummaryResponse)
+                .build();
+    }
+
+    public DailyHealthDetailResponse getDailyHealthDetailByDate(int userSeq, LocalDate date) {
+
+        List<BloodPressureResponse> bloodPressureResponses = bloodPressureService.getBloodPressureByDate(userSeq, date, date);
+        List<SleepResponse> sleepResponse = sleepService.getSleepsByDate(userSeq, date, date);
+        List<WaterIntakeResponse> waterIntakeResponses = waterIntakeService.getWaterIntakeByDate(userSeq, date, date);
+        List<HeartRateResponse> heartRateResponses = heartRateService.getHeartRatesByPeriod(userSeq, date, date);
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, date, date);
 
 
         DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()

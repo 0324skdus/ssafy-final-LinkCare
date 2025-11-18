@@ -64,4 +64,9 @@ public class GroupMember {
         this.user = user;
         this.isLeader = isLeader != null ? isLeader : false;
     }
+
+    // 그룹장 권한 변경 메서드
+    public void updateLeaderStatus(Boolean isLeader) {
+        this.isLeader = isLeader;
+    }
 }

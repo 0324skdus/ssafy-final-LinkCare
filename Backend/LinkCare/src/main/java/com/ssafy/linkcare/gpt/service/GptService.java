@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -102,7 +103,7 @@ public class GptService {
     /**
      * 개인 건강 데이터 한줄평 생성
      */
-    public HealthSummaryResponse generateHealthSummary(String healthDataText) {
+    public HealthSummaryRequest generateHealthSummary(String healthDataText) {
         String systemPrompt = """
                 당신은 친근하고 따뜻한 건강 코치입니다.
                 사용자의 하루 건강 데이터를 보고 **구체적인 격려나 조언**을 담은 한줄평을 작성해주세요.
@@ -120,7 +121,7 @@ public class GptService {
                 
                 3. 친근하고 격려하는 말투 (존댓말, 이모티콘 금지)
                 
-                4. 한줄평은 30자 이내
+                4. 한줄평은 10자 이내
                 
                 응답 형식:
                 한줄평: [기록된 데이터 기반 조언]
@@ -201,17 +202,20 @@ public class GptService {
 
         String response = getChatCompletion(groupHealthDataText, systemPrompt);
 
-        return new WeeklyHeaderResponse(response.trim());
+        return new WeeklyHeaderResponse(response.trim(), LocalDateTime.now());
     }
 
     /**
      * GPT 응답을 HealthSummaryResponse로 파싱
      */
-    private HealthSummaryResponse parseHealthSummary(String response) {
+    /**
+     * GPT 응답을 HealthSummaryRequest로 파싱
+     */
+    private HealthSummaryRequest parseHealthSummary(String response) {
         try {
             String[] lines = response.split("\n");
             String summary = "";
-            HealthSummaryResponse.HealthStatus status = HealthSummaryResponse.HealthStatus.GOOD;
+            HealthSummaryRequest.HealthStatus status = HealthSummaryRequest.HealthStatus.GOOD;
 
             for (String line : lines) {
                 if (line.contains("한줄평:")) {
@@ -219,20 +223,23 @@ public class GptService {
                 } else if (line.contains("건강상태:")) {
                     String statusText = line.replace("건강상태:", "").trim();
                     if (statusText.contains("완벽")) {
-                        status = HealthSummaryResponse.HealthStatus.PERFECT;
+                        status = HealthSummaryRequest.HealthStatus.PERFECT;
                     } else if (statusText.contains("주의")) {
-                        status = HealthSummaryResponse.HealthStatus.CAUTION;
+                        status = HealthSummaryRequest.HealthStatus.CAUTION;
                     } else {
-                        status = HealthSummaryResponse.HealthStatus.GOOD;
+                        status = HealthSummaryRequest.HealthStatus.GOOD;
                     }
                 }
             }
 
-            return new HealthSummaryResponse(summary, status);
+            return new HealthSummaryRequest(summary, status);
 
         } catch (Exception e) {
             log.error("GPT 응답 파싱 실패: {}", response, e);
-            return new HealthSummaryResponse("건강 데이터를 분석했습니다.", HealthSummaryResponse.HealthStatus.GOOD);
+            return new HealthSummaryRequest(
+                    "(더미) 건강 데이터 분석 오류 발생.",
+                    HealthSummaryRequest.HealthStatus.GOOD
+            );
         }
     }
 

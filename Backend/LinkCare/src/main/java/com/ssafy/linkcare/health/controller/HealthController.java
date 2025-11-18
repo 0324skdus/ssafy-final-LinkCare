@@ -2,10 +2,12 @@ package com.ssafy.linkcare.health.controller;
 
 import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.service.HealthService;
+import com.ssafy.linkcare.health.service.HealthSyncService;
 import com.ssafy.linkcare.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.time.LocalDate;
 public class HealthController {
 
     private final HealthService healthService;
+    private final HealthSyncService healthSyncService;
 
     // 일별 데이터 동기화
     @PostMapping("/users/{userId}/daily")
@@ -27,7 +30,7 @@ public class HealthController {
 
         System.out.println("받은 데이터: " + data.toString());
 
-        healthService.syncDailyHealthData(data, userId);
+        healthSyncService.syncDailyHealthData(data, userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("성공", HttpStatus.OK.value(), data)
@@ -66,6 +69,18 @@ public class HealthController {
         log.info("API 호출 - 당일 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
 
         DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetail(userSeq);
+
+        return ResponseEntity.ok(dailyHealthDetailResponse);
+    }
+
+    @GetMapping("/{userSeq}/health/daily/{date}")
+    public ResponseEntity<DailyHealthDetailResponse> getUserHealthDetailDataByDate(
+            @PathVariable int userSeq,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        log.info("API 호출 - 특정 날짜 건강 데이터 detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetailByDate(userSeq, date);
 
         return ResponseEntity.ok(dailyHealthDetailResponse);
     }

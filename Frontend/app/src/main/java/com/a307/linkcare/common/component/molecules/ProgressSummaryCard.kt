@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,9 +47,8 @@ fun toSummaries(members: List<Member>): List<ProgressSummary> =
 
 @Composable
 fun ProgressSummaryCard(
+    title: String,
     members: List<Member>,
-    totalSteps: Int? = null,
-    totalGoal: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val summaries = toSummaries(members)
@@ -71,7 +71,7 @@ fun ProgressSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.padding(2.dp)) {
-                    Text("운동량", fontWeight = FontWeight.SemiBold, color = black)
+                    Text(title, fontWeight = FontWeight.SemiBold, color = black)
                 }
                 // 달성 뱃지 (필요 시 주석해제)
 //                Row(verticalAlignment = Alignment.CenterVertically) {

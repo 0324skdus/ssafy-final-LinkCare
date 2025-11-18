@@ -227,12 +227,13 @@ public class ExerciseController {
     /**
      * 일반 동기화 엔드포인트
      */
-    @PostMapping("/exercise/sync")
+    @PostMapping("/watch/sync")
     public ResponseEntity<Void> syncExercise(
-            @RequestBody ExerciseDto exerciseDto,
+            @RequestBody WatchExerciseData watchExerciseData,
             @RequestHeader("userSeq") int userSeq) {
 
-        exerciseService.saveDailyExerciseData(exerciseDto, userSeq);
+        exerciseService.saveWatchExercise(watchExerciseData, userSeq);
         return ResponseEntity.ok().build();
     }
+    // "/api/health/exercise/watch/sync" syncExercise
 }

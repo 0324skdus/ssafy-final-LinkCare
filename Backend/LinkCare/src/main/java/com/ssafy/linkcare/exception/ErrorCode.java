@@ -62,6 +62,7 @@ public enum ErrorCode {
     // 403 Forbidden
     NOT_GROUP_LEADER(HttpStatus.FORBIDDEN, "그룹 방장 권한이 없습니다"),
     ALREADY_GROUP_MEMBER(HttpStatus.FORBIDDEN, "이미 그룹 멤버임"),
+    CANNOT_KICK_LEADER(HttpStatus.FORBIDDEN, "그룹장은 내보낼 수 없습니다"),
 
     // 409 Conflict
     GROUP_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "그룹 정원이 초과되었습니다"),
@@ -94,7 +95,13 @@ public enum ErrorCode {
 
     // AI 코멘트 관련 에러
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "한줄평을 찾을 수 없습니다"),
-    NOT_GROUP_MEMBER_FOR_COMMENT(HttpStatus.FORBIDDEN, "해당 그룹의 멤버만 한줄평을 작성할 수 있습니다");
+    NOT_GROUP_MEMBER_FOR_COMMENT(HttpStatus.FORBIDDEN, "해당 그룹의 멤버만 한줄평을 작성할 수 있습니다"),
+
+    // 그룹 헤더 관련 에러
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 시도해 주세요"),
+
+    // 그룹 탈퇴/삭제 관련 에러
+    LEADER_CANNOT_LEAVE_WITH_MEMBERS(HttpStatus.BAD_REQUEST, "그룹장은 다른 멤버가 있을 때 탈퇴할 수 없습니다. 먼저 그룹장을 위임하거나 그룹을 삭제하세요");
 
     private final HttpStatus status;
     private final String message;

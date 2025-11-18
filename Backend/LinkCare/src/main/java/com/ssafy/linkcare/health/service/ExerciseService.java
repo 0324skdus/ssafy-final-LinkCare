@@ -11,6 +11,7 @@ import com.ssafy.linkcare.health.util.TimeStampUtil;
 import com.ssafy.linkcare.user.entity.User;
 import com.ssafy.linkcare.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,19 +22,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ExerciseService {
 
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final ExerciseSessionRepository exerciseSessionRepository;
+
+    @Lazy
     private final HealthSyncService healthSyncService;
 
     private final TimeStampUtil timeStampUtil;
+
+    public ExerciseService(
+            UserRepository userRepository,
+            ExerciseRepository exerciseRepository,
+            ExerciseSessionRepository exerciseSessionRepository,
+            @Lazy HealthSyncService healthSyncService,
+            TimeStampUtil timeStampUtil) {
+        this.userRepository = userRepository;
+        this.exerciseRepository = exerciseRepository;
+        this.exerciseSessionRepository = exerciseSessionRepository;
+        this.healthSyncService = healthSyncService;
+        this.timeStampUtil = timeStampUtil;
+    }
 
     @Transactional
     public void saveAllExerciseData(List<ExerciseDto> exerciseList, int userSeq) {
@@ -77,7 +93,7 @@ public class ExerciseService {
                                         .exerciseType(sessionDto.getExerciseType())
                                         .calories(sessionDto.getCalories())
                                         .distance(sessionDto.getDistance())
-                                        .duration(sessionDto.getDuration())
+                                        .duration(TimeUnit.MILLISECONDS.toSeconds(sessionDto.getDuration()))
                                         .build()
                                 ).toList();
 
@@ -540,7 +556,7 @@ public class ExerciseService {
                             .exerciseType(session.getExerciseType())
                             .distance(session.getDistance())
                             .calories(session.getCalories())
-                            .duration(session.getDuration())
+                            .duration(TimeUnit.MILLISECONDS.toSeconds(session.getDuration()))
                             .exercise(exercise)
                             .build())
                     .toList();
@@ -753,8 +769,8 @@ public class ExerciseService {
     ) {
         User user = validateUser(userSeq);
 
-        Long effectiveStartTime = startTime != null ? timeStampUtil.getDateStartTimestamp(startTime) : timeStampUtil.getThreeWeeksAgoTimestamp();
-        Long effectiveEndTime = endTime != null ? timeStampUtil.getDateEndTimestamp(endTime) : timeStampUtil.getCurrentTimestamp();
+        Long effectiveStartTime = timeStampUtil.getDateStartTimestamp(startTime);
+        Long effectiveEndTime = timeStampUtil.getDateEndTimestamp(endTime);
 
         log.info("(LocalDate) 운동 통계 조회 - User: {}, Start: {}, End: {}", userSeq, effectiveStartTime, effectiveEndTime);
 

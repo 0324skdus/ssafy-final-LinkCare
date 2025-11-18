@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,13 +27,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.HeaderBack
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.common.theme.white
+import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
 
 enum class GroupType { CARE, HEALTH }
 
@@ -40,23 +44,92 @@ data class GroupSummary(
     val id: Long,
     val name: String,
     val type: GroupType,
-    val minGoalText: String,          // 예: "300kcal | 30min | 4000steps | 3km"
+    val minGoalText: String,
     val desc: String,
     val current: Int,
     val max: Int,
-    @DrawableRes val imageRes: Int,   // 네가 줄 사진(res/drawable)로 교체
-    val isPending: Boolean = false    // 신청 목록이면 true
+    @DrawableRes val imageRes: Int = 0,
+    val imageUrl: String? = null,
+    val joinStatus: String = "MEMBER",
+    val isPending: Boolean = false
 )
+
+// MyGroupResponse를 GroupSummary로 변환
+fun MyGroupResponse.toGroupSummary(): GroupSummary {
+    return GroupSummary(
+        id = groupSeq,
+        name = groupName,
+        type = if (type == "HEALTH") GroupType.HEALTH else GroupType.CARE,
+        minGoalText = "", // API에서 목표 데이터가 없으면 빈 문자열
+        desc = groupDescription,
+        current = currentMembers,
+        max = capacity,
+        imageUrl = imageUrl,
+        joinStatus = joinStatus,
+        isPending = joinStatus == "PENDING"
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyGroups (
     navController: NavController,
     modifier: Modifier = Modifier,
-    myGroups: List<GroupSummary> = sampleMyGroups(),
-    pendingGroups: List<GroupSummary> = samplePendingGroups(),
     onGroupClick: (GroupSummary) -> Unit = {}
 ) {
+    val viewModel: com.a307.linkcare.feature.commongroup.MyGroupsViewModel = hiltViewModel()
+
+    val careGroups by viewModel.careGroups.collectAsState()
+    val healthGroups by viewModel.healthGroups.collectAsState()
+    val carePendingGroups by viewModel.carePendingGroups.collectAsState()
+    val healthPendingGroups by viewModel.healthPendingGroups.collectAsState()
+
+    // 주기적 자동 새로고침 (10초마다)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10000) // 10초마다
+            android.util.Log.d("MyGroups", "주기적 자동 새로고침 시작")
+            viewModel.loadCare()
+            viewModel.loadHealth()
+            viewModel.loadCarePending()
+            viewModel.loadHealthPending()
+        }
+    }
+
+    // 데이터 로드 - 화면이 표시될 때마다 새로고침
+    LaunchedEffect(key1 = navController.currentBackStackEntry) {
+        android.util.Log.d("MyGroups", "화면 진입 - 데이터 새로고침 시작")
+        viewModel.loadCare()
+        viewModel.loadHealth()
+        viewModel.loadCarePending()
+        viewModel.loadHealthPending()
+    }
+
+    // SharedFlow 이벤트 구독 - 그룹 신청 시 실시간 업데이트
+    LaunchedEffect(Unit) {
+        viewModel.refreshEvent.collect {
+            android.util.Log.d("MyGroups", "그룹 신청 이벤트 수신 - 목록 새로고침")
+            viewModel.loadCare()
+            viewModel.loadHealth()
+            viewModel.loadCarePending()
+            viewModel.loadHealthPending()
+        }
+    }
+
+    // MEMBER 상태 그룹 (내 그룹)
+    val myGroups = remember(careGroups, healthGroups) {
+        val groups = (careGroups + healthGroups).map { it.toGroupSummary() }
+        android.util.Log.d("MyGroups", "내 그룹: ${groups.size}개")
+        groups
+    }
+
+    // PENDING 상태 그룹 (신청 목록)
+    val pendingGroups = remember(carePendingGroups, healthPendingGroups) {
+        val groups = (carePendingGroups + healthPendingGroups).map { it.toGroupSummary() }
+        android.util.Log.d("MyGroups", "신청 목록: ${groups.size}개")
+        groups
+    }
+
     var tabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("내 그룹", "신청 목록")
 
@@ -131,14 +204,27 @@ private fun GroupCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // 그룹 이미지
-                Image(
-                    painter = painterResource(group.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                if (!group.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = group.imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.ic_launcher_foreground),
+                        error = painterResource(R.drawable.ic_launcher_foreground)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 Spacer(Modifier.width(10.dp))
 

@@ -1,15 +1,19 @@
 package com.ssafy.linkcare.group.controller;
 
 import com.ssafy.linkcare.ai.service.GoalGenerationService;
+import com.ssafy.linkcare.gpt.dto.WeeklyHeaderResponse;
 import com.ssafy.linkcare.group.dto.*;
 import com.ssafy.linkcare.group.entity.WeeklyGroupGoals;
 import com.ssafy.linkcare.group.enums.GroupType;
+import com.ssafy.linkcare.group.scheduler.GroupHeaderScheduler;
 import com.ssafy.linkcare.group.service.GroupService;
 import com.ssafy.linkcare.group.service.WeeklyStatsService;
 import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
 import com.ssafy.linkcare.health.dto.WaterIntakeStatisticsResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +39,7 @@ public class GroupController {
     private final GroupService groupService;
     private final WeeklyStatsService weeklyStatsService;
     private final GoalGenerationService goalGenerationService;
+    private final GroupHeaderScheduler groupHeaderScheduler;
 
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
@@ -126,6 +131,19 @@ public class GroupController {
         List<GroupResponse> response = groupService.getMyGroups(userId, type);
         return ResponseEntity.ok(response);
     }
+    // 내가 신청한 그룹 목록 조회
+    @GetMapping("/my-pending")
+    @Operation(summary = "내가 신청한 그룹 목록 조회", description = "승인 대기 중인 내 신청 목록을 조회합니다. type 파라미터로 HEALTH/CARE 필터링 가능")
+    public ResponseEntity<List<GroupResponse>> getMyPendingGroups(
+            Authentication authentication,
+            @RequestParam(required = false) GroupType type) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        log.info("내 신청 그룹 목록 조회 요청: userId={}, type={}", userId, type);
+
+        List<GroupResponse> response = groupService.getMyPendingGroups(userId, type);
+        return ResponseEntity.ok(response);
+    }
 
     // 그룹 검색
     @GetMapping("/search")
@@ -144,10 +162,12 @@ public class GroupController {
     @GetMapping("/{groupSeq}")
     @Operation(summary = "그룹 상세 조회", description = "그룹의 상세 정보와 멤버 목록을 조회합니다")
     public ResponseEntity<GroupDetailResponse> getGroupDetail(
+            Authentication authentication,
             @PathVariable Long groupSeq) {
 
-        log.info("그룹 상세 조회 요청: groupSeq={}", groupSeq);
-        GroupDetailResponse response = groupService.getGroupDetail(groupSeq);
+        Long userId = Long.parseLong(authentication.getName());
+        log.info("그룹 상세 조회 요청: groupSeq={}, userId={}", groupSeq, userId);
+        GroupDetailResponse response = groupService.getGroupDetail(groupSeq, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -199,6 +219,21 @@ public class GroupController {
         log.info("그룹 정보 수정 API 호출: userId={}, groupSeq={}, imageAction={}", userId, groupSeq, imageAction);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "그룹 상세 정보 조회 (멤버 프로필 포함)", description = "그룹 ID로 그룹의 기본 정보와 멤버들의 프로필(캐릭터, 배경 이미지)을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupSeq}/details")
+    public ResponseEntity<MyGroupDetailResponseDto> getGroupDetails(
+            Authentication authentication, @PathVariable Long groupSeq) {
+        Long userId = Long.valueOf(authentication.getName());
+        MyGroupDetailResponseDto response = groupService.getGroupDetails(userId, groupSeq);
+
+        return ResponseEntity.ok(response);
+    }
+
 
     // ============== 초대 링크 관련 API ==============
 
@@ -371,6 +406,30 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "그룹 걸음수 통계 조회",
+            description = "오늘 날짜 기준 그룹원들의 개별 걸음수와 그룹 전체 총 걸음수를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = GroupStepStatisticsResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "그룹을 찾을 수 없음"
+            )
+    })
+    @GetMapping("/{groupSeq}/step-statistics")
+    public ResponseEntity<GroupStepStatisticsResponse> getGroupStepStatistics(
+            @Parameter(description = "그룹 시퀀스", required = true, example = "1")
+            @PathVariable Long groupSeq) {
+
+        GroupStepStatisticsResponse response = groupService.getGroupStepStatistics(groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/generate-weekly-stats")
     public ResponseEntity<String> generateWeeklyStats() {
         weeklyStatsService.generateAllGroupWeeklyStats();
@@ -481,5 +540,113 @@ public class GroupController {
         log.info("그룹원 권한 자동 동의 API 호출: userId={}, groupSeq={}", userId, groupSeq);
         return ResponseEntity.ok().build();
     }
-}
 
+    @GetMapping("/weekly-header/{groupSeq}")
+    @Operation(summary = "그룹 주간 헤더 문구 조회", description = "저장된 이번 주 목표 문구를 제공합니다")
+    public ResponseEntity<WeeklyHeaderResponse> getWeeklyHeader(
+            @PathVariable Long groupSeq
+    ) {
+        log.info("=== 주간 헤더 조회 ===");
+        log.info("그룹 ID: {}", groupSeq);
+
+        WeeklyHeaderResponse response = groupService.getWeeklyHeader(groupSeq);
+
+        log.info("헤더 메시지: {}", response.getHeaderMessage());
+        log.info("생성 시간: {}", response.getGeneratedAt());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 관리자용 - 수동 재생성 API (선택사항)
+    @PostMapping("/weekly-header/{groupSeq}/regenerate")
+    @Operation(summary = "주간 헤더 강제 재생성")
+    public ResponseEntity<WeeklyHeaderResponse> regenerateWeeklyHeader(
+            @PathVariable Long groupSeq
+    ) {
+        log.info("=== 주간 헤더 수동 재생성 ===");
+        WeeklyHeaderResponse response = groupHeaderScheduler.updateGroupHeader(groupSeq);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============== 그룹 관리 API ==============
+
+    @PostMapping("/{groupSeq}/delegate")
+    @Operation(summary = "그룹장 위임", description = "그룹장이 다른 멤버에게 그룹장 권한을 위임합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "위임 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> delegateLeader(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @RequestParam Long newLeaderUserSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹장 위임 요청: groupSeq={}, currentUser={}, newLeader={}",
+                groupSeq, currentUserSeq, newLeaderUserSeq);
+
+        groupService.delegateLeader(groupSeq, newLeaderUserSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupSeq}/members/{targetUserSeq}")
+    @Operation(summary = "그룹원 내보내기", description = "그룹장이 그룹원을 내보냅니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "내보내기 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음 또는 그룹장은 내보낼 수 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> kickMember(
+            Authentication authentication,
+            @PathVariable Long groupSeq,
+            @PathVariable Long targetUserSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹원 내보내기 요청: groupSeq={}, currentUser={}, targetUser={}",
+                groupSeq, currentUserSeq, targetUserSeq);
+
+        groupService.kickMember(groupSeq, targetUserSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupSeq}/leave")
+    @Operation(summary = "그룹 탈퇴", description = "그룹원이 그룹을 탈퇴합니다. 그룹장은 다른 멤버가 있으면 탈퇴할 수 없습니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "탈퇴 완료"),
+            @ApiResponse(responseCode = "400", description = "그룹장은 다른 멤버가 있을 때 탈퇴할 수 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> leaveGroup(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹 탈퇴 요청: groupSeq={}, currentUser={}", groupSeq, currentUserSeq);
+
+        groupService.leaveGroup(groupSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupSeq}")
+    @Operation(summary = "그룹 삭제", description = "그룹장이 그룹을 삭제합니다. 그룹장만 가능합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 완료"),
+            @ApiResponse(responseCode = "403", description = "그룹장 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    public ResponseEntity<Void> deleteGroup(
+            Authentication authentication,
+            @PathVariable Long groupSeq) {
+
+        Long currentUserSeq = Long.parseLong(authentication.getName());
+        log.info("그룹 삭제 요청: groupSeq={}, currentUser={}", groupSeq, currentUserSeq);
+
+        groupService.deleteGroup(groupSeq, currentUserSeq);
+
+        return ResponseEntity.ok().build();
+    }
+}

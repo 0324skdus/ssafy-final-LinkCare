@@ -107,7 +107,7 @@ fun SignupBirthScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${if (userName.isNotBlank()) userName + "님" else "당신"}님이",
+                            text = "${if (userName.isNotBlank()) userName + "님" else "당신"}이",
                             fontSize = 25.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = black

@@ -54,14 +54,10 @@ public class UserController {
     public ResponseEntity<MyPageResponseDto> getMyPageInfo(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         MyPageResponseDto myPageInfo = userService.getMyPageInfo(userId);
-        System.out.println("메인 배경 확인(C) : " + myPageInfo.getMainBackgroundImageUrl());
+
         return ResponseEntity.ok(myPageInfo);
     }
 
-    /*
-     * 내 프로필 조회
-     * GET /api/users/me
-     */
     @Operation(summary = "내 프로필 조회",
         description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
     @ApiResponses(value = {
@@ -78,10 +74,6 @@ public class UserController {
         return ResponseEntity.ok(profile);
     }
 
-    /*
-     * 프로필 업데이트
-        * PUT /api/users/profile
-    */
     @Operation(summary = "프로필 업데이트",
         description = "사용자의 프로필 정보(생년월일, 키, 몸무게, 성별, 운동 시작 년도)를 업데이트합니다.")
     @ApiResponses(value = {
@@ -97,12 +89,10 @@ public class UserController {
 
         String userId = authentication.getName();
 
-        // 생년월일 미래 날짜 검증
         if (request.birth().isAfter(LocalDate.now())) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "생년월일은 미래일 수 없습니다");
         }
 
-        // 프로필 정보 업데이트
         userService.updateProfile(Long.parseLong(userId), request);
 
         return ResponseEntity.ok("프로필 업데이트 성공");

@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,7 @@ import com.a307.linkcare.common.component.atoms.Avatar
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.R
+import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
@@ -28,7 +30,8 @@ fun MemberRowCare(
     m: Member,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isSelf: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -78,15 +81,60 @@ fun MemberRowCare(
 //            )
         }
         Spacer(Modifier.width(12.dp))
-        Column(horizontalAlignment = Alignment.End) {
-            Text("현재 ${m.progresses} 걸음", fontWeight = FontWeight.Bold, color = if (m.goal > m.progresses) main else point)
-            Text("총 ${m.goal} 걸음", fontSize = 12.sp, color = Color(0xFF888888))
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.padding(end = 4.dp)
+        ) {
+            // 상태(status) → 텍스트 컬러는 상태별로 구분 가능
+            when (m.status) {
+                "PERFECT" -> "완벽"
+                "GOOD" -> "양호"
+                "CAUTION" -> "주의"
+                "ANALYZING" -> "분석 중"
+                "UNKNOWN" -> "알 수 없음"
+                else -> m.status
+            }?.let {
+                Text(
+                    text = it,
+                    fontWeight = FontWeight.Bold,
+                    color = when (m.status) {
+                        "PERFECT" -> point
+                        "GOOD" -> main
+                        "CAUTION" -> Color(0xFFFFA000)
+                        "ANALYZING" -> Color(0xFF888888)
+                        "UNKNOWN" -> Color(0xFF888888)
+                        else -> main
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            // 요약(summary)
+            m.summary?.let {
+                Text(
+                    text = it,
+                    fontSize = 12.sp,
+                    color = Color(0xFF888888),
+                    maxLines = 1
+                )
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        Image(
-            painter = painterResource(R.drawable.tap),
-            contentDescription = null,
-            modifier = Modifier.size(30.dp)
-        )
+        if (!isSelf) {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp)
+            )
+        } else {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.tap),
+                contentDescription = null,
+                modifier = Modifier.size(30.dp),
+                colorFilter = ColorFilter.tint(gray)
+            )
+        }
     }
 }
