@@ -285,20 +285,6 @@ private fun MenuRow(
                 color = Color(0xFF8E8E93),
                 textAlign = TextAlign.Center
             )
-
-
-            Text(
-                "탈퇴하기",
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(top = 2.dp)
-                    .clickable {
-                        println("탈퇴하였습니다")
-                    },
-                fontSize = 15.sp,
-                color = Color(0xFF8E8E93),
-                textAlign = TextAlign.Center
-            )
         }
     }
 }
