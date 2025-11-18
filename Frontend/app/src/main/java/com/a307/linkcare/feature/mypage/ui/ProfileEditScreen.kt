@@ -147,11 +147,11 @@ fun ProfileEditScreen(
                 }
 
                 // ----- 펫 이름 -----
-                Text("펫 이름", color = black, style = MaterialTheme.typography.labelLarge)
+                Text("캐릭터 이름", color = black, style = MaterialTheme.typography.labelLarge)
                 LcInputField(
                     value = petName,
                     onValueChange = { petName = it },
-                    placeholder = "펫 이름 입력",
+                    placeholder = "캐릭터 이름 입력",
                     modifier = Modifier.fillMaxWidth()
                 )
 
