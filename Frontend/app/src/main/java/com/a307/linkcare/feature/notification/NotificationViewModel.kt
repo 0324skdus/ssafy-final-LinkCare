@@ -27,10 +27,15 @@ import javax.inject.Inject
 class NotificationViewModel @Inject constructor(
     private val repository: NotificationRepository,
     private val notificationEventManager: NotificationEventManager,
+    private val groupRepository: com.a307.linkcare.feature.commongroup.data.GroupRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val processedStore = ProcessedNotificationStore(context)
+
+    // 그룹 이미지 캐시 (groupSeq -> imageUrl)
+    private val _groupImages = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val groupImages: StateFlow<Map<Long, String>> = _groupImages
 
     // FCM 브로드캐스트 리시버 (백업용)
     private val fcmReceiver = object : BroadcastReceiver() {
@@ -91,6 +96,9 @@ class NotificationViewModel @Inject constructor(
                     Log.d("NotificationViewModel", "✅ API 성공: ${notifications.size}개 알림 받음")
                     _notifications.value = notifications
                     Log.d("NotificationViewModel", "StateFlow 업데이트 완료")
+
+                    // 그룹 이미지 로드
+                    loadGroupImages(notifications)
                 }
                 .onFailure { error ->
                     Log.e("NotificationViewModel", "❌ API 실패: ${error.message}", error)
@@ -191,6 +199,33 @@ class NotificationViewModel @Inject constructor(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    // 그룹 이미지 로드
+    private fun loadGroupImages(notifications: List<NotificationResponse>) {
+        viewModelScope.launch {
+            val groupSeqs = notifications.mapNotNull { it.relatedGroupSeq }.distinct()
+            val newImages = mutableMapOf<Long, String>()
+
+            groupSeqs.forEach { groupSeq ->
+                // 이미 캐시에 있으면 스킵
+                if (_groupImages.value.containsKey(groupSeq)) {
+                    newImages[groupSeq] = _groupImages.value[groupSeq]!!
+                } else {
+                    // 그룹 상세 정보 가져오기
+                    try {
+                        val detail = groupRepository.getGroupDetail(groupSeq)
+                        newImages[groupSeq] = detail.imageUrl
+                        Log.d("NotificationViewModel", "그룹 이미지 로드 성공: $groupSeq -> ${detail.imageUrl}")
+                    } catch (error: Exception) {
+                        Log.e("NotificationViewModel", "그룹 이미지 로드 실패: $groupSeq - ${error.message}")
+                    }
+                }
+            }
+
+            // 캐시 업데이트
+            _groupImages.value = _groupImages.value + newImages
+        }
     }
 
     // FCM 리시버 등록
