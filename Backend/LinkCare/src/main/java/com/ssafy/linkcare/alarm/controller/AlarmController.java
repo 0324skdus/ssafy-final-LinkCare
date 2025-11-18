@@ -71,4 +71,23 @@ public class AlarmController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "알림 읽음 처리", description = "특정 알림을 읽음 상태로 변경합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "읽음 처리 성공"),
+            @ApiResponse(responseCode = "403", description = "해당 알림을 읽을 권한이 없음"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음")
+    })
+    @PatchMapping("/{alarmId}/read")
+    public ResponseEntity<String> readAlarm(
+            @PathVariable Long alarmId,
+            Authentication authentication) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        log.info("알림 읽음 처리 API 호출: alarmId={}, userId={}", alarmId, userId);
+
+        alarmService.readAlarm(alarmId, userId);
+
+        return ResponseEntity.ok("알림을 성공적으로 읽음 처리했습니다.");
+    }
 }

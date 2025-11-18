@@ -73,4 +73,17 @@ public class AlarmService {
                 .map(AlarmResponseDto::new)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public void readAlarm(Long alarmId, Long userId) {
+        Alarm alarm = alarmRepository.findById(alarmId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ALARM_NOT_FOUND));
+
+        // 알림의 수신자가 현재 로그인한 사용자인지 확인
+        if (!alarm.getReceiver().getUserPk().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        alarm.read(); // isRead를 true로 변경
+    }
 }
