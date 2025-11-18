@@ -62,31 +62,20 @@ import com.a307.linkcare.feature.healthgroup.ui.HealthGroup
 import com.a307.linkcare.feature.healthgroup.ui.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.ui.HealthGroupEdit
 import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHome
-import com.a307.linkcare.feature.mypage.ui.DecorateScreen
 import com.a307.linkcare.feature.mypage.ui.MyGroups
 import com.a307.linkcare.feature.mypage.ui.MyPage
 import com.a307.linkcare.feature.mypage.MyPageApiState
 import com.a307.linkcare.feature.mypage.MyPageViewModel
-import com.a307.linkcare.feature.mypage.ui.StoreItem
-import com.a307.linkcare.feature.mypage.ui.StoreScreen
-import com.a307.linkcare.feature.mypage.ui.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
 import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.a307.linkcare.feature.customize.CustomEntity
-import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
-import com.a307.linkcare.feature.customize.CustomizeRepository
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.mypage.ui.ProfileEditScreen
-import com.a307.linkcare.feature.watch.data.DataLayerManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.feature.mypage.MyPageEditViewModel
-import com.a307.linkcare.feature.mypage.StoreViewModel
+import com.a307.linkcare.feature.mypage.ui.DecorateRoute
 import com.a307.linkcare.feature.mypage.ui.StoreRoute
-import com.a307.linkcare.feature.mypage.ui.StoreTab
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -297,7 +286,7 @@ fun MainTabs(
                 // --- 꾸미기 (마이페이지 > 꾸미기) ---
                 currentDestination?.route == Route.Decorate.route -> {
                     HeaderBack(
-                        title = "꾸미기",
+                        title = "보관함",
                         onBackClick = { navController.goBackToMyPage() }
                     )
                     Divider(color = unActiveField, thickness = 1.dp)
@@ -681,26 +670,7 @@ fun MainTabs(
 
                 // 꾸미기
                 composable(Route.Decorate.route) {
-                    val repo: CustomizeRepository = hiltViewModel<CustomizeRepoHolderVM>().repo
-                    val context = LocalContext.current
-                    val custom by repo.customFlow.collectAsState(initial = CustomEntity(1, 1))
-
-
-                    DecorateScreen(
-                        ownedCharacters = listOf(1, 2),
-                        ownedBackgrounds = listOf(1, 2),
-                        equippedCharacter = custom.characterId,
-                        equippedBackground = custom.backgroundId,
-                        onApply = { charId, bgId ->
-                            CoroutineScope(Dispatchers.IO).launch {
-                                repo.saveCustom(charId, bgId)   // 논리 ID 저장
-                            }
-
-                            DataLayerManager.sendTheme(context, charId, bgId)  // 논리 ID 전송
-
-                            navController.goBackToMyPage()
-                        }
-                    )
+                    DecorateRoute(navController)
                 }
             }
         }
