@@ -213,6 +213,15 @@ public class HealthService {
                 .build();
     }
 
+    public DailyActivitySummaryResponse getDailyActivitySummaryByDate(int userSeq, LocalDate date) {
+        List<ExerciseSessionResponse> exerciseSessionResponses = exerciseService.getExerciseSessionsByDate(userSeq, date, date);
+
+        return DailyActivitySummaryResponse.builder()
+                .exercises(exerciseSessionResponses)
+                .steps(stepService.getStepsByDate(userSeq, date))
+                .build();
+    }
+
 
     public TodayStatisticsResponse getTodayStatisticsForDialogs(int userSeq) {
         LocalDate today = LocalDate.now();
