@@ -335,10 +335,10 @@ public class GroupService {
                     String backgroundUrl = null;
 
                     if (user.getMainCharacter() != null) {
-                        characterUrl = user.getMainCharacter().getCharacter().getBaseImageS3Key();
+                        characterUrl = s3Service.generatePresignedGetUrl(user.getMainCharacter().getCharacter().getBaseImageS3Key());
                     }
                     if (user.getMainBackground() != null) {
-                        backgroundUrl = user.getMainBackground().getBackground().getS3Key();
+                        backgroundUrl = s3Service.generatePresignedGetUrl(user.getMainBackground().getBackground().getS3Key());
                     }
 
                     return GroupMemberProfileDto.builder()
