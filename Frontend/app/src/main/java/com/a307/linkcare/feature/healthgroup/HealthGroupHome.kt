@@ -284,7 +284,11 @@ fun HealthGroupHome(
 
                     ScreenTitleRow(
                         title = "$progressText$unit",
-                        subtitle = "목표 ${if (totalGroupGoal > 0) "$totalGroupGoal$unit" else "미설정"} 까지\n${percentText}% 달성했어요",
+                        subtitle = if (totalGroupGoal > 0) {
+                            "목표 $totalGroupGoal$unit 까지\n${percentText}% 달성했어요"
+                        } else {
+                            "목표 미설정"
+                        },
                         onEditClick = {
                             android.util.Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
                             if (!isLeader) {
@@ -312,8 +316,20 @@ fun HealthGroupHome(
                 item {
                     HeaderCard(
                         progress = todayGroupPercent,
-                        onPrev = { selectedDate = selectedDate.minusDays(1) },
-                        onNext = { selectedDate = selectedDate.plusDays(1) },
+                        onPrev = {
+                            selectedDate = clampDate(
+                                selectedDate.minusDays(1),
+                                minDate,
+                                today
+                            )
+                        },
+                        onNext = {
+                            selectedDate = clampDate(
+                                selectedDate.plusDays(1),
+                                minDate,
+                                today
+                            )
+                        },
                         label = selectedDate.korLabel(),
                         onClick = { showCalendar = true }
                     )
@@ -437,38 +453,64 @@ fun HealthGroupHome(
                         else -> 0
                     } ?: 0
 
-                    val weeklyMembersForCard = remember(weeklyMembersWithActivity, goalState) {
-                        weeklyMembersWithActivity.map { memberWithActivity ->
-                            val memberInfo = memberWithActivity.memberInfo
-                            val weeklyActivity = memberWithActivity.activity
+                    if (totalWeeklyGroupGoal > 0) {
+                        // 목표가 설정된 경우 - 기존 카드 표시
+                        val weeklyMembersForCard = remember(weeklyMembersWithActivity, goalState) {
+                            weeklyMembersWithActivity.map { memberWithActivity ->
+                                val memberInfo = memberWithActivity.memberInfo
+                                val weeklyActivity = memberWithActivity.activity
 
-                            val weeklyProgress = when (currentMetricType) {
-                                "STEPS" -> weeklyActivity.totalSteps
-                                "KCAL" -> weeklyActivity.totalCalories.toInt()
-                                "DURATION" -> weeklyActivity.totalDuration
-                                "DISTANCE" -> (weeklyActivity.totalDistances / 1000).toInt() // m -> km 변환
-                                else -> 0
+                                val weeklyProgress = when (currentMetricType) {
+                                    "STEPS" -> weeklyActivity.totalSteps
+                                    "KCAL" -> weeklyActivity.totalCalories.toInt()
+                                    "DURATION" -> weeklyActivity.totalDuration
+                                    "DISTANCE" -> (weeklyActivity.totalDistances / 1000).toInt() // m -> km 변환
+                                    else -> 0
+                                }
+
+                                memberInfo.copy(
+                                    progresses = weeklyProgress,
+                                    goal = totalWeeklyGroupGoal
+                                )
                             }
+                        }
 
-                            memberInfo.copy(
-                                progresses = weeklyProgress,
-                                goal = totalWeeklyGroupGoal
-                            )
+                        val cardTitle = when (currentMetricType) {
+                            "STEPS" -> "주간 걸음수 기여도"
+                            "KCAL" -> "주간 칼로리 기여도"
+                            "DURATION" -> "주간 운동시간 기여도"
+                            "DISTANCE" -> "주간 이동거리 기여도"
+                            else -> "주간 활동 기여도"
+                        }
+
+                        ProgressSummaryCard(
+                            title = cardTitle,
+                            members = weeklyMembersForCard
+                        )
+                    } else {
+                        // 목표가 없는 경우 - "목표 설정하세요" 멘트
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            color = Color(0xFFF5F5F5),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "목표 설정하세요",
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF999999),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
-
-                    val cardTitle = when (currentMetricType) {
-                        "STEPS" -> "주간 걸음수 기여도"
-                        "KCAL" -> "주간 칼로리 기여도"
-                        "DURATION" -> "주간 운동시간 기여도"
-                        "DISTANCE" -> "주간 이동거리 기여도"
-                        else -> "주간 활동 기여도"
-                    }
-
-                    ProgressSummaryCard(
-                        title = cardTitle,
-                        members = weeklyMembersForCard
-                    )
                 }
 
                 item {
