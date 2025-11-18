@@ -85,6 +85,18 @@ public class HealthController {
         return ResponseEntity.ok(dailyHealthDetailResponse);
     }
 
+    @GetMapping("/{userSeq}/health/daily-activity/{date}")
+    public ResponseEntity<DailyActivitySummaryResponse> getUserDailyActivityDataByDate(
+            @PathVariable int userSeq,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        log.info("API 호출 - 특정 날짜 daily activity detail 전체 조회 userSeq = {}", userSeq);
+
+        DailyActivitySummaryResponse dailyActivitySummaryResponse = healthService.getDailyActivitySummaryByDate(userSeq, date);
+
+        return ResponseEntity.ok(dailyActivitySummaryResponse);
+    }
+
     @GetMapping("/{userSeq}/today-activity/detail")
     public ResponseEntity<DailyActivitySummaryResponse> getUserDailyActivitySummaryDetailData(
             @PathVariable int userSeq
