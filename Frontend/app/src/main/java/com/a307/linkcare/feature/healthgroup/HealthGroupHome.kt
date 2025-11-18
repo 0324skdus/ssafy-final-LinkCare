@@ -603,8 +603,8 @@ fun HealthGroupHome(
                     val summaryChips = remember(totalStats) {
                         val calories = totalStats?.totalCalories ?: 0.0
                         val steps = totalStats?.totalSteps ?: 0
-                        val durationSec = totalStats?.totalDuration ?: 0
-                        val formattedDuration = formatDuration(durationSec)
+                        val durationMs = totalStats?.totalDuration ?: 0
+                        val formattedDuration = formatDuration((durationMs / 1000).toInt())
 
                         listOf(
                             "🔥 ${calories.toInt()} kcal 태웠어요",
