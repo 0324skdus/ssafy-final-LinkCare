@@ -12,7 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,26 +21,30 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.IntOffset
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.white
-import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.common.util.CropTransparentTransformation
 import kotlin.math.roundToInt
-
-
 
 @Composable
 fun HealthGroupHeaderCard(
     progress: Float,
     @DrawableRes leaderAvatarRes: Int,
-    @DrawableRes bgImgRes: Int
+    @DrawableRes bgImgRes: Int,
+    avatarUrl: String?,
+    backgroundUrl: String?
 ) {
-    // 부드러운 애니메이션 효과
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(durationMillis = 1000),
@@ -65,14 +69,17 @@ fun HealthGroupHeaderCard(
                 .clip(RoundedCornerShape(16.dp))
         ) {
             // 배경 이미지
-            Image(
-                painter = painterResource(bgImgRes),
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(backgroundUrl.takeUnless { it.isNullOrBlank() } ?: bgImgRes)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
 
-            // 그라데이션 오버레이 (깊이감 추가)
+            // 그라데이션
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -87,7 +94,28 @@ fun HealthGroupHeaderCard(
                     )
             )
 
-            // 진행바 섹션
+            // 리더 아바타
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(avatarUrl.takeUnless { it.isNullOrBlank() } ?: leaderAvatarRes)
+                        .crossfade(true)
+                        .transformations(CropTransparentTransformation())
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .offset(x = (-30).dp, y = (-10).dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            // 진행바
             BoxWithConstraints(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -97,9 +125,7 @@ fun HealthGroupHeaderCard(
                 val barHeight = 12.dp
                 val coinSize = 32.dp
                 val barRadius = 8.dp
-
                 val totalWidthDp = maxWidth
-
 
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -114,20 +140,17 @@ fun HealthGroupHeaderCard(
                         Text(
                             text = "그룹 목표 달성률",
                             color = white,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 13.sp
                         )
                         Text(
                             text = "${(animatedProgress * 100).roundToInt()}%",
                             color = white,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 16.sp
                         )
                     }
 
-                    // 진행바
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        // 바 트랙 (배경)
+                        // 바 트랙
                         Box(
                             Modifier
                                 .fillMaxWidth()
@@ -139,7 +162,7 @@ fun HealthGroupHeaderCard(
                         // 채워진 바
                         Box(
                             Modifier
-                                .fillMaxWidth(animatedProgress)
+                                .fillMaxWidth(animatedProgress.coerceIn(0f, 1f))
                                 .height(barHeight)
                                 .clip(RoundedCornerShape(barRadius))
                                 .background(
@@ -152,7 +175,7 @@ fun HealthGroupHeaderCard(
                                 )
                         )
 
-                        // 눈금 (0~100, 10% 간격)
+                        // 눈금
                         Canvas(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -178,10 +201,11 @@ fun HealthGroupHeaderCard(
                         }
 
                         // 코인 위치
-                        val coinOffsetX = with(LocalDensity.current) {
+                        val coinOffsetX = with(density) {
                             val total = totalWidthDp.toPx()
                             val c = coinSize.toPx()
-                            ((total - c) * animatedProgress).coerceIn(0f, total - c)
+                            ((total - c) * animatedProgress.coerceIn(0f, 1f))
+                                .coerceIn(0f, total - c)
                         }
 
                         // 코인 이미지
@@ -195,22 +219,6 @@ fun HealthGroupHeaderCard(
                         )
                     }
                 }
-            }
-
-            // 모임장 캐릭터 (우상단)
-            Box(
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResourceCropped(leaderAvatarRes),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .offset(x = -30.dp, y = -10.dp)
-                )
             }
         }
     }

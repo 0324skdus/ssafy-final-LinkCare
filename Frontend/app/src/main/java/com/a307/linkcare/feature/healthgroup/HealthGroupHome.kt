@@ -40,8 +40,6 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
-import com.a307.linkcare.feature.caregroup.data.endOfWeek
-import com.a307.linkcare.feature.caregroup.data.startOfWeek
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 
@@ -264,6 +262,13 @@ fun HealthGroupHome(
         ?: Member("나", 50, 100, R.drawable.char_bear_1, "", isLeader = true)
     }
 
+    val leaderCharInfo = remember(leader, characterMap) {
+        characterMap[leader.userPk]   // userPk는 위에서 m.userSeq 넣어둔 값
+    }
+
+    val leaderAvatarUrl = leaderCharInfo?.mainCharacterImageUrl
+    val leaderBgUrl = leaderCharInfo?.mainBackgroundImageUrl
+
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
 
     val dpState = rememberDatePickerState(
@@ -357,7 +362,9 @@ fun HealthGroupHome(
                     HealthGroupHeaderCard(
                         progress = todayGroupPercent.coerceIn(0f, 1f),
                         bgImgRes = R.drawable.background_1,
-                        leaderAvatarRes = leader.avatarRes
+                        leaderAvatarRes = leader.avatarRes,
+                        avatarUrl = leaderAvatarUrl,
+                        backgroundUrl = leaderBgUrl,
                     )
                     Spacer(Modifier.height(12.dp))
                 }
