@@ -139,6 +139,8 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+    val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
+    val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
     // -------------------------
 
     val members = remember(membersResponse, characterMap) {
@@ -220,6 +222,19 @@ fun HealthGroupHome(
             goalVm.fetchWeeklyMembersHealthData(members, selectedDate)
         }
     }
+
+    // 날짜 변경 시 이전 daily activity 클리어
+    LaunchedEffect(selectedDate) {
+        goalVm.clearDailyActivity()
+    }
+
+    // 멤버 변경 시 또는 날짜 변경 시 daily activity 로드
+    LaunchedEffect(members, selectedDate) {
+        if (members.isNotEmpty()) {
+            val userSeqs = members.map { it.userPk.toInt() }
+            goalVm.loadDailyActivityForMembers(userSeqs, selectedDate)
+        }
+    }
     // -------------------------
 
     // GoalState 변화 감지
@@ -289,6 +304,14 @@ fun HealthGroupHome(
     var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, membersWithActivity) {
         membersWithActivity.associate { m -> m.memberInfo.name to sampleHealthToday(m.memberInfo) }
+    }
+
+    val todayActivityByUserPk = remember(dailyActivityData, isLoadingDailyActivity) {
+        if (isLoadingDailyActivity) {
+            emptyMap()
+        } else {
+            dailyActivityData
+        }
     }
 
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
@@ -590,8 +613,9 @@ fun HealthGroupHome(
                     val summaryChips = remember(totalStats) {
                         val calories = totalStats?.totalCalories ?: 0.0
                         val steps = totalStats?.totalSteps ?: 0
+                        val durationMs = totalStats?.totalDuration ?: 0
                         val durationSec = totalStats?.totalDuration ?: 0
-                        val formattedDuration = formatDuration(durationSec)
+                        val formattedDuration = formatDuration((durationMs / 1000).toInt())
 
                         listOf(
                             "🔥 ${calories.toInt()} kcal 태웠어요",
@@ -620,7 +644,9 @@ fun HealthGroupHome(
                     petName = info.petName,
                     myCharInfo = myCharInfo,
                     today = todayHealthByName[info.member.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null }
+                    onDismiss = { selectedMember = null },
+                    dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
+                    isLoading = isLoadingDailyActivity
                 )
             }
 

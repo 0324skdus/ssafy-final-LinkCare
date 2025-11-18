@@ -30,6 +30,7 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -321,7 +322,7 @@ fun CareGroupHome(
             if (it.userPk > 0) it.userPk.toInt() else null
         }
       if (userPks.isNotEmpty()) {
-            healthViewModel.loadHealthDataForMembers(userPks)
+            healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
             Log.d("CareGroupHome", "No valid userPks to load health data")
         }
