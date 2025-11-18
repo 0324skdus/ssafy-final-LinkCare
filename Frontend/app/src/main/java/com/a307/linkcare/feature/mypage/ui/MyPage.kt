@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -186,6 +186,7 @@ fun MyPage(
 
             // 하단 카드 2열
             MenuRow(
+                state = state,
                 onStoreClick = onStoreClick,
                 onDecorateClick = onDecorateClick
             )
@@ -384,11 +385,13 @@ private fun ProfileCard(
 
 @Composable
 private fun MenuRow(
+    state: MyPageUiState,
     onStoreClick: () -> Unit,
     onDecorateClick: () -> Unit
 ) {
     Row(Modifier.fillMaxWidth()) {
         MenuButtonCard(
+            state = state,
             title = "상점",
             icon = { Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(24.dp)) },
             modifier = Modifier.weight(1f),
@@ -397,7 +400,8 @@ private fun MenuRow(
         )
         Spacer(Modifier.width(16.dp))
         MenuButtonCard(
-            title = "꾸미기",
+            state = state,
+            title = "보관함",
             icon = { Icon(Icons.Default.Lock, null, modifier = Modifier.size(24.dp)) },
             modifier = Modifier.weight(1f),
             onClick = onDecorateClick,
@@ -408,6 +412,7 @@ private fun MenuRow(
 
 @Composable
 private fun MenuButtonCard(
+    state: MyPageUiState,
     title: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},

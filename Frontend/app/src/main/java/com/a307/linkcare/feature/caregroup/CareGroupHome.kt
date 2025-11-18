@@ -31,11 +31,10 @@ import com.a307.linkcare.feature.caregroup.domain.Tap
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.caregroup.data.*
 import com.a307.linkcare.feature.caregroup.domain.CareGroupHomeViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.healthgroup.formatDuration
+import com.a307.linkcare.feature.healthgroup.ui.formatDuration
 
 import android.util.Log
 import android.widget.Toast
@@ -46,7 +45,7 @@ import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState

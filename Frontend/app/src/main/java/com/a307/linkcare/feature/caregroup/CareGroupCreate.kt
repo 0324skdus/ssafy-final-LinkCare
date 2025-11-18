@@ -24,7 +24,7 @@ import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.R
 import com.a307.linkcare.feature.caregroup.domain.CareGroupCreateViewModel
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.healthgroup.toMultipart
+import com.a307.linkcare.feature.healthgroup.ui.toMultipart
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")

@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,6 +21,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.mypage.domain.MyProfileResponse
 import java.util.Calendar
 
 enum class Gender { MALE, FEMALE }

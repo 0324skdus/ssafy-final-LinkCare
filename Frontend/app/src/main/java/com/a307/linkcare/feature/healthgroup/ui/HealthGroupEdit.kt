@@ -1,8 +1,9 @@
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -21,10 +22,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.a307.linkcare.R
@@ -32,7 +33,13 @@ import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.caregroup.GroupMember
+import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
+import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
+import com.a307.linkcare.feature.healthgroup.HealthGroupEditViewModel
 import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -53,7 +60,7 @@ private fun uriToFile(context: Context, uri: Uri): File? {
 
         tempFile
     } catch (e: Exception) {
-        android.util.Log.e("HealthGroupEdit", "URI to File 변환 실패: ${e.message}", e)
+        Log.e("HealthGroupEdit", "URI to File 변환 실패: ${e.message}", e)
         null
     }
 }
@@ -92,8 +99,8 @@ data class HealthMember(
 fun HealthGroupEdit(
     navController: NavHostController,
     groupSeq: Long,
-    viewModel: HealthGroupEditViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
-    groupvm: com.a307.linkcare.feature.commongroup.MyGroupsViewModel? = null,
+    viewModel: HealthGroupEditViewModel = hiltViewModel(),
+    groupvm: MyGroupsViewModel? = null,
     myPageViewModel: com.a307.linkcare.feature.mypage.MyPageViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
     onGroupDeleted: () -> Unit = {},
     onCopyInvite: (String) -> Unit = {},
@@ -163,7 +170,7 @@ fun HealthGroupEdit(
                 ).show()
                 viewModel.resetMemberActionState()
                 // 그룹 목록 새로고침 후 health 탭의 루트로 이동
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                CoroutineScope(Dispatchers.Main).launch {
                     groupvm?.loadHealth()
                     onGroupDeleted()
                     navController.navigate("health/main") {
@@ -180,7 +187,7 @@ fun HealthGroupEdit(
                 ).show()
                 viewModel.resetMemberActionState()
                 // 그룹 목록 새로고침 후 health 탭의 루트로 이동
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                CoroutineScope(Dispatchers.Main).launch {
                     groupvm?.loadHealth()
                     onGroupDeleted()
                     navController.navigate("health/main") {
@@ -268,13 +275,14 @@ fun HealthGroupEdit(
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 private fun RenderHealthGroupEditForm(
     navController: NavHostController,
-    groupDetail: com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse,
+    groupDetail: GroupDetailResponse,
     viewModel: HealthGroupEditViewModel,
     updateState: HealthGroupEditViewModel.UpdateState,
-    characterMap: Map<Long, com.a307.linkcare.feature.mypage.GroupCharacterResponse>,
+    characterMap: Map<Long, GroupCharacterResponse>,
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,
@@ -661,7 +669,7 @@ private fun MemberRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 아바타 (배경 이미지 포함)
+                // 아바타
                 Box(modifier = Modifier.size(44.dp)) {
                     // 배경 이미지
                     if (backgroundUrl != null) {
@@ -702,7 +710,7 @@ private fun MemberRow(
                     )
                 }
 
-                // 오른쪽 작은 액션들 (테두리 없는 Button으로 변경)
+                // 오른쪽 작은 액션들
                 if (isLeader && !member.isLeader) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
