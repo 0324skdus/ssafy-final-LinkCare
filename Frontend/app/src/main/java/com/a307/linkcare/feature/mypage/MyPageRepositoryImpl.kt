@@ -13,4 +13,8 @@ class MyPageRepositoryImpl @Inject constructor(
     override suspend fun updateProfile(req: UpdateProfileRequest) {
         api.updateProfile(req)
     }
+
+    override suspend fun getMyGroupCharacters(groupSeq: Long): GroupDetailResponse {
+        return api.getMyGroupCharacters(groupSeq)
+    }
 }

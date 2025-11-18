@@ -28,6 +28,9 @@ import com.a307.linkcare.feature.commongroup.domain.Member
 @Composable
 fun MemberRowCare(
     m: Member,
+    avatarUrl: String?,
+    backgroundUrl: String?,
+    petName: String?,
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
@@ -43,16 +46,21 @@ fun MemberRowCare(
     ) {
         // 아바타
         Avatar(
-            imageRes = m.avatarRes,
+            avatarUrl = avatarUrl,
+            backgroundUrl = backgroundUrl,
+            petName = petName,
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
-            onBubbleVisibleChange = { showBubble = it },
-            bgImgRes = R.drawable.background_1
+            onBubbleVisibleChange = { showBubble = it }
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
+                if (petName != null) {
+                    Text(petName, fontWeight = FontWeight.SemiBold, color = black)
+                }
+                else
+                    Text(m.name, fontWeight = FontWeight.SemiBold, color = black)
                 if (m.isLeader) {
                     Spacer(Modifier.width(6.dp))
                     Surface(
