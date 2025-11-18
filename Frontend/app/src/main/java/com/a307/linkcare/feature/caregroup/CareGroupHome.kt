@@ -42,7 +42,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
+import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
 import com.a307.linkcare.feature.mypage.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
@@ -358,16 +360,13 @@ fun CareGroupHome(
         sampleSummary(selectedDate.korLabel(), metricType)
     }
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberDetailInfo?>(null) }
     val todayHealthByName = remember(selectedDate, todayMembers, healthData) {
        todayMembers.associate { m ->
-            Log.d("CareGroupHome", "Looking for userPk=${m.userPk.toInt()} for ${m.name}")
             val health = if (m.userPk > 0) {
                 val apiData = healthData[m.userPk.toInt()]
-                Log.d("CareGroupHome", "API data for ${m.name}: ${if (apiData != null) "FOUND" else "NOT FOUND"}")
                 apiData ?: sampleHealthToday(m)
             } else {
-                Log.d("CareGroupHome", "userPk is 0 for ${m.name}, using dummy data")
                 sampleHealthToday(m)
             }
             m.name to health
@@ -462,8 +461,16 @@ fun CareGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
-                        onClick = { selectedMember = m },
-                        isSelf = (m.name == currentUserName)
+                        onClick = {
+                            val charInfo = characterMap[m.userPk]
+                            selectedMember = MemberDetailInfo(
+                                member = m,
+                                avatarUrl = charInfo?.mainCharacterImageUrl,
+                                backgroundUrl = charInfo?.mainBackgroundImageUrl,
+                                petName = charInfo?.petName
+                            )
+                        },
+                        isSelf = (m.userPk == TokenStore(context).getUserPk())
                     )
 
                     if (index < todayMembers.lastIndex) {
@@ -593,21 +600,27 @@ fun CareGroupHome(
                 }
             }
 
-            selectedMember?.let { m ->
+        selectedMember?.let { info ->
 
-                LaunchedEffect(m.userPk, selectedDate) {
-                    if (m.userPk > 0) {
-                        healthViewModel.loadHealthData(m.userPk.toInt(), selectedDate)
-                    }
+            LaunchedEffect(info.member.userPk) {
+                if (info.member.userPk > 0) {
+                    healthViewModel.loadHealthData(info.member.userPk.toInt())
                 }
-
-                CareMemberDetail(
-                    member = m,
-                    today = todayHealthByName[m.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null },
-                    currentUserName = currentUserName
-                )
             }
+
+            val myCharInfo = characterMap.values.find { it.userId == TokenStore(context).getUserPk() }
+
+            CareMemberDetail(
+                member = info.member,
+                avatarUrl = info.avatarUrl,
+                backgroundUrl = info.backgroundUrl,
+                petName = info.petName,
+                myCharInfo = myCharInfo,
+                today = todayHealthByName[info.member.name] ?: HealthToday(),
+                onDismiss = { selectedMember = null },
+                currentUserName = currentUserName
+            )
+        }
 
             if (showCalendar) {
                 DatePickerDialog(
