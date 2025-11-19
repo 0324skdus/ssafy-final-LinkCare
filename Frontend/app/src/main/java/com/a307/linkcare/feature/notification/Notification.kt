@@ -15,10 +15,12 @@ fun Notification(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("콕 찌르기", "편지함", "그룹")
 
-    // 화면 진입 시 알림 로드
-    LaunchedEffect(Unit) {
-        viewModel.loadAllAlarms()
-        viewModel.loadNotifications("GROUP")
+    // 화면이 처음 나타날 때와 탭이 변경될 때 데이터 로드
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            0, 1 -> viewModel.loadAllAlarms()
+            2 -> viewModel.loadNotifications("GROUP")
+        }
     }
 
     Column(Modifier.fillMaxSize()) {

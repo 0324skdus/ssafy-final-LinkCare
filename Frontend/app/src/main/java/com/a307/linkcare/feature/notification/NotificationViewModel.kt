@@ -36,26 +36,46 @@ class NotificationViewModel @Inject constructor(
 
     private val processedStore = ProcessedNotificationStore(context)
 
-    // 그룹 이미지 캐시 (groupSeq -> imageUrl)
+    // StateFlow 및 프로퍼티 선언을 init 블록 위로 이동
+    private val _notifications = MutableStateFlow<List<NotificationResponse>>(emptyList())
+    val notifications: StateFlow<List<NotificationResponse>> = _notifications
+
+    private val _alarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
+    val alarms: StateFlow<List<AlarmResponse>> = _alarms
+
+    private val _pokeAlarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
+    val pokeAlarms: StateFlow<List<AlarmResponse>> = _pokeAlarms
+
+    private val _letterAlarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
+    val letterAlarms: StateFlow<List<AlarmResponse>> = _letterAlarms
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
     private val _groupImages = MutableStateFlow<Map<Long, String>>(emptyMap())
     val groupImages: StateFlow<Map<Long, String>> = _groupImages
 
-    // FCM 브로드캐스트 리시버 (백업용)
+    val processedNotifications: StateFlow<Map<Long, String>> = processedStore.processedNotifications
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
     private val fcmReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d("NotificationViewModel", "브로드캐스트 수신: ${intent?.action}")
-            // 새 알림이 왔을 때 자동으로 목록 갱신 (silent)
             loadNotifications("GROUP", silent = true)
         }
     }
 
     init {
         Log.d("NotificationViewModel", "ViewModel 초기화 시작")
-
-        // ViewModel 생성 시 리시버 등록 (백업)
         registerFcmReceiver()
 
-        // SharedFlow 이벤트 구독 (메인 방식)
         viewModelScope.launch {
             Log.d("NotificationViewModel", "SharedFlow 구독 시작")
             notificationEventManager.newNotificationEvent.collect {
@@ -66,35 +86,6 @@ class NotificationViewModel @Inject constructor(
 
         Log.d("NotificationViewModel", "ViewModel 초기화 완료")
     }
-
-    private val _notifications = MutableStateFlow<List<NotificationResponse>>(emptyList())
-    val notifications: StateFlow<List<NotificationResponse>> = _notifications
-
-    // 알림 (Alarms) - POKE와 LETTER
-    private val _alarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
-    val alarms: StateFlow<List<AlarmResponse>> = _alarms
-
-    // 콕 찌르기 (POKE만 필터링)
-    private val _pokeAlarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
-    val pokeAlarms: StateFlow<List<AlarmResponse>> = _pokeAlarms
-
-    // 편지 (LETTER만 필터링)
-    private val _letterAlarms = MutableStateFlow<List<AlarmResponse>>(emptyList())
-    val letterAlarms: StateFlow<List<AlarmResponse>> = _letterAlarms
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
-
-    // 처리된 알림 정보 (DataStore에서 로드)
-    val processedNotifications: StateFlow<Map<Long, String>> = processedStore.processedNotifications
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
-        )
 
     // 알림 목록 로드
     fun loadNotifications(category: String = "GROUP", silent: Boolean = false) {
@@ -111,8 +102,6 @@ class NotificationViewModel @Inject constructor(
                     Log.d("NotificationViewModel", "✅ API 성공: ${notifications.size}개 알림 받음")
                     _notifications.value = notifications
                     Log.d("NotificationViewModel", "StateFlow 업데이트 완료")
-
-                    // 그룹 이미지 로드
                     loadGroupImages(notifications)
                 }
                 .onFailure { error ->
@@ -130,7 +119,7 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    // 모든 알림 로드 (POKE, LETTER) - read 상태 구분하여 표시
+    // 모든 알림 로드 (POKE, LETTER)
     fun loadAllAlarms() {
         viewModelScope.launch {
             Log.d("NotificationViewModel", "[LOAD_ALARMS] 모든 알림 조회 시작")
@@ -141,17 +130,11 @@ class NotificationViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val allAlarms: List<AlarmResponse> = response.body()!!
                     _alarms.value = allAlarms
-
-                    // messageType에 따라 분리
-                    val pokes: List<AlarmResponse> = allAlarms.filter { it.messageType == "POKE" }
-                    val letters: List<AlarmResponse> = allAlarms.filter { it.messageType == "LETTER" }
-
+                    val pokes = allAlarms.filter { it.messageType == "POKE" }
+                    val letters = allAlarms.filter { it.messageType == "LETTER" }
                     _pokeAlarms.value = pokes
                     _letterAlarms.value = letters
-
                     Log.d("NotificationViewModel", "[LOAD_ALARMS] ✅ 성공: 전체 ${allAlarms.size}개")
-                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 콕 찌르기: ${pokes.size}개 (읽음: ${pokes.count { it.read }}, 안읽음: ${pokes.count { !it.read }})")
-                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 편지: ${letters.size}개 (읽음: ${letters.count { it.read }}, 안읽음: ${letters.count { !it.read }})")
                 } else {
                     Log.e("NotificationViewModel", "[LOAD_ALARMS] ❌ 실패: HTTP ${response.code()}")
                 }
@@ -361,11 +344,7 @@ class NotificationViewModel @Inject constructor(
             val newImages = mutableMapOf<Long, String>()
 
             groupSeqs.forEach { groupSeq ->
-                // 이미 캐시에 있으면 스킵
-                if (_groupImages.value.containsKey(groupSeq)) {
-                    newImages[groupSeq] = _groupImages.value[groupSeq]!!
-                } else {
-                    // 그룹 상세 정보 가져오기
+                if (!_groupImages.value.containsKey(groupSeq)) {
                     try {
                         val detail = groupRepository.getGroupDetail(groupSeq)
                         newImages[groupSeq] = detail.imageUrl
@@ -376,8 +355,9 @@ class NotificationViewModel @Inject constructor(
                 }
             }
 
-            // 캐시 업데이트
-            _groupImages.value = _groupImages.value + newImages
+            if (newImages.isNotEmpty()) {
+                _groupImages.value = _groupImages.value + newImages
+            }
         }
     }
 
@@ -389,11 +369,9 @@ class NotificationViewModel @Inject constructor(
         }
 
         try {
-            // LocalBroadcastManager로 등록 (모든 버전)
             LocalBroadcastManager.getInstance(context).registerReceiver(fcmReceiver, filter)
             Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 등록 완료")
 
-            // Android 13+ 에서는 글로벌 리시버도 등록
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.registerReceiver(fcmReceiver, filter, Context.RECEIVER_EXPORTED)
                 Log.d("NotificationViewModel", "Global 리시버 등록 완료")
@@ -405,7 +383,6 @@ class NotificationViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // ViewModel 소멸 시 리시버 등록 해제
         try {
             LocalBroadcastManager.getInstance(context).unregisterReceiver(fcmReceiver)
             Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 해제")
