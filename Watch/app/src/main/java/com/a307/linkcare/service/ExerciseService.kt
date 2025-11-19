@@ -63,6 +63,11 @@ class ExerciseService : LifecycleService() {
         exerciseClientManager.exerciseClient.isExerciseInProgress()
 
     suspend fun prepareExercise() {
+        // 새 운동 준비 시 상태 리셋
+        exerciseServiceMonitor.resetState()
+        summarySent = false
+        isExerciseEnded = false
+        startTimestamp = null
         exerciseClientManager.prepareExercise()
     }
 

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -80,11 +82,16 @@ fun ExerciseRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    if (uiState.isEnded) {
+    // 화면 로드 시 초기 상태를 기록하여 이전 세션의 isEnded 무시
+    val initialIsEnded = remember { uiState.isEnded }
+    var hasNavigatedToSummary by remember { mutableStateOf(false) }
+
+    // 운동이 종료되면 Summary 화면으로 이동 (초기 isEnded 상태면 무시)
+    if (uiState.isEnded && !initialIsEnded && !hasNavigatedToSummary) {
+        hasNavigatedToSummary = true
         SideEffect {
             val summary = uiState.toSummary(uiState.sessionId)
             onSummary(summary)
-            DataLayerManager.sendWorkoutSummary(context, summary.toWorkoutSummary())
         }
     }
 
@@ -247,10 +254,9 @@ private fun ExerciseMetrics(
             characterId = characterId,
             isAnimating = !uiState.isPaused,
             modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(1.0f)
-                .scale(2.5f)
-                .offset(x = 10.dp, y = 0.dp)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 50.dp)
+                .scale(2.0f)
         )
 
         Column(
@@ -301,12 +307,6 @@ private fun ExerciseControlButtons(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Image(
-            painter = painterResource(id = R.drawable.background_default),
-            contentDescription = "배경",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize()
-        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -326,33 +326,29 @@ private fun ExerciseControlButtons(
         }
     }
 }
-//현재 이동거리(미사용)
-//@Composable
-//private fun DistanceAndLapsRow(uiState: ExerciseScreenState) {
-//    Row(
-//        modifier = Modifier.fillMaxWidth(),
-//        horizontalArrangement = Arrangement.SpaceAround
-//    ) {
-//        Row {
-//            DistanceText(uiState.exerciseState?.exerciseMetrics?.distance)
-//        }
-//    }
-//}
 
 @Composable
 private fun HeartRateColumn(uiState: ExerciseScreenState) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(
+        modifier = Modifier
+            .background(Color.White.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
         HRText(
-            hr = uiState.exerciseState?.exerciseMetrics?.heartRate
+            hr = uiState.exerciseState?.exerciseMetrics?.heartRate,
         )
     }
 }
 
 @Composable
 private fun CaloriesColumn(uiState: ExerciseScreenState) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(
+        modifier = Modifier
+            .background(Color.White.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
         CaloriesText(
-            uiState.exerciseState?.exerciseMetrics?.calories
+            uiState.exerciseState?.exerciseMetrics?.calories,
         )
     }
 }
@@ -361,18 +357,37 @@ private fun CaloriesColumn(uiState: ExerciseScreenState) {
 private fun DurationRow(uiState: ExerciseScreenState) {
     val checkpoint = uiState.exerciseState?.activeDurationCheckpoint
     val state = uiState.exerciseState?.exerciseState
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        if (checkpoint != null && state != null) {
-            ActiveDurationText(checkpoint = checkpoint, state = state) {
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Color.White.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(50.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 4.dp) // 글자 뒤 최소 패딩
+        ) {
+            if (checkpoint != null && state != null) {
+                ActiveDurationText(checkpoint = checkpoint, state = state) {
+                    Text(
+                        text = formatElapsedTime(it, includeSeconds = true),
+                        fontSize = 38.sp, // 워치 화면 기준 적당히 키움
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+            } else {
                 Text(
-                    text = formatElapsedTime(it, includeSeconds = true),
-                    fontSize = 40.sp,
+                    "--:--",
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
+                    color = Color.Black
                 )
             }
-        } else {
-            Text("--:--", fontSize = 40.sp, fontWeight = FontWeight.Bold,color = Color.DarkGray)
         }
     }
 }
