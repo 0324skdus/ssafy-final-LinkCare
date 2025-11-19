@@ -267,22 +267,45 @@ public class GoalGenerationService {
     }
 
     /**
-     * 현재 주차 목표 수정
+     * 현재 주차 목표 수정 또는 생성
      * @param groupSeq 그룹 시퀀스
      * @param request 수정 요청 (selectedMetricType, goalValue)
-     * @return 수정된 목표
+     * @return 수정 또는 생성된 목표
      */
     @Transactional
     public WeeklyGroupGoals updateCurrentWeekGoal(Long groupSeq, UpdateWeeklyGroupGoalRequest request) {
+        // 그룹 존재 여부 확인
+        Group group = groupRepository.findById(groupSeq)
+                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+
         // 이번 주 월요일 계산
         LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
 
-        log.info("현재 주차 목표 수정 시작: groupSeq={}, weekStart={}, metricType={}, goalValue={}",
+        log.info("현재 주차 목표 수정/생성 시작: groupSeq={}, weekStart={}, metricType={}, goalValue={}",
                 groupSeq, weekStart, request.selectedMetricType(), request.goalValue());
 
-        // 현재 주차 목표 조회
+        // 현재 주차 목표 조회 또는 생성
         WeeklyGroupGoals goal = weeklyGroupGoalsRepository.findByGroup_GroupSeqAndWeekStart(groupSeq, weekStart)
-                .orElseThrow(() -> new CustomException(ErrorCode.GOAL_NOT_FOUND));
+                .orElseGet(() -> {
+                    log.info("기존 목표가 없어 새로 생성합니다: groupSeq={}, weekStart={}", groupSeq, weekStart);
+
+                    // 기본값으로 새 목표 생성 (모든 필드를 0으로 초기화)
+                    WeeklyGroupGoals newGoal = WeeklyGroupGoals.builder()
+                            .group(group)
+                            .weekStart(weekStart)
+                            .goalSteps(0L)
+                            .goalKcal(0.0f)
+                            .goalDuration(0)
+                            .goalDistance(0.0f)
+                            .predictedGrowthRateSteps(1.0)
+                            .predictedGrowthRateKcal(1.0)
+                            .predictedGrowthRateDuration(1.0)
+                            .predictedGrowthRateDistance(1.0)
+                            .createdAt(System.currentTimeMillis())
+                            .build();
+
+                    return weeklyGroupGoalsRepository.save(newGoal);
+                });
 
         // 최소 기준 검증 및 조정
         Long finalGoalValue = validateAndAdjustGoalValue(
@@ -296,7 +319,7 @@ public class GoalGenerationService {
 
         WeeklyGroupGoals saved = weeklyGroupGoalsRepository.save(goal);
 
-        log.info("목표 수정 완료: groupSeq={}, metricType={}, finalValue={}",
+        log.info("목표 수정/생성 완료: groupSeq={}, metricType={}, finalValue={}",
                 groupSeq, request.selectedMetricType(), finalGoalValue);
 
         return saved;

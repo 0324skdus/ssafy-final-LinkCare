@@ -80,10 +80,6 @@ public class UserService {
         Character selectedCharacter = characterRepository.findById(characterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
 
-        if (selectedCharacter.getPrice() != 0) {
-            throw new CustomException(ErrorCode.INVALID_REQUEST, "무료 캐릭터만 선택할 수 있습니다.");
-        }
-
         UserCharacter userCharacter = UserCharacter.builder()
                 .user(user)
                 .character(selectedCharacter)

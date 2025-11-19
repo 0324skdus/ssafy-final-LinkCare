@@ -91,7 +91,8 @@ private fun epochMilliToLocalDate(millis: Long): LocalDate =
 fun HealthGroupHome(
     groupSeq: Long,
     modifier: Modifier = Modifier,
-    vm: MyGroupsViewModel = hiltViewModel(),
+    vm: MyGroupsViewModel? = hiltViewModel(),
+    onReloadRequest: () -> Unit,
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
     aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel(),  // ⑥ AI 제안 추가
     myPageViewModel: MyPageViewModel = hiltViewModel(),
@@ -165,7 +166,7 @@ fun HealthGroupHome(
 
     val today = remember { LocalDate.now() }
 
-    val detail by vm.detail.collectAsStateWithLifecycle()
+    val detail by vm!!.detail.collectAsStateWithLifecycle()
     val membersResponse = detail?.members ?: emptyList()
     val goalCriteria = detail?.goalCriteria
     val groupCharResponse: List<GroupCharacterResponse> =
@@ -215,7 +216,7 @@ fun HealthGroupHome(
         }
     }
 
-    val mySeq = vm.myUserSeq
+    val mySeq = vm?.myUserSeq
     val groupName = detail?.groupName ?: ""
     val isLeader = membersResponse.any { it.userSeq == mySeq && it.isLeader }
 
@@ -284,7 +285,7 @@ fun HealthGroupHome(
     // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {
         Log.d("HealthGroupHome", "========== LaunchedEffect triggered for groupSeq=$groupSeq ==========")
-        vm.loadGroupDetail(groupSeq)
+        vm?.loadGroupDetail(groupSeq)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         goalVm.loadCurrentGoals(groupSeq, today.format(formatter))
         Log.d("HealthGroupHome", "Calling loadGroupMemberComments for groupSeq=$groupSeq")
@@ -408,6 +409,8 @@ fun HealthGroupHome(
                     HealthPermissionViewModel.State.Granted -> {
                         isRefreshing = true
                         syncViewModel.syncTodayData()
+
+                        onReloadRequest()
                     }
                     else -> {
                         Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
@@ -481,12 +484,15 @@ fun HealthGroupHome(
                 }
 
                 item {
+                    val isLeaderExercising = leader.userPk > 0 && exercisingUserIds.contains(leader.userPk)
+
                     HealthGroupHeaderCard(
                         progress = todayGroupPercent.coerceIn(0f, 1f),
                         bgImgRes = R.drawable.background_1,
                         leaderAvatarRes = leader.avatarRes,
                         avatarUrl = leaderAvatarUrl,
                         backgroundUrl = leaderBgUrl,
+                        isLeaderExercising = isLeaderExercising
                     )
                     Spacer(Modifier.height(12.dp))
                 }

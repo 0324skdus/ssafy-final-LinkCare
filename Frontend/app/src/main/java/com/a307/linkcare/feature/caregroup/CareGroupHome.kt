@@ -117,6 +117,7 @@ enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
 fun CareGroupHome(
     healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
     groupSeq: Long,
+    onReloadRequest: () -> Unit,
     modifier: Modifier = Modifier,
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
@@ -470,6 +471,8 @@ fun CareGroupHome(
                     HealthPermissionViewModel.State.Granted -> {
                         isRefreshing = true
                         syncViewModel.syncTodayData()
+
+                        onReloadRequest()
                     }
                     else -> {
                         Toast.makeText(context, "먼저 권한을 허용해주세요", Toast.LENGTH_SHORT).show()
