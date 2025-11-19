@@ -365,7 +365,7 @@ fun HealthGroupHome(
     var goalError by rememberSaveable { mutableStateOf<String?>(null) }
 
     /** ---------------- 화면 렌더링 ---------------- */
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { paddingValues ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { _ ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
@@ -383,7 +383,6 @@ fun HealthGroupHome(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
         Box(modifier = modifier.fillMaxSize()) {
 

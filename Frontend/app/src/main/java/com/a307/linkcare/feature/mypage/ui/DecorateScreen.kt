@@ -2,7 +2,8 @@
 
 package com.a307.linkcare.feature.mypage.ui
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -10,11 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.a307.linkcare.common.component.atoms.LcBtn
-import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.feature.mypage.domain.CharacterDto
+import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.mypage.domain.BackgroundDto
+import com.a307.linkcare.feature.mypage.domain.CharacterDto
 
 @Composable
 fun DecorateScreen(
@@ -27,18 +28,23 @@ fun DecorateScreen(
 ) {
     var tab by rememberSaveable { mutableStateOf(StoreTab.CHARACTER) }
 
-    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedCharacterIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedBackgroundIndex by rememberSaveable { mutableIntStateOf(0) }
 
     var selectedCharId by rememberSaveable { mutableLongStateOf(equippedCharacter?.characterId ?: 0L) }
     var selectedBgId by rememberSaveable { mutableLongStateOf(equippedBackground?.backgroundId ?: 0L) }
 
-    val items = when (tab) {
-        StoreTab.CHARACTER -> ownedCharacters
-        StoreTab.BACKGROUND -> ownedBackgrounds
+    val itemsCharacter = ownedCharacters.filter { it.unlocked }
+    val itemsBackground = ownedBackgrounds.filter { it.unlocked }
+
+    val items: List<Any> = when (tab) {
+        StoreTab.CHARACTER -> itemsCharacter
+        StoreTab.BACKGROUND -> itemsBackground
     }
 
-    if (items.isNotEmpty() && selectedIndex !in items.indices) {
-        selectedIndex = 0
+    val selectedIndex = when (tab) {
+        StoreTab.CHARACTER -> selectedCharacterIndex
+        StoreTab.BACKGROUND -> selectedBackgroundIndex
     }
 
     val previewBgUrl =
@@ -51,6 +57,32 @@ fun DecorateScreen(
             (items[selectedIndex] as CharacterDto).baseImageUrl
         else equippedCharacter?.baseImageUrl ?: ""
 
+    val isApplyEnabled = when (tab) {
+        StoreTab.CHARACTER -> {
+            if (itemsCharacter.isEmpty()) false
+            else !itemsCharacter[selectedCharacterIndex].main
+        }
+        StoreTab.BACKGROUND -> {
+            if (itemsBackground.isEmpty()) false
+            else !itemsBackground[selectedBackgroundIndex].main
+        }
+    }
+
+    fun updateSelectedId() {
+        when (tab) {
+            StoreTab.CHARACTER -> {
+                if (itemsCharacter.isNotEmpty()) {
+                    selectedCharId = itemsCharacter[selectedCharacterIndex].characterId
+                }
+            }
+            StoreTab.BACKGROUND -> {
+                if (itemsBackground.isNotEmpty()) {
+                    selectedBgId = itemsBackground[selectedBackgroundIndex].backgroundId
+                }
+            }
+        }
+    }
+
     Box(
         modifier
             .fillMaxSize()
@@ -61,6 +93,7 @@ fun DecorateScreen(
 
             Spacer(Modifier.height(6.dp))
 
+            // 탭 전환
             TabRow(
                 selectedTabIndex = tab.ordinal,
                 containerColor = white,
@@ -73,37 +106,57 @@ fun DecorateScreen(
                 }
             ) {
                 Tab(
-                    selected = (tab == StoreTab.CHARACTER),
-                    onClick = { tab = StoreTab.CHARACTER }
+                    selected = tab == StoreTab.CHARACTER,
+                    onClick = {
+                        tab = StoreTab.CHARACTER
+                        selectedCharacterIndex = 0
+                        updateSelectedId()
+                    }
                 ) { Text("캐릭터", Modifier.padding(12.dp)) }
 
                 Tab(
-                    selected = (tab == StoreTab.BACKGROUND),
-                    onClick = { tab = StoreTab.BACKGROUND }
+                    selected = tab == StoreTab.BACKGROUND,
+                    onClick = {
+                        tab = StoreTab.BACKGROUND
+                        selectedBackgroundIndex = 0
+                        updateSelectedId()
+                    }
                 ) { Text("배경", Modifier.padding(12.dp)) }
             }
 
             Spacer(Modifier.height(6.dp))
 
+            // 캐러셀
             CarouselBox(
                 onPrev = {
                     if (items.isEmpty()) return@CarouselBox
-                    selectedIndex =
-                        if (selectedIndex - 1 < 0) items.lastIndex else selectedIndex - 1
-
-                    if (tab == StoreTab.CHARACTER)
-                        selectedCharId = (items[selectedIndex] as CharacterDto).characterId
-                    else
-                        selectedBgId = (items[selectedIndex] as BackgroundDto).backgroundId
+                    when (tab) {
+                        StoreTab.CHARACTER -> {
+                            selectedCharacterIndex =
+                                if (selectedCharacterIndex - 1 < 0) itemsCharacter.lastIndex
+                                else selectedCharacterIndex - 1
+                        }
+                        StoreTab.BACKGROUND -> {
+                            selectedBackgroundIndex =
+                                if (selectedBackgroundIndex - 1 < 0) itemsBackground.lastIndex
+                                else selectedBackgroundIndex - 1
+                        }
+                    }
+                    updateSelectedId()
                 },
                 onNext = {
                     if (items.isEmpty()) return@CarouselBox
-                    selectedIndex = (selectedIndex + 1) % items.size
-
-                    if (tab == StoreTab.CHARACTER)
-                        selectedCharId = (items[selectedIndex] as CharacterDto).characterId
-                    else
-                        selectedBgId = (items[selectedIndex] as BackgroundDto).backgroundId
+                    when (tab) {
+                        StoreTab.CHARACTER -> {
+                            selectedCharacterIndex =
+                                (selectedCharacterIndex + 1) % itemsCharacter.size
+                        }
+                        StoreTab.BACKGROUND -> {
+                            selectedBackgroundIndex =
+                                (selectedBackgroundIndex + 1) % itemsBackground.size
+                        }
+                    }
+                    updateSelectedId()
                 }
             ) {
                 CirclePreview(
@@ -114,26 +167,21 @@ fun DecorateScreen(
 
             Spacer(Modifier.height(20.dp))
 
+            // 적용 버튼
             LcBtn(
                 text = "적용",
                 modifier = Modifier.fillMaxWidth(),
                 buttonColor = main,
                 buttonTextColor = white,
-                isEnabled = selectedCharId != 0L && selectedBgId != 0L,
-                onClick = { onApply(selectedCharId, selectedBgId) }
+                isEnabled = isApplyEnabled,
+                onClick = {
+                    if (items.isEmpty()) return@LcBtn
+                    when (tab) {
+                        StoreTab.CHARACTER -> onApply(selectedCharId, 0L)
+                        StoreTab.BACKGROUND -> onApply(0L, selectedBgId)
+                    }
+                }
             )
         }
     }
-}
-
-
-private fun updateSelection(
-    tab: StoreTab,
-    items: List<Any>,
-    index: Int,
-    onCharacter: (CharacterDto) -> Unit,
-    onBackground: (BackgroundDto) -> Unit
-) {
-    if (tab == StoreTab.CHARACTER) onCharacter(items[index] as CharacterDto)
-    else onBackground(items[index] as BackgroundDto)
 }

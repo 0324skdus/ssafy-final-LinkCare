@@ -13,8 +13,8 @@ class DecorateRepository @Inject constructor(
     suspend fun unlockCharacter(characterId: Long) =
         api.unlockCharacter(characterId)
 
-    suspend fun setMainCharacter(userCharacterId: Long) =
-        api.setMainCharacter(userCharacterId)
+    suspend fun setMainCharacter(characterId: Long) =
+        api.setMainCharacter(characterId)
 
     suspend fun getBackgrounds() = api.getBackgrounds()
 
@@ -23,6 +23,6 @@ class DecorateRepository @Inject constructor(
     suspend fun unlockBackground(backgroundId: Long) =
         api.unlockBackground(backgroundId)
 
-    suspend fun setMainBackground(userBackgroundId: Long) =
-        api.setMainBackground(userBackgroundId)
+    suspend fun setMainBackground(backgroundId: Long) =
+        api.setMainBackground(backgroundId)
 }

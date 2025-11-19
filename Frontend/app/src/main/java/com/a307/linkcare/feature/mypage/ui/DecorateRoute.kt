@@ -6,11 +6,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.a307.linkcare.feature.mypage.DecorateViewModel
+import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.navigation.Route
 
 @Composable
 fun DecorateRoute(navController: NavHostController) {
     val vm: DecorateViewModel = hiltViewModel()
+    val myPageViewModel: MyPageViewModel = hiltViewModel()
     val ui by vm.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -22,6 +24,7 @@ fun DecorateRoute(navController: NavHostController) {
         onApply = { charId, bgId ->
             vm.applyDecoration(charId, bgId)   // 서버 저장
             vm.sendToWear(context, charId, bgId) // Wear 전송
+            myPageViewModel.fetchMyPageData()
             navController.navigate(Route.MyPage.route) {
                 popUpTo(Route.MyPage.route) { inclusive = true }
                 launchSingleTop = true

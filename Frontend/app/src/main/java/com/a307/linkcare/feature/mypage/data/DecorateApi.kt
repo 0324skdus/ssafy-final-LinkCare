@@ -17,9 +17,9 @@ interface DecorateApi {
         @Path("characterId") characterId: Long
     )
 
-    @POST("/api/characters/main/{userCharacterId}")
+    @POST("/api/characters/main/{characterId}")
     suspend fun setMainCharacter(
-        @Path("userCharacterId") userCharacterId: Long
+        @Path("characterId") characterId: Long
     )
 
     @GET("/api/backgrounds")
@@ -33,8 +33,8 @@ interface DecorateApi {
         @Path("backgroundId") backgroundId: Long
     )
 
-    @POST("/api/backgrounds/main/{userBackgroundId}")
+    @POST("/api/backgrounds/main/{backgroundId}")
     suspend fun setMainBackground(
-        @Path("userBackgroundId") userBackgroundId: Long
+        @Path("backgroundId") backgroundId: Long
     )
 }

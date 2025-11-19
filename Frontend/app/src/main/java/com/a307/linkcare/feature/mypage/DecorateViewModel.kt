@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.mypage
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.mypage.data.DecorateRepository
@@ -60,14 +61,19 @@ class DecorateViewModel @Inject constructor(
 
     fun applyDecoration(charId: Long, bgId: Long) {
         viewModelScope.launch {
-            runCatching {
-                repository.setMainCharacter(charId)
-                repository.setMainBackground(bgId)
-            }.onSuccess {
-                loadAll()
+            try {
+                if (charId != 0L) {
+                    repository.setMainCharacter(charId)
+                }
+                if (bgId != 0L) {
+                    repository.setMainBackground(bgId)
+                }
+            } catch (e: Exception) {
+                Log.e("DecorateViewModel", "applyDecoration error", e)
             }
         }
     }
+
 
 
     fun applyDecoration(charId: Long, bgId: Long, onSuccess: () -> Unit) {
