@@ -454,6 +454,7 @@ fun ExerciseControlButtonsPreview() {
         )
     }
 }
+
 @Composable
 fun AnimatedCharacter(
     characterId: Int,
@@ -462,24 +463,46 @@ fun AnimatedCharacter(
 ) {
     val frames = when (characterId) {
         1 -> listOf(
-            R.drawable.duck_walk1,
-            R.drawable.duck_walk2,
-            R.drawable.duck_walk3,
-            R.drawable.duck_walk4,
-            R.drawable.duck_walk5
-        )
-        2 -> listOf(
             R.drawable.bear_walk1,
             R.drawable.bear_walk2,
             R.drawable.bear_walk3,
             R.drawable.bear_walk4
         )
-        else -> listOf(
+
+        2 -> listOf(
+            R.drawable.bear2_walk1,
+            R.drawable.bear2_walk2,
+            R.drawable.bear2_walk3,
+            R.drawable.bear2_walk4
+        )
+
+        3 -> listOf(
+            R.drawable.bear3_walk1,
+            R.drawable.bear3_walk2,
+            R.drawable.bear3_walk3,
+            R.drawable.bear3_walk4
+        )
+
+        4 -> listOf(
             R.drawable.duck_walk1,
             R.drawable.duck_walk2,
             R.drawable.duck_walk3,
             R.drawable.duck_walk4,
             R.drawable.duck_walk5
+        )
+
+        5 -> listOf(
+            R.drawable.duck2_walk1,
+            R.drawable.duck2_walk2,
+            R.drawable.duck2_walk3,
+            R.drawable.duck2_walk4,
+            R.drawable.duck2_walk5
+        )
+        else -> listOf(
+            R.drawable.bear_walk1,
+            R.drawable.bear_walk2,
+            R.drawable.bear_walk3,
+            R.drawable.bear_walk4
         )
     }
 

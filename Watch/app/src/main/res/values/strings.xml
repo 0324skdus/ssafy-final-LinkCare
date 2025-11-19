@@ -34,12 +34,12 @@
 
 
     <!-- Summary Screen -->
-    <string name="workout_complete">Workout complete!</string>
-    <string name="duration"> Duration </string>
-    <string name="distance"> Distance </string>
-    <string name="calories"> kCal </string>
-    <string name="avgHR"> AvgHR </string>
-    <string name="restart">Restart</string>
+    <string name="workout_complete">운동을 완료했습니다!</string>
+    <string name="duration">운동 시간</string>
+    <string name="distance">이동 거리</string>
+    <string name="calories">소모 칼로리</string>
+    <string name="avgHR">평균 심박수</string>
+    <string name="restart">다시 시작</string>
 
     <!-- Descriptions -->
     <string name="laps">Laps</string>
