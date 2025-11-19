@@ -2,6 +2,8 @@ package com.a307.linkcare.feature.watch.service
 
 import android.content.Intent
 import android.util.Log
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.watch.data.ExerciseSessionManager
 import com.a307.linkcare.feature.watch.data.mapper.toRequest
 import com.a307.linkcare.feature.watch.model.WorkoutSummary
 import com.a307.linkcare.feature.workout.data.repository.WorkoutRepository
@@ -16,15 +18,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@AndroidEntryPoint  // ❗ 이것도 필요하면 추가
+@AndroidEntryPoint
 class WatchListenerService : WearableListenerService() {
 
     @Inject lateinit var workoutRepository: WorkoutRepository
+    @Inject lateinit var exerciseSessionManager: ExerciseSessionManager
 
     override fun onCreate() {
         super.onCreate()
-        EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
-            .inject(this)
+        workoutRepository = EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
+            .workoutRepository()
+        Log.d("WatchListenerService", "Service created, repository initialized")
     }
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {

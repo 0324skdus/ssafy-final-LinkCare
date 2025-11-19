@@ -67,9 +67,9 @@ public class AlarmService {
         fcmService.sendPushNotification(receiver, title, body);
     }
 
-    public List<AlarmResponseDto> getUnreadAlarms(User user) {
-        List<Alarm> unreadAlarms = alarmRepository.findByReceiverAndIsReadOrderBySentAtDesc(user, false);
-        return unreadAlarms.stream()
+    public List<AlarmResponseDto> getAllAlarms(User user) {
+        List<Alarm> AllAlarms = alarmRepository.findByReceiverOrderBySentAtDesc(user);
+        return AllAlarms.stream()
                 .map(AlarmResponseDto::new)
                 .collect(Collectors.toList());
     }
@@ -86,4 +86,19 @@ public class AlarmService {
 
         alarm.read(); // isRead를 true로 변경
     }
+
+    @Transactional
+    public void deleteAlarm(Long userId, Long alarmId) {
+        Alarm alarm = alarmRepository.findById(alarmId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ALARM_NOT_FOUND));
+
+        // 알림의 수신자가 현재 로그인한 사용자인지 확인
+        if (!alarm.getReceiver().getUserPk().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        alarmRepository.delete(alarm);
+    }
+
+
 }

@@ -127,12 +127,23 @@ fun CareGroupHome(
     val context = LocalContext.current
     val activity = context as Activity
 
+    // ExerciseSessionManager 주입 (Singleton via EntryPoint)
+    val exerciseSessionManager = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            ExerciseSessionEntryPoint::class.java
+        ).exerciseSessionManager()
+    }
+
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
 
     // ⑤ AI 빠른 넛지 메시지
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // 운동 중인 사용자 ID 목록
+    val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -290,9 +301,9 @@ fun CareGroupHome(
                 feedback?.status?.name ?: "GOOD"
             }
             val summary = if (isLoadingHealthFeedback) {
-                "건강 상태 분석 중입니다..."
+                "분석 중입니다!"
             } else {
-                feedback?.summary ?: "오늘 하루도 파이팅."
+                feedback?.summary ?: "오늘 하루도 파이팅!"
             }
 
             Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
@@ -429,7 +440,7 @@ fun CareGroupHome(
         }
     }
 
-    Scaffold { paddingValues ->
+    Scaffold { _ ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
@@ -447,7 +458,6 @@ fun CareGroupHome(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
             LazyColumn(Modifier.fillMaxSize()) {
 
@@ -498,6 +508,7 @@ fun CareGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
+                    val isExercising = m.userPk > 0 && exercisingUserIds.contains(m.userPk)
 
                     MemberRowCare(
                         m = m,
@@ -509,6 +520,7 @@ fun CareGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
+                        isExercising = isExercising,
                         onClick = {
                             val charInfo = characterMap[m.userPk]
                             selectedMember = MemberDetailInfo(
@@ -664,7 +676,7 @@ fun CareGroupHome(
 
             LaunchedEffect(info.member.userPk) {
                 if (info.member.userPk > 0) {
-                    healthViewModel.loadHealthData(info.member.userPk.toInt())
+                    healthViewModel.loadHealthData(info.member.userPk.toInt(), selectedDate)
                 }
             }
 
