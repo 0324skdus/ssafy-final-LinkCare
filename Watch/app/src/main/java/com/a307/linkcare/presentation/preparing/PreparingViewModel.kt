@@ -1,7 +1,6 @@
 package com.a307.linkcare.presentation.preparing
 
 import android.Manifest
-import android.health.connect.HealthPermissions
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -81,8 +80,6 @@ constructor(
             add(Manifest.permission.ACTIVITY_RECOGNITION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 add(Manifest.permission.POST_NOTIFICATIONS)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA)
-                add(HealthPermissions.READ_HEART_RATE)
         }
     }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.a307.linkcare.app
+package com.a307.linkcare.core
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
