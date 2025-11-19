@@ -12,6 +12,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyActivitySummaryResponse {
+    @Override
+    public String toString() {
+        return "DailyActivitySummaryResponse{" +
+                "운동=" + exercises +
+                ", 걸음수=" + steps +
+                '}';
+    }
 
     private List<ExerciseSessionResponse> exercises;
     private int steps;

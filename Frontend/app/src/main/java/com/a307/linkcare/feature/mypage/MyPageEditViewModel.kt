@@ -1,15 +1,17 @@
 package com.a307.linkcare.feature.mypage
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.feature.auth.data.RetrofitClient
+import com.a307.linkcare.feature.mypage.data.MyPageRepository
+import com.a307.linkcare.feature.mypage.domain.UpdateProfileRequest
+import com.a307.linkcare.feature.mypage.domain.toUpdateRequest
+import com.a307.linkcare.feature.mypage.ui.Gender
+import com.a307.linkcare.feature.mypage.ui.Profile
+import com.a307.linkcare.feature.mypage.ui.toProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -47,16 +49,7 @@ class MyPageEditViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 // PUT /api/users/profile 요청용 DTO
-                val req = UpdateProfileRequest(
-                    birth = updated.birthDate,
-                    height = updated.heightCm,
-                    weight = updated.weightKg,
-                    gender = when (updated.gender) {
-                        Gender.MALE -> "남"
-                        Gender.FEMALE -> "여"
-                    },
-                    exerciseStartYear = null  // 항상 null (네가 말한 조건)
-                )
+                val req = updated.toUpdateRequest()
                 repo.updateProfile(req) // suspend fun updateProfile(req: UpdateProfileRequest)
             }.onSuccess {
                 onSuccess()

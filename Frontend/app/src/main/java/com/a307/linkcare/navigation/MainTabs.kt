@@ -58,46 +58,24 @@ import com.a307.linkcare.feature.caregroup.GroupMember
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.feature.commongroup.ui.GroupSearch
 import com.a307.linkcare.feature.commongroup.ui.MainWithNoGroup
-import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.healthgroup.HealthGroup
-import com.a307.linkcare.feature.healthgroup.HealthGroupCreate
-import com.a307.linkcare.feature.healthgroup.HealthGroupEdit
-import com.a307.linkcare.feature.healthgroup.HealthGroupHome
-import com.a307.linkcare.feature.mypage.DecorateScreen
-import com.a307.linkcare.feature.mypage.MyGroups
-import com.a307.linkcare.feature.mypage.MyPage
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroup
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupCreate
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupEdit
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHome
+import com.a307.linkcare.feature.mypage.ui.MyGroups
+import com.a307.linkcare.feature.mypage.ui.MyPage
 import com.a307.linkcare.feature.mypage.MyPageApiState
 import com.a307.linkcare.feature.mypage.MyPageViewModel
-import com.a307.linkcare.feature.mypage.StoreItem
-import com.a307.linkcare.feature.mypage.StoreScreen
-import com.a307.linkcare.feature.mypage.StoreUiState
 import com.a307.linkcare.feature.notification.Notification
 import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.a307.linkcare.common.component.molecules.HeaderBasic
-import com.a307.linkcare.feature.customize.CustomEntity
-import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
-import com.a307.linkcare.feature.customize.CustomizeRepository
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.mypage.Gender
-import com.a307.linkcare.feature.mypage.Profile
-import com.a307.linkcare.feature.mypage.ProfileEditScreen
-import com.a307.linkcare.feature.watch.data.DataLayerManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.a307.linkcare.feature.mypage.ui.ProfileEditScreen
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.feature.mypage.MyPageEditViewModel
+import com.a307.linkcare.feature.mypage.ui.DecorateRoute
+import com.a307.linkcare.feature.mypage.ui.StoreRoute
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -308,7 +286,7 @@ fun MainTabs(
                 // --- 꾸미기 (마이페이지 > 꾸미기) ---
                 currentDestination?.route == Route.Decorate.route -> {
                     HeaderBack(
-                        title = "꾸미기",
+                        title = "보관함",
                         onBackClick = { navController.goBackToMyPage() }
                     )
                     Divider(color = unActiveField, thickness = 1.dp)
@@ -680,58 +658,54 @@ fun MainTabs(
 
                 // 그룹 조회
                 composable(Route.MyGroups.route) {
-                    MyGroups(navController = navController)
-                }
+                    MyGroups(
+                        navController = navController,
+                        onGroupClick = { group ->
+                            // PENDING 상태면 클릭 불가
+                            if (group.isPending) return@MyGroups
 
-                // 상점
-                val dummyState = StoreUiState(
-                    coins = 300,
-                    characterItems = listOf(
-                        StoreItem(1, R.drawable.char_bear_1, price = 100, owned = true),
-                        StoreItem(2, R.drawable.char_duck_1, price = 150, owned = false)
-                    ),
-                    backgroundItems = listOf(
-                        StoreItem(1, R.drawable.background_1, price = 80, owned = true),
-                        StoreItem(2, R.drawable.background_2, price = 120, owned = false),
-                        StoreItem(3, R.drawable.background_3, price = 120, owned = false),
-                        StoreItem(4, R.drawable.background_4, price = 120, owned = false),
-                        StoreItem(5, R.drawable.background_5, price = 120, owned = false),
-                        StoreItem(6, R.drawable.background_6, price = 120, owned = false),
-                        StoreItem(7, R.drawable.background_7, price = 120, owned = false),
-                        StoreItem(8, R.drawable.background_8, price = 120, owned = false)
-                    ),
-                    equippedBackground = R.drawable.background_1,
-                    equippedCharacter = R.drawable.char_bear_1
-                )
-                composable(Route.Store.route) {
-                    StoreScreen(
-                        state = dummyState,
-                        onBuy = { /* TODO: 구매 처리 */ }
+                            when (group.type) {
+                                com.a307.linkcare.feature.mypage.ui.GroupType.CARE -> {
+                                    // 케어 그룹 선택
+                                    val index = careGroups.indexOfFirst { it.groupSeq == group.id }
+                                    if (index != -1) {
+                                        selectedIndexCare = index
+                                        selectedCareGroup = group.id
+                                    }
+                                    // 케어 탭으로 이동
+                                    navController.navigate(Route.Care.route) {
+                                        popUpTo(Route.Main.route) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                                com.a307.linkcare.feature.mypage.ui.GroupType.HEALTH -> {
+                                    // 헬스 그룹 선택
+                                    val index = healthGroups.indexOfFirst { it.groupSeq == group.id }
+                                    if (index != -1) {
+                                        selectedIndexHealth = index
+                                        selectedHealthGroup = group.id
+                                    }
+                                    // 헬스 탭으로 이동
+                                    navController.navigate(Route.Health.route) {
+                                        popUpTo(Route.Main.route) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
+
+                composable(Route.Store.route) {
+                    StoreRoute(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
 
                 // 꾸미기
                 composable(Route.Decorate.route) {
-                    val repo: CustomizeRepository = hiltViewModel<CustomizeRepoHolderVM>().repo
-                    val context = LocalContext.current
-                    val custom by repo.customFlow.collectAsState(initial = CustomEntity(1, 1))
-
-
-                    DecorateScreen(
-                        ownedCharacters = listOf(1, 2),
-                        ownedBackgrounds = listOf(1, 2),
-                        equippedCharacter = custom.characterId,
-                        equippedBackground = custom.backgroundId,
-                        onApply = { charId, bgId ->
-                            CoroutineScope(Dispatchers.IO).launch {
-                                repo.saveCustom(charId, bgId)   // 논리 ID 저장
-                            }
-
-                            DataLayerManager.sendTheme(context, charId, bgId)  // 논리 ID 전송
-
-                            navController.goBackToMyPage()
-                        }
-                    )
+                    DecorateRoute(navController)
                 }
             }
         }

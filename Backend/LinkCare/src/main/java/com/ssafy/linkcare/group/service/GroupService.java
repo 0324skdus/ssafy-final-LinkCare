@@ -389,6 +389,53 @@ public class GroupService {
                 .toList();
     }
 
+    // 모든 그룹 목록 조회
+    public List<GroupResponse> getAllGroups(Long userId, GroupType type) {
+        List<Group> groups;
+        if (type != null) {
+            groups = groupRepository.findByType(type);
+        } else {
+            groups = groupRepository.findAll();
+        }
+
+        return groups.stream()
+                .map(group -> {
+                    int currentMembers = groupMemberRepository.countByGroup(group);
+
+                    // 가입 상태 확인
+                    String joinStatus = "NONE";
+                    if (userId != null) {
+                        // 이미 멤버인지 확인
+                        boolean isMember = groupMemberRepository.existsByGroupAndUser_UserPk(group, userId);
+                        if (isMember) {
+                            joinStatus = "MEMBER";
+                        } else {
+                            // 대기 중인 신청이 있는지 확인
+                            boolean hasPendingRequest = groupJoinRequestRepository
+                                    .existsByGroup_GroupSeqAndUser_UserPkAndStatus(
+                                            group.getGroupSeq(), userId, RequestStatus.PENDING
+                                    );
+                            if (hasPendingRequest) {
+                                joinStatus = "PENDING";
+                            }
+                        }
+                    }
+
+                    return new GroupResponse(
+                            group.getGroupSeq(),
+                            group.getGroupName(),
+                            group.getGroupDescription(),
+                            group.getType(),
+                            group.getCapacity(),
+                            currentMembers,
+                            group.getImageUrl(),
+                            group.getCreatedAt(),
+                            joinStatus
+                    );
+                })
+                .toList();
+    }
+
     // 그룹 검색 (이름으로)
     public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {

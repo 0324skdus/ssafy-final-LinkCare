@@ -40,6 +40,7 @@ import com.a307.linkcare.feature.auth.domain.LoginRequest
 import com.a307.linkcare.feature.auth.domain.LoginResponse
 import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
 import com.google.firebase.messaging.FirebaseMessaging
+import com.a307.linkcare.feature.watch.data.DataLayerManager
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.cancellation.CancellationException
@@ -104,6 +105,9 @@ fun LoginScreen(
 
                                 // FCM 토큰 발급 및 백엔드 전송
                                 sendFcmTokenToServer(context, auth.accessToken)
+
+                                // 워치에 테마 동기화
+                                syncThemeToWatch(context)
 
                                 // needsProfileCompletion == isFirstLogin
                                 onLoginSuccessState(auth.needsProfileCompletion)
@@ -179,6 +183,9 @@ fun LoginScreen(
 
                             // FCM 토큰 발급 및 백엔드 전송
                             sendFcmTokenToServer(context, auth.accessToken)
+
+                            // 워치에 테마 동기화
+                            syncThemeToWatch(context)
 
                             onLoginSuccessState(auth.needsProfileCompletion)
                         } else {
@@ -281,6 +288,9 @@ fun LoginScreen(
 
                                     // FCM 토큰 발급 및 백엔드 전송
                                     sendFcmTokenToServer(context, auth.accessToken)
+
+                                    // 워치에 테마 동기화
+                                    syncThemeToWatch(context)
 
                                     onLoginSuccessState(auth.needsProfileCompletion) // == isFirstLogin
                                 } else {
@@ -446,5 +456,56 @@ private fun sendFcmTokenToServer(context: Context, accessToken: String) {
                 Log.e("LoginScreen", "FCM 토큰 백엔드 전송 중 에러", e)
             }
         }
+    }
+}
+
+/**
+ * 로그인 성공 후 사용자의 테마 설정을 워치에 동기화하는 함수
+ */
+private fun syncThemeToWatch(context: Context) {
+    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        try {
+            // 서버에서 사용자 정보 조회
+            val userResponse = RetrofitClient.userApi.getMyInfo()
+
+            if (userResponse.isSuccessful && userResponse.body() != null) {
+                val userData = userResponse.body()!!
+
+                // URL에서 캐릭터 ID와 배경 ID 추출
+                val charId = extractCharacterId(userData.mainCharacterImageUrl) ?: 1
+                val bgId = extractBackgroundId(userData.mainBackgroundImageUrl) ?: 1
+
+                // 워치에 테마 전송
+                DataLayerManager.sendTheme(context, charId, bgId)
+                Log.d("LoginScreen", "테마 워치 동기화 완료: char=$charId, bg=$bgId")
+            } else {
+                Log.e("LoginScreen", "사용자 정보 조회 실패: ${userResponse.code()}")
+            }
+        } catch (e: Exception) {
+            Log.e("LoginScreen", "테마 워치 동기화 실패", e)
+        }
+    }
+}
+
+/**
+ * 캐릭터 이미지 URL에서 캐릭터 ID 추출
+ * 예: char_duck_1 -> 1, char_bear_1 -> 2
+ */
+private fun extractCharacterId(url: String?): Int? {
+    if (url == null) return null
+    return when {
+        url.contains("duck") -> 1
+        url.contains("bear") -> 2
+        else -> null
+    }
+}
+
+/**
+ * 배경 이미지 URL에서 배경 ID 추출
+ * 예: background_3.png -> 3
+ */
+private fun extractBackgroundId(url: String?): Int? {
+    return url?.let {
+        Regex("background_(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull()
     }
 }

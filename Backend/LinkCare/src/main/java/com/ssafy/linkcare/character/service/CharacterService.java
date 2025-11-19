@@ -30,6 +30,7 @@ public class CharacterService {
     private final S3Service s3Service;
     private final PointService pointService;
 
+    @Transactional
     public List<CharacterStatusDto> getCharacterStatuses(Long userPk) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -59,6 +60,7 @@ public class CharacterService {
         }).collect(Collectors.toList());
     }
 
+    @Transactional
     public CharacterStatusDto getMainCharacter(Long userPk) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -84,15 +86,16 @@ public class CharacterService {
     }
 
     @Transactional
-    public void changeMainCharacter(Long userPk, Long userCharacterId) {
+    public void changeMainCharacter(Long userPk, Long characterId) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        UserCharacter newMainCharacter = userCharacterRepository.findByUserAndUserCharacterId(user, userCharacterId)
+        UserCharacter newMainCharacter = user.getCharacters().stream()
+                .filter(uc -> uc.getCharacter().getCharacterId().equals(characterId))
+                .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND, "사용자가 보유하지 않은 캐릭터입니다."));
 
         user.setMainCharacter(newMainCharacter);
-        userRepository.save(user);
     }
 
     @Transactional

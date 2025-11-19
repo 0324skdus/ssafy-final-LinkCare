@@ -54,21 +54,20 @@ public class FCMService {
             if (groupType != null) {
                 data.put("groupType", groupType);
             }
-
-            // FCM 메시지 생성
-            Message.Builder messageBuilder = Message.builder()
-                    .setToken(user.getFcmToken())
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build());
-
-            // 데이터가 있으면 추가
-            if (!data.isEmpty()) {
-                messageBuilder.putAllData(data);
+            if (title != null) {
+                data.put("title", title);
+            }
+            if (body != null) {
+                data.put("body", body);
             }
 
-            Message message = messageBuilder.build();
+            data.put("userId", String.valueOf(user.getUserPk()));
+
+            // FCM 메시지 생성
+            Message message = Message.builder()
+                    .setToken(user.getFcmToken())
+                    .putAllData(data)
+                    .build();
 
             // FCM 전송
             String response = FirebaseMessaging.getInstance().send(message);

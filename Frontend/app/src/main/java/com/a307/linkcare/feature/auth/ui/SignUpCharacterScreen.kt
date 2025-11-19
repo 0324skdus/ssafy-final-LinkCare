@@ -46,6 +46,7 @@ import com.a307.linkcare.feature.auth.data.HealthPermissions
 import com.a307.linkcare.feature.customize.CustomizeRepoHolderVM
 import com.a307.linkcare.feature.watch.data.DataLayerManager
 import com.a307.linkcare.sdk.health.domain.permission.HealthPermissionManager
+import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -81,8 +82,10 @@ fun SignupCharacterScreen(
     onStart: (selectedIndex: Long, name: String) -> Unit = { _, _ -> },
     onNavigateToIntro: () -> Unit = {},
     healthVm: HealthPermissionViewModel = hiltViewModel(),
-    onBoardingVm: OnboardingViewModel = hiltViewModel()
-) {
+    onBoardingVm: OnboardingViewModel = hiltViewModel(),
+    healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
+    syncViewModel: HealthSyncViewModel = hiltViewModel(),
+    ) {
     require(characterImages.isNotEmpty()) { "characterImages must not be empty" }
     require(characterImages.size == characterIds.size) { "characterImages와 characterIds의 크기가 같아야 합니다." }
 
@@ -94,8 +97,10 @@ fun SignupCharacterScreen(
     //var shouldSubmitProfile by remember { mutableStateOf(false) }
 
     // --- 권한 처리 준비 ---
+    val permissionState by healthPermissionViewModel.state.collectAsState()
     val context = LocalContext.current
     val healthState by healthVm.state.collectAsState() // 지금은 UI에서 안 쓰지만 남겨둬도 무방
+    val syncState by syncViewModel.syncState.collectAsState()
 
     // 워치 커스터마이즈 저장용 repo, 컨텍스트
     val repo = hiltViewModel<CustomizeRepoHolderVM>().repo
@@ -303,22 +308,24 @@ fun SignupCharacterScreen(
             SamsungHealthPermissionDialog(
                 onDismiss = { showPermissionDialog = false },
                 onConnectClick = {
-                    showPermissionDialog = false
-
                     scope.launch {
                         // 1. 삼성헬스 권한 요청
                         val activity = context as? Activity
                         if (activity != null) {
-                            samsungHealthPermissionManager.requestPermissions(activity)
+                            healthPermissionViewModel.requestPermissions(activity)
                         }
 
-                        // 2. Health Connect 권한 요청
-                        permissionLauncher.launch(HealthPermissions.permissions)
+//                        // 2. Health Connect 권한 요청
+//                        permissionLauncher.launch(HealthPermissions.permissions)
 
                         // 3. 프로필 제출
                         onBoardingVm.submitProfile()
 
-                        // 4. 다음 화면 이동
+                        // 3. 건강 데이터 동기화 시작 (백그라운드에서 계속 진행)
+                        syncViewModel.syncAllHealthData()
+
+                        // 4. 바로 다음 화면으로 이동
+                        showPermissionDialog = false
                         onNavigateToIntro()
                     }
                 }
