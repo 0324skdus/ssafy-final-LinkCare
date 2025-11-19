@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.data.DataLayerManager
 import com.a307.linkcare.data.HealthServicesRepository
 import com.a307.linkcare.data.ServiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,6 +37,8 @@ constructor(
         viewModelScope.launch {
             healthServicesRepository.prepareExercise()
             healthServicesRepository.startExerciseWithSession(sessionId)
+            // 모바일에 운동 시작 상태 전송
+            DataLayerManager.sendSessionState("START")
         }
     }
 

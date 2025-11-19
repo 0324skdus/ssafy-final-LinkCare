@@ -16,11 +16,11 @@ class ExerciseSessionManager @Inject constructor() {
     /**
      * 세션 상태 업데이트
      * @param userId 사용자 ID
-     * @param state 세션 상태 ("START", "RUNNING", "PAUSE", "STOP")
+     * @param state 세션 상태 ("START", "PAUSE", "RESUME", "STOP")
      */
     fun updateSessionState(userId: Long, state: String) {
         when (state.uppercase()) {
-            "START", "RUNNING" -> {
+            "START", "RESUME" -> {
                 _exercisingUserIds.value = _exercisingUserIds.value + userId
             }
             "PAUSE", "STOP" -> {

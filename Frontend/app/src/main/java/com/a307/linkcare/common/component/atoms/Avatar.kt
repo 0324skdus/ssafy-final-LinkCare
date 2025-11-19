@@ -91,9 +91,12 @@ fun Avatar(
 
             AvatarAnimator(
                 modifier = Modifier
-                    .size(35.dp)
                     .align(Alignment.Center)
-                    .graphicsLayer(scaleX = 0.8f, scaleY = 0.8f), // 크기 조정
+                    .offset(y = (-15).dp)
+                    .graphicsLayer(
+                        scaleX = 2.7f,
+                        scaleY = 2.7f
+                    ),
                 selection = AvatarSelection(
                     species = species,
                     variant = 1, // 기본값
