@@ -13,4 +13,12 @@ public class HeartRateResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Double heartRate;
+
+    @Override
+    public String toString() {
+        return "HeartRateResponse{" +
+                ", 측정시간=" + startTime +
+                ", 심박수=" + heartRate +
+                '}';
+    }
 }
