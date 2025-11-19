@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface AlarmRepository extends JpaRepository<Alarm, Long> {
     List<Alarm> findByReceiverAndIsReadOrderBySentAtDesc(User receiver, boolean isRead);
+
+    List<Alarm> findByReceiverOrderBySentAtDesc(User receiver);
 }
