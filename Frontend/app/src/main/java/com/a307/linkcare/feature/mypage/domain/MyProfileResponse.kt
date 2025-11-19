@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.domain
 
 data class MyProfileResponse(
     val name: String,
@@ -6,5 +6,6 @@ data class MyProfileResponse(
     val height: Double,
     val weight: Double,
     val gender: String,
-    val exerciseStartYear: Int? = null
+    val exerciseStartYear: Int? = null,
+    val petName: String?
 )

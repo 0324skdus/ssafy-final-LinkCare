@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
@@ -29,20 +29,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.a307.linkcare.R
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.CropTransparentTransformation
 import com.a307.linkcare.common.util.painterResourceCropped
-import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.caregroup.ExerciseSession
+import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.HealthToday
+import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.commongroup.ui.NudgeLetterCard
 import com.a307.linkcare.feature.commongroup.ui.Suggestion
 import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import kotlinx.coroutines.launch
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.ExerciseSessionResponse
 import kotlin.math.roundToInt
@@ -59,7 +65,8 @@ fun HealthMemberDetail(
     onDismiss: () -> Unit,
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    goalCriteria: GoalCriteria? = null
 ) {
 
     val context = LocalContext.current
@@ -67,7 +74,7 @@ fun HealthMemberDetail(
         member.userPk == TokenStore(context).getUserPk()
     }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
             tonalElevation = 8.dp,
@@ -102,7 +109,7 @@ fun HealthMemberDetail(
                                     model = ImageRequest.Builder(context)
                                         .data(avatarUrl)
                                         .transformations(CropTransparentTransformation())
-                                        .size(coil.size.Size.ORIGINAL)
+                                        .size(Size.ORIGINAL)
                                         .build(),
                                     contentDescription = petName,
                                     modifier = Modifier
@@ -225,10 +232,23 @@ fun HealthMemberDetail(
                 }
 
                 var showLetter by remember { mutableStateOf(false) }
+
+                // ④ AI 제안 로드 (wellness-other)
+                val suggestionViewModel: AiSuggestionViewModel = hiltViewModel()
+                val aiSuggestions by suggestionViewModel.healthGroupSuggestions.collectAsState()
+                val isLoading by suggestionViewModel.isLoading.collectAsState()
+                val scope = rememberCoroutineScope()
+
                 // 편지쓰기 버튼
                 Button(
-                    enabled = !isSelf,
-                    onClick = { showLetter = true },
+                    enabled = !isSelf && !isLoading,
+                    onClick = {
+                        // AI 제안 먼저 로드한 후 다이얼로그 열기
+                        scope.launch {
+                            suggestionViewModel.loadHealthGroupSuggestions(member.userPk, goalCriteria)
+                            showLetter = true
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -236,12 +256,20 @@ fun HealthMemberDetail(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = main)
                 ) {
-                    Text(
-                        "💌 편지쓰기",
-                        color = white,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = white,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "💌 편지쓰기",
+                            color = white,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
 
                 if (showLetter) {
@@ -261,15 +289,26 @@ fun HealthMemberDetail(
                         petName = petName
                     )
 
-                    androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
+                    Dialog(onDismissRequest = { showLetter = false }) {
+                        // AI 생성 제안 또는 기본 제안 사용
+                        val suggestions = remember(aiSuggestions) {
+                            if (aiSuggestions.isNotEmpty()) {
+                                aiSuggestions.mapIndexed { index, text ->
+                                    Suggestion(index + 1, text)
+                                }
+                            } else {
+                                listOf(
+                                    Suggestion(1, "오늘 컨디션 좋아 보여요!"),
+                                    Suggestion(2, "물 자주 마셔요 💧"),
+                                    Suggestion(3, "이따 운동하러 같이 가요 🏃‍♀️")
+                                )
+                            }
+                        }
+
                         NudgeLetterCard(
                             sender = senderUser,
                             receiver = receiverUser,
-                            suggestions = listOf(
-                                Suggestion(1, "오늘 컨디션 좋아 보여요!"),
-                                Suggestion(2, "물 자주 마셔요 💧"),
-                                Suggestion(3, "이따 운동하러 같이 가요 🏃‍♀️")
-                            ),
+                            suggestions = suggestions,
                             onClose = { showLetter = false },
                             onSend = { suggestion, custom ->
                                 println("보낼 내용: ${suggestion?.text ?: custom}")

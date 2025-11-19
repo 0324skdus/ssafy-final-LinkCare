@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.health.domain
 
 import com.google.gson.annotations.SerializedName
 
+// 일일 건강 데이터 (단일 날짜)
 data class DailyHealthDataDto(
     @SerializedName("activitySummary") val activitySummary: ActivitySummaryDto?,
     @SerializedName("heartRate") val heartRate: List<HeartRateDto>?,
@@ -10,6 +11,17 @@ data class DailyHealthDataDto(
     @SerializedName("bloodPressure") val bloodPressure: List<BloodPressureDto>?,
     @SerializedName("exercise") val exercise: ExerciseDto?,
     @SerializedName("step") val step: StepDto?
+)
+
+// 전체 건강 데이터 (여러 날짜)
+data class AllHealthDataDto(
+    @SerializedName("activitySummary") val activitySummary: List<ActivitySummaryDto>?,
+    @SerializedName("heartRate") val heartRate: List<HeartRateDto>?,
+    @SerializedName("sleep") val sleep: List<SleepDataDto>?,
+    @SerializedName("waterIntake") val waterIntake: List<WaterIntakeDto>?,
+    @SerializedName("bloodPressure") val bloodPressure: List<BloodPressureDto>?,
+    @SerializedName("exercise") val exercise: List<ExerciseDto>?,
+    @SerializedName("step") val step: List<StepDto>?
 )
 
 data class ActivitySummaryDto(
@@ -115,3 +127,4 @@ data class DataSourceDto(
     @SerializedName("a") val a: String,
     @SerializedName("b") val b: String
 )
+

@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -38,8 +39,14 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.util.loadCroppedPainterIO
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.a307.linkcare.common.util.CropTransparentTransformation
+import com.a307.linkcare.feature.mypage.StoreEvent
+import com.a307.linkcare.feature.mypage.StoreViewModel
 
 @Composable
 fun rememberCroppedPainter(@DrawableRes resId: Int?): Painter? {
@@ -54,8 +61,9 @@ fun rememberCroppedPainter(@DrawableRes resId: Int?): Painter? {
 enum class StoreTab { CHARACTER, BACKGROUND }
 
 data class StoreItem(
-    val id: Int,//리소스Id에서 임의지정 아이디로 변경하기위함
-    @DrawableRes val resId: Int,
+    val id: Long,
+    val imageUrl: String,
+    val animatedImageUrl: String? = null,
     val price: Int,
     val owned: Boolean
 )
@@ -64,8 +72,8 @@ data class StoreUiState(
     val coins: Int,
     val characterItems: List<StoreItem>,
     val backgroundItems: List<StoreItem>,
-    val equippedBackground: Int,
-    val equippedCharacter: Int,
+    val equippedBackground: String,
+    val equippedCharacter: String,
 )
 
 /* --------- 상점 화면 --------- */
@@ -74,7 +82,7 @@ fun StoreScreen(
     state: StoreUiState,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onBuy: (StoreItem) -> Unit = {},
+    onBuy: (StoreItem, StoreTab) -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(StoreTab.CHARACTER) }
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
@@ -84,29 +92,18 @@ fun StoreScreen(
         StoreTab.BACKGROUND -> state.backgroundItems
     }
 
-    if (items.isNotEmpty() && selectedIndex !in items.indices) selectedIndex = 0
-
-    val context = LocalContext.current
-
-    val croppedPainters: MutableList<Painter?> = remember(items) {
-        mutableStateListOf<Painter?>().also { l -> repeat(items.size) { l.add(null) } }
-    }
-    LaunchedEffect(items) {
-        items.forEachIndexed { i, it ->
-            if (croppedPainters[i] == null) {
-                croppedPainters[i] = loadCroppedPainterIO(context, it.resId)
-            }
-        }
+    if (items.isNotEmpty() && selectedIndex !in items.indices) {
+        selectedIndex = 0
     }
 
-    val previewBgRes =
-        if (tab == StoreTab.BACKGROUND && items.isNotEmpty()) items[selectedIndex].resId
+    val previewBgUrl =
+        if (tab == StoreTab.BACKGROUND && items.isNotEmpty()) items[selectedIndex].imageUrl
         else state.equippedBackground
 
-    val equippedPainter = rememberCroppedPainter(state.equippedCharacter)
-    val previewCharPainter: Painter? =
-        if (tab == StoreTab.CHARACTER && items.isNotEmpty()) croppedPainters.getOrNull(selectedIndex)
-        else equippedPainter
+    val previewCharUrl =
+        if (tab == StoreTab.CHARACTER && items.isNotEmpty()) items[selectedIndex].imageUrl
+        else state.equippedCharacter
+
 
     Box(
         modifier
@@ -115,6 +112,7 @@ fun StoreScreen(
             .padding(horizontal = 16.dp)
     ) {
         Column(Modifier.fillMaxSize()) {
+
             Spacer(Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -136,10 +134,17 @@ fun StoreScreen(
                     )
                 }
             ) {
-                Tab(selected = tab == StoreTab.CHARACTER, onClick = { tab = StoreTab.CHARACTER }) {
+                Tab(
+                    selected = tab == StoreTab.CHARACTER,
+                    onClick = { tab = StoreTab.CHARACTER }
+                ) {
                     Text("캐릭터", modifier = Modifier.padding(12.dp))
                 }
-                Tab(selected = tab == StoreTab.BACKGROUND, onClick = { tab = StoreTab.BACKGROUND }) {
+
+                Tab(
+                    selected = tab == StoreTab.BACKGROUND,
+                    onClick = { tab = StoreTab.BACKGROUND }
+                ) {
                     Text("배경", modifier = Modifier.padding(12.dp))
                 }
             }
@@ -149,7 +154,8 @@ fun StoreScreen(
             CarouselBox(
                 onPrev = {
                     if (items.isNotEmpty())
-                        selectedIndex = if (selectedIndex - 1 < 0) items.lastIndex else selectedIndex - 1
+                        selectedIndex =
+                            if (selectedIndex - 1 < 0) items.lastIndex else selectedIndex - 1
                 },
                 onNext = {
                     if (items.isNotEmpty())
@@ -157,8 +163,8 @@ fun StoreScreen(
                 }
             ) {
                 CirclePreview(
-                    backgroundRes = previewBgRes,
-                    characterPainter = previewCharPainter,
+                    backgroundUrl = previewBgUrl,
+                    characterUrl = previewCharUrl
                 )
             }
 
@@ -166,14 +172,13 @@ fun StoreScreen(
 
             if (items.isNotEmpty()) {
                 val cur = items[selectedIndex]
+
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    if (cur.owned) {
-                        Text("", color = main, fontWeight = FontWeight.SemiBold)
-                    } else {
+                    if (!cur.owned) {
                         Image(painterResource(R.drawable.coin), null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("${cur.price}", color = Color(0xFF666666))
@@ -188,7 +193,7 @@ fun StoreScreen(
                     buttonColor = if (cur.owned) unActiveBtn else main,
                     buttonTextColor = if (cur.owned) unActiveField else white,
                     isEnabled = !cur.owned,
-                    onClick = { onBuy(cur) }
+                    onClick = { onBuy(cur, tab) }
                 )
             } else {
                 Text(
@@ -202,12 +207,11 @@ fun StoreScreen(
     }
 }
 
-
 /* --------- 공통: 원형 미리보기 --------- */
 @Composable
 fun CirclePreview(
-    @DrawableRes backgroundRes: Int,
-    characterPainter: Painter?,
+    backgroundUrl: String,
+    characterUrl: String?,
     size: Dp = 255.dp
 ) {
     Box(
@@ -224,29 +228,33 @@ fun CirclePreview(
                 .border(3.dp, Color(0xFFE5E7EB), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(backgroundRes),
-                contentDescription = "background",
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop
-            )
+            // 배경 이미지
+            if (backgroundUrl.isNotBlank()) {
+                AsyncImage(
+                    model = backgroundUrl,
+                    contentDescription = "background",
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
-            if (characterPainter != null) {
-                Crossfade(
-                    targetState = characterPainter,
-                    animationSpec = tween(durationMillis = 120),
-                    label = "previewCrossfade"
-                ) { p ->
-                    Image(
-                        painter = p,
-                        contentDescription = "character",
-                        modifier = Modifier
-                            .fillMaxSize(0.5f)
-                            .align(Alignment.Center)
-                            .offset(y = 10.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                }
+            val context = LocalContext.current
+            val characterSize = size * 0.55f
+            // 캐릭터 이미지
+            if (characterUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(characterUrl)
+                        .crossfade(true)
+                        .size(1024)
+                        .transformations(CropTransparentTransformation())
+                        .build(),
+                    contentDescription = "avatar",
+                    modifier = Modifier
+                        .size(characterSize)
+                        .offset(y = 12.dp),
+                    contentScale = ContentScale.Fit
+                )
             }
         }
     }

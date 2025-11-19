@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.a307.linkcare.feature.healthgroup
+package com.a307.linkcare.feature.healthgroup.ui
 
 import android.app.Activity
 import android.os.Build
@@ -32,6 +32,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -48,9 +49,12 @@ import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
 import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.healthgroup.HealthGroupHomeViewModel
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
+import kotlin.collections.get
 
 /* ---------- 날짜 유틸 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -89,6 +93,7 @@ fun HealthGroupHome(
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel(),  // ⑥ AI 제안 추가
     myPageViewModel: MyPageViewModel = hiltViewModel(),
     healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel()
@@ -160,8 +165,14 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+
     val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
     val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
+
+
+    // ⑥ AI 빠른 넛지 메시지
+    val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
+
     // -------------------------
 
     val members = remember(membersResponse, characterMap) {
@@ -197,6 +208,7 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
+    // --- 실제 데이터로 교체 ---
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     // 현재 metric 타입에 따른 진행도 계산
@@ -430,7 +442,7 @@ fun HealthGroupHome(
                             "목표 미설정"
                         },
                         onEditClick = {
-                            android.util.Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
+                            Log.d("HealthGroupHome", "✏️ 목표 수정 버튼 클릭")
                             if (!isLeader) {
                                 scope.launch { snackbar.showSnackbar("그룹장만 목표를 수정할 수 있어요.") }
                                 return@ScreenTitleRow
@@ -553,7 +565,19 @@ fun HealthGroupHome(
                         },
                         isSelf = (member.userPk == TokenStore(context).getUserPk()),
                         isDistanceMetric = currentMetricType == "DISTANCE",
-                        unit = currentUnit
+                        unit = currentUnit,
+                        onTapIconClick = {
+                            // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
+                            scope.launch {
+                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
+                                // AI 생성 후 로그 출력
+                                if (quickNudgeMessage.isNotEmpty()) {
+                                    Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
+                                } else {
+                                    Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
+                                }
+                            }
+                        }
                     )
                     if (index < membersWithActivity.lastIndex) {
                         Divider(color = Color(0x11000000))
@@ -708,7 +732,8 @@ fun HealthGroupHome(
                     today = todayHealthByName[info.member.name] ?: HealthToday(),
                     onDismiss = { selectedMember = null },
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
-                    isLoading = isLoadingDailyActivity
+                    isLoading = isLoadingDailyActivity,
+                    goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
                 )
             }
 
@@ -904,7 +929,7 @@ private fun GoalEditSheet(
     errorText: String?,
     aiGoals: WeeklyGroupGoalResponse?,
     currentMetricIndex: Int,
-    goalCriteria: com.a307.linkcare.feature.commongroup.domain.GoalCriteria?,
+    goalCriteria: GoalCriteria?,
     isLoading: Boolean,
     onTextChange: (String) -> Unit,
     onMetricChange: (GoalMetricType) -> Unit,
