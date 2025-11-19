@@ -442,6 +442,43 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "특정 날짜 그룹 걸음수 통계 조회",
+            description = "특정 날짜 기준 그룹원들의 개별 걸음수와 그룹 전체 총 걸음수를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = GroupStepStatisticsResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "그룹을 찾을 수 없음"
+            )
+    })
+
+    @GetMapping("/{groupSeq}/step-statistics/{date}")
+    public ResponseEntity<GroupStepStatisticsResponse> getGroupStepStatisticsByDate(
+            @Parameter(description = "그룹 시퀀스", required = true, example = "1")
+            @PathVariable Long groupSeq,
+            @PathVariable LocalDate date) {
+
+        GroupStepStatisticsResponse response = groupService.getGroupStepStatisticsByDate(groupSeq, date);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{groupSeq}/step-statistics/period")
+    public ResponseEntity<GroupStepStatisticsResponse> getGroupStepStatisticsByPeriod(
+            @Parameter(description = "그룹 시퀀스", required = true, example = "1")
+            @PathVariable Long groupSeq,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        GroupStepStatisticsResponse response = groupService.getGroupStepStatisticsByPeriod(groupSeq, startDate, endDate);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/generate-weekly-stats")
     public ResponseEntity<String> generateWeeklyStats() {
         weeklyStatsService.generateAllGroupWeeklyStats();
