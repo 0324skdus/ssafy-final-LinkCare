@@ -114,11 +114,6 @@ fun HealthGroupHome(
     // 운동 중인 사용자 ID 목록
     val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
-    // 디버깅: exercisingUserIds 변화 감지
-    LaunchedEffect(exercisingUserIds) {
-        Log.d("HealthGroupHome", "🏃 exercisingUserIds changed: $exercisingUserIds")
-    }
-
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
         healthPermissionViewModel.checkPermissions()
@@ -574,11 +569,6 @@ fun HealthGroupHome(
                     val petName = charInfo?.petName
                     val isExercising = member.userPk > 0 && exercisingUserIds.contains(member.userPk)
 
-                    // 디버깅: 각 멤버의 운동 상태 확인
-                    if (exercisingUserIds.isNotEmpty()) {
-                        Log.d("HealthGroupHome", "👤 Member ${member.name} (pk=${member.userPk}): isExercising=$isExercising, exercisingIds=$exercisingUserIds")
-                    }
-
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
                         avatarUrl = avatarUrl,
@@ -605,7 +595,7 @@ fun HealthGroupHome(
                         onTapIconClick = {
                             // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
                             scope.launch {
-                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
+                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk)
                                 // AI 생성 후 토스트 표시
                                 if (quickNudgeMessage.isNotEmpty()) {
                                     Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
@@ -770,8 +760,7 @@ fun HealthGroupHome(
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
                     groupSeq = groupSeq,
                     onDismiss = { selectedMember = null },
-                    isLoading = isLoadingDailyActivity,
-                    goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
+                    isLoading = isLoadingDailyActivity
                 )
             }
 
@@ -1019,7 +1008,8 @@ private fun GoalEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = Color.White
     ) {
         Column(
             Modifier
