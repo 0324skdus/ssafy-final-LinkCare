@@ -115,6 +115,25 @@ class CareGroupRepository @Inject constructor(
         }
     }
 
+    suspend fun getGroupStepStatisticsByPeriod(groupSeq: Long, startDate: LocalDate, endDate: LocalDate)
+    : Result<GroupStepStatisticsResponse> {
+        return try {
+            val res = api.getGroupStepStatisticsByPeriod(groupSeq, startDate, endDate)
+            if (res.isSuccessful) {
+                val body = res.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(IllegalStateException("Empty body"))
+                }
+            } else {
+                Result.failure(IllegalStateException("HTTP ${res.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getHealthFeedback(userSeq: Int, date: LocalDate): HealthSummaryResponse? {
         return try {
             val response = healthFeedbackApi.getHealthFeedback(userSeq, date)
