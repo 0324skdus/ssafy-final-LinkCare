@@ -389,6 +389,53 @@ public class GroupService {
                 .toList();
     }
 
+    // 모든 그룹 목록 조회
+    public List<GroupResponse> getAllGroups(Long userId, GroupType type) {
+        List<Group> groups;
+        if (type != null) {
+            groups = groupRepository.findByType(type);
+        } else {
+            groups = groupRepository.findAll();
+        }
+
+        return groups.stream()
+                .map(group -> {
+                    int currentMembers = groupMemberRepository.countByGroup(group);
+
+                    // 가입 상태 확인
+                    String joinStatus = "NONE";
+                    if (userId != null) {
+                        // 이미 멤버인지 확인
+                        boolean isMember = groupMemberRepository.existsByGroupAndUser_UserPk(group, userId);
+                        if (isMember) {
+                            joinStatus = "MEMBER";
+                        } else {
+                            // 대기 중인 신청이 있는지 확인
+                            boolean hasPendingRequest = groupJoinRequestRepository
+                                    .existsByGroup_GroupSeqAndUser_UserPkAndStatus(
+                                            group.getGroupSeq(), userId, RequestStatus.PENDING
+                                    );
+                            if (hasPendingRequest) {
+                                joinStatus = "PENDING";
+                            }
+                        }
+                    }
+
+                    return new GroupResponse(
+                            group.getGroupSeq(),
+                            group.getGroupName(),
+                            group.getGroupDescription(),
+                            group.getType(),
+                            group.getCapacity(),
+                            currentMembers,
+                            group.getImageUrl(),
+                            group.getCreatedAt(),
+                            joinStatus
+                    );
+                })
+                .toList();
+    }
+
     // 그룹 검색 (이름으로)
     public List<GroupResponse> searchGroups(String keyword, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
@@ -993,6 +1040,9 @@ public class GroupService {
 
         // 6. 신청자에게 거절 알림 전송
         User applicant = joinRequest.getUser();
+        log.info("🔍 거절 알림 전송 대상 확인: 그룹장userId={}, 신청자userId={}, 신청자이름={}",
+                userId, applicant.getUserPk(), applicant.getName());
+
         String rejectionContent = "참가 신청이 거절되었습니다.";
         notificationService.createNotification(
                 applicant,
@@ -1003,7 +1053,7 @@ public class GroupService {
                 null
         );
 
-        log.info("참가 신청 거절 완료: requestSeq={}, userId={}, groupSeq={}",
+        log.info("참가 신청 거절 완료: requestSeq={}, 신청자userId={}, groupSeq={}",
                 requestSeq, joinRequest.getUser().getUserPk(), group.getGroupSeq());
     }
 

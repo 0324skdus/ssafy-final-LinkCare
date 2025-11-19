@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 class NotificationEventManager {
 
-    private val _newNotificationEvent = MutableSharedFlow<Unit>(replay = 0)
+    private val _newNotificationEvent = MutableSharedFlow<Unit>(replay = 1)
     val newNotificationEvent: SharedFlow<Unit> = _newNotificationEvent.asSharedFlow()
 
     suspend fun notifyNewNotification() {

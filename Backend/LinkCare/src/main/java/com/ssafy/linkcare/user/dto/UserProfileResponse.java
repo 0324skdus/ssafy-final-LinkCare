@@ -8,5 +8,6 @@ public record UserProfileResponse(
     Float height,
     Float weight,
     String gender,
-    Integer exerciseStartYear
+    Integer exerciseStartYear,
+    String petName
 ) {}

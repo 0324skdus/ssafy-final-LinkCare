@@ -41,6 +41,18 @@ public class GroupController {
     private final GoalGenerationService goalGenerationService;
     private final GroupHeaderScheduler groupHeaderScheduler;
 
+    @Operation(summary = "모든 그룹 목록 조회", description = "모든 그룹 목록을 조회합니다. type 파라미터로 HEALTH/CARE 필터링 가능")
+    @GetMapping
+    public ResponseEntity<List<GroupResponse>> getAllGroups(
+            Authentication authentication,
+            @RequestParam(required = false) GroupType type) {
+
+        Long userId = authentication != null ? Long.parseLong(authentication.getName()) : null;
+
+        List<GroupResponse> response = groupService.getAllGroups(userId, type);
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "헬스 그룹 생성",
             description = "운동 목표 기반 헬스 그룹을 생성합니다. 최소 목표 기준(칼로리/걸음수/거리/시간)을 설정할 수 있습니다.")
     @ApiResponses(value = {

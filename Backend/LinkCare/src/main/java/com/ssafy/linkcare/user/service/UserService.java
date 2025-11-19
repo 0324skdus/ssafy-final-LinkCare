@@ -112,8 +112,9 @@ public class UserService {
             request.height(),
             request.weight(),
             request.birth(),
-                request.gender(),
-            request.exerciseStartYear()
+            request.gender(),
+            request.exerciseStartYear(),
+            request.petName()
         );
 
         log.info("프로필 업데이트 완료: userId={}, birth={}", userPk, request.birth());
@@ -129,7 +130,8 @@ public class UserService {
                 user.getHeight(),
                 user.getWeight(),
                 user.getGender(),
-                user.getExerciseStartYear()
+                user.getExerciseStartYear(),
+                user.getPetName()
         );
     }
 
