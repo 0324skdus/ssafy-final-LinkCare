@@ -4,8 +4,11 @@ import android.content.Context
 import com.a307.linkcare.feature.ai.data.api.AiApi
 import com.a307.linkcare.feature.auth.data.*
 import com.a307.linkcare.feature.character.data.CharacterApi
+import com.a307.linkcare.feature.mypage.data.DecorateApi
+import com.a307.linkcare.feature.mypage.data.DecorateRepository
 import com.a307.linkcare.feature.mypage.data.ShopApi
 import com.a307.linkcare.feature.mypage.data.ShopRepository
+import com.a307.linkcare.feature.health.data.HealthSyncApi
 import com.a307.linkcare.feature.notification.data.NotificationApi
 import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
@@ -114,6 +117,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideHealthSyncApi(retrofit: Retrofit): HealthSyncApi =
+        retrofit.create(HealthSyncApi::class.java)
+
+    @Provides
+    @Singleton
     fun provideAiApi(retrofit: Retrofit): AiApi =
         retrofit.create(AiApi::class.java)
 
@@ -129,5 +137,16 @@ object NetworkModule {
         api: ShopApi
     ): ShopRepository {
         return ShopRepository(api)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDecorateApi(retrofit: Retrofit): DecorateApi =
+        retrofit.create(DecorateApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideDecorateRepository(api: DecorateApi): DecorateRepository {
+        return DecorateRepository(api)
     }
 }

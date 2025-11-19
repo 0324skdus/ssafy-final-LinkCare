@@ -241,6 +241,8 @@ public class UserHealthFeedbackService {
         DailyHealthDetailResponse dailyHealthDetailResponse = healthService.getDailyHealthDetailByDate(userSeq, date);
         String healthData = dailyHealthDetailResponse.toString();
 
+        log.info("건강 데이터 정보: {}", healthData);
+
         // GPT로 건강 한줄평 생성
         HealthSummaryRequest gptResponse = gptService.generateHealthSummary(healthData);
 
