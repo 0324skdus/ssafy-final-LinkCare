@@ -228,7 +228,7 @@ fun HealthMemberDetail(
                                     if (totalDistance > 0) {
                                         DetailRow(
                                             "총 거리",
-                                            "${"%.2f".format(totalDistance)} km",
+                                            "${"%.2f".format(totalDistance / 1000)} km",
                                             bold = true
                                         )
                                     }
