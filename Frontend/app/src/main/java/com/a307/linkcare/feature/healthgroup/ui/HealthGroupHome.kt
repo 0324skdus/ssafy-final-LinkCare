@@ -32,6 +32,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.sampleHealthToday
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
@@ -92,6 +93,7 @@ fun HealthGroupHome(
     modifier: Modifier = Modifier,
     vm: MyGroupsViewModel = hiltViewModel(),
     goalVm: HealthGroupHomeViewModel = hiltViewModel(),
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel(),  // ⑥ AI 제안 추가
     myPageViewModel: MyPageViewModel = hiltViewModel(),
     healthPermissionViewModel: HealthPermissionViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel()
@@ -99,7 +101,18 @@ fun HealthGroupHome(
     val context = LocalContext.current
     val activity = context as Activity
 
+    // ExerciseSessionManager 주입 (Singleton via EntryPoint)
+    val exerciseSessionManager = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            com.a307.linkcare.feature.caregroup.ExerciseSessionEntryPoint::class.java
+        ).exerciseSessionManager()
+    }
+
     val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 운동 중인 사용자 ID 목록
+    val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -163,8 +176,14 @@ fun HealthGroupHome(
     val membersWithActivity by goalVm.membersWithActivity.collectAsStateWithLifecycle()
     val isLoadingActivities by goalVm.isLoadingActivities.collectAsStateWithLifecycle()
     val weeklyMembersWithActivity by goalVm.weeklyMembersWithActivity.collectAsStateWithLifecycle()
+
     val dailyActivityData by goalVm.dailyActivityData.collectAsStateWithLifecycle()
     val isLoadingDailyActivity by goalVm.isLoadingDailyActivity.collectAsStateWithLifecycle()
+
+
+    // ⑥ AI 빠른 넛지 메시지
+    val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
+
     // -------------------------
 
     val members = remember(membersResponse, characterMap) {
@@ -200,6 +219,7 @@ fun HealthGroupHome(
 
     val goalState by goalVm.goalState
 
+    // --- 실제 데이터로 교체 ---
     var totalGroupGoal by rememberSaveable { mutableStateOf(initialGoal) }
 
     // 현재 metric 타입에 따른 진행도 계산
@@ -533,6 +553,7 @@ fun HealthGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
+                    val isExercising = member.userPk > 0 && exercisingUserIds.contains(member.userPk)
 
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
@@ -544,6 +565,7 @@ fun HealthGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
+                        isExercising = isExercising,
                         onClick = {
                             val charInfo = characterMap[member.userPk]
                             selectedMember = MemberDetailInfo(
@@ -555,7 +577,19 @@ fun HealthGroupHome(
                         },
                         isSelf = (member.userPk == TokenStore(context).getUserPk()),
                         isDistanceMetric = currentMetricType == "DISTANCE",
-                        unit = currentUnit
+                        unit = currentUnit,
+                        onTapIconClick = {
+                            // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
+                            scope.launch {
+                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
+                                // AI 생성 후 로그 출력
+                                if (quickNudgeMessage.isNotEmpty()) {
+                                    Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
+                                } else {
+                                    Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
+                                }
+                            }
+                        }
                     )
                     if (index < membersWithActivity.lastIndex) {
                         Divider(color = Color(0x11000000))
@@ -710,7 +744,8 @@ fun HealthGroupHome(
                     today = todayHealthByName[info.member.name] ?: HealthToday(),
                     onDismiss = { selectedMember = null },
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
-                    isLoading = isLoadingDailyActivity
+                    isLoading = isLoadingDailyActivity,
+                    goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
                 )
             }
 

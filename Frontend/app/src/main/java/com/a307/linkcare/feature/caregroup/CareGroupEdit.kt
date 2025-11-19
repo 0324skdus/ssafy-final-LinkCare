@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.caregroup
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -101,11 +102,16 @@ fun CareGroupEdit(
     // 그룹 캐릭터 정보 로드
     val groupCharacters by myPageViewModel.groupCharacters.collectAsState()
     val characterMap = remember(groupCharacters) {
+        Log.d("CareGroupEdit", "🎭 characterMap 생성: groupCharacters size=${groupCharacters.size}")
+        groupCharacters.forEach { char ->
+            Log.d("CareGroupEdit", "  - userId=${char.userId}, userName=${char.userName}, imageUrl=${char.mainCharacterImageUrl}")
+        }
         groupCharacters.associateBy({ it.userId }, { it })
     }
 
     // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
+        Log.d("CareGroupEdit", "🔄 loadGroupCharacters 호출: groupSeq=$groupSeq")
         viewModel.loadGroupDetail(groupSeq)
         myPageViewModel.loadGroupCharacters(groupSeq)
     }
@@ -428,6 +434,12 @@ private fun RenderCareGroupEditForm(
                 key = { index, m -> m.userSeq }
             ) { _, member ->
                 val charInfo = characterMap[member.userSeq]
+                Log.d("CareGroupEdit", "👤 Member: userSeq=${member.userSeq}, userName=${member.userName}")
+                Log.d("CareGroupEdit", "   - charInfo: ${if (charInfo != null) "찾음" else "null"}")
+                Log.d("CareGroupEdit", "   - mainCharacterImageUrl: ${charInfo?.mainCharacterImageUrl}")
+                Log.d("CareGroupEdit", "   - mainBackgroundImageUrl: ${charInfo?.mainBackgroundImageUrl}")
+                Log.d("CareGroupEdit", "   - fallback: ${member.mainCharacterBaseImageUrl}")
+
                 val groupMember = GroupMember(
                     id = member.userSeq,
                     name = member.userName,
@@ -631,6 +643,8 @@ private fun MemberRow(
     onDelegate: () -> Unit,
     onKick: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
@@ -646,22 +660,36 @@ private fun MemberRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 아바타 (배경 이미지 포함)
-                Box(modifier = Modifier.size(44.dp)) {
+                // 아바타 (배경 이미지 + 캐릭터 이미지)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF2F3F6)),
+                    contentAlignment = Alignment.Center
+                ) {
                     // 배경 이미지
                     if (backgroundUrl != null) {
                         coil.compose.AsyncImage(
                             model = backgroundUrl,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentDescription = "배경",
+                            modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     }
                     // 캐릭터 이미지
-                    GroupAvatarChip(
-                        avatarRes = member.avatarRes ?: R.drawable.main_duck,
-                        avatarUrl = member.avatarUrl
-                    )
+                    if (member.avatarUrl != null) {
+                        coil.compose.AsyncImage(
+                            model = coil.request.ImageRequest.Builder(context)
+                                .data(member.avatarUrl)
+                                .transformations(com.a307.linkcare.common.util.CropTransparentTransformation())
+                                .size(coil.size.Size.ORIGINAL)
+                                .build(),
+                            contentDescription = "캐릭터",
+                            modifier = Modifier.size(35.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
 
                 Spacer(Modifier.width(10.dp))
