@@ -290,9 +290,9 @@ fun CareGroupHome(
                 feedback?.status?.name ?: "GOOD"
             }
             val summary = if (isLoadingHealthFeedback) {
-                "건강 상태 분석 중입니다..."
+                "분석 중입니다!"
             } else {
-                feedback?.summary ?: "오늘 하루도 파이팅."
+                feedback?.summary ?: "오늘 하루도 파이팅!"
             }
 
             Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
