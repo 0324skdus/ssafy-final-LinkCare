@@ -31,13 +31,21 @@ class MyPageViewModel @Inject constructor(
     private val _apiState = MutableStateFlow<MyPageApiState>(MyPageApiState.Loading)
     val apiState: StateFlow<MyPageApiState> = _apiState
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+
     init {
         fetchMyPageData()
     }
 
-    fun fetchMyPageData() {
+    fun fetchMyPageData(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _apiState.value = MyPageApiState.Loading
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _apiState.value = MyPageApiState.Loading
+            }
             try {
                 coroutineScope {
                     val userResponseDeferred = async { RetrofitClient.userApi.getMyInfo() }
@@ -68,6 +76,10 @@ class MyPageViewModel @Inject constructor(
                 val errorMsg = "서버 통신 오류: ${e.message}"
                 Log.e("MyPageViewModel", errorMsg, e)
                 _apiState.value = MyPageApiState.Error(errorMsg)
+            } finally {
+                if (isRefresh) {
+                    _isRefreshing.value = false
+                }
             }
         }
     }

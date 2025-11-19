@@ -573,6 +573,7 @@ fun MainTabs(
                 composable(Route.MyPageMain.route) {
                     val myPageViewModel: MyPageViewModel = hiltViewModel()
                     val apiState by myPageViewModel.apiState.collectAsState()
+                    val isRefreshing by myPageViewModel.isRefreshing.collectAsState()
                     val context = LocalContext.current
 
                     when (val state = apiState) {
@@ -588,6 +589,8 @@ fun MainTabs(
                         is MyPageApiState.Success -> {
                             MyPage(
                                 state = state.uiState,
+                                isRefreshing = isRefreshing,
+                                onRefresh = { myPageViewModel.fetchMyPageData(isRefresh = true) },
                                 onGroupsClick = { navController.navigate(Route.MyGroups.route) },
                                 onEditClick = { navController.navigate(Route.EditProfile.route) },
                                 onStoreClick = { navController.navigate(Route.Store.route) },
