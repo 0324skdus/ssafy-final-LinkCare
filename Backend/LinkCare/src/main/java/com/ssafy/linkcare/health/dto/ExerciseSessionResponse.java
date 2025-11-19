@@ -13,6 +13,18 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExerciseSessionResponse {
+    @Override
+    public String toString() {
+        return "ExerciseSessionResponse{" +
+                "시작시간=" + startTime +
+                ", 종료시간=" + endTime +
+                ", 운동거리=" + distance +
+                ", 소모칼로리=" + calories +
+                ", 평균심박수=" + meanPulseRate +
+                ", 운동시간=" + duration +
+                '}';
+    }
+
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Float distance;
