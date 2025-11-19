@@ -127,12 +127,23 @@ fun CareGroupHome(
     val context = LocalContext.current
     val activity = context as Activity
 
+    // ExerciseSessionManager 주입 (Singleton via EntryPoint)
+    val exerciseSessionManager = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            ExerciseSessionEntryPoint::class.java
+        ).exerciseSessionManager()
+    }
+
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
 
     // ⑤ AI 빠른 넛지 메시지
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // 운동 중인 사용자 ID 목록
+    val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -498,6 +509,7 @@ fun CareGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
+                    val isExercising = m.userPk > 0 && exercisingUserIds.contains(m.userPk)
 
                     MemberRowCare(
                         m = m,
@@ -509,6 +521,7 @@ fun CareGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == m.name) null else m.name
                         },
+                        isExercising = isExercising,
                         onClick = {
                             val charInfo = characterMap[m.userPk]
                             selectedMember = MemberDetailInfo(

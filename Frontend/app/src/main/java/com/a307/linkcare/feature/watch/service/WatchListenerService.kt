@@ -2,6 +2,8 @@ package com.a307.linkcare.feature.watch.service
 
 import android.content.Intent
 import android.util.Log
+import com.a307.linkcare.feature.auth.data.TokenStore
+import com.a307.linkcare.feature.watch.data.ExerciseSessionManager
 import com.a307.linkcare.feature.watch.data.mapper.toRequest
 import com.a307.linkcare.feature.watch.model.WorkoutSummary
 import com.a307.linkcare.feature.workout.data.repository.WorkoutRepository
@@ -16,10 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@AndroidEntryPoint  // ❗ 이것도 필요하면 추가
+@AndroidEntryPoint
 class WatchListenerService : WearableListenerService() {
 
     @Inject lateinit var workoutRepository: WorkoutRepository
+    @Inject lateinit var exerciseSessionManager: ExerciseSessionManager
 
     override fun onCreate() {
         super.onCreate()
@@ -83,8 +86,19 @@ class WatchListenerService : WearableListenerService() {
         if (messageEvent.path == "/linkcare/session") {
             val state = String(messageEvent.data)
             Log.d("DataLayer", "📨 Session state: $state")
+
+            // 현재 로그인한 사용자 ID 가져오기
+            val userId = TokenStore(applicationContext).getUserPk()
+            if (userId != null) {
+                exerciseSessionManager.updateSessionState(userId, state)
+                Log.d("DataLayer", "🏃 운동 상태 업데이트: userId=$userId, state=$state")
+            }
+
             sendBroadcast(Intent("SESSION_STATE_RECEIVED").apply {
                 putExtra("state", state)
+                if (userId != null) {
+                    putExtra("userId", userId)
+                }
             })
         }
     }
