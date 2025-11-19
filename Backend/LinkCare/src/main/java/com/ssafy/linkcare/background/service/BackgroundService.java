@@ -80,15 +80,16 @@ public class BackgroundService {
     }
 
     @Transactional
-    public void changeMainBackground(Long userPk, Long userBackgroundId) {
+    public void changeMainBackground(Long userPk, Long backgroundId) {
         User user = userRepository.findById(userPk)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        UserBackground newMainBackground = userBackgroundRepository.findByUserAndUserBackgroundId(user, userBackgroundId)
+        UserBackground newMainBackground = user.getBackgrounds().stream()
+                .filter(ub -> ub.getBackground().getBackgroundId().equals(backgroundId))
+                .findFirst()
                 .orElseThrow(() -> new CustomException(ErrorCode.BACKGROUND_NOT_FOUND, "사용자가 보유하지 않은 배경입니다."));
 
         user.setMainBackground(newMainBackground);
-        userRepository.save(user);
     }
 
     @Transactional

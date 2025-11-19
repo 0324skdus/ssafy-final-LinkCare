@@ -35,22 +35,32 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.healthgroup.formatDuration
+import com.a307.linkcare.feature.healthgroup.ui.formatDuration
 
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.a307.linkcare.feature.auth.HealthPermissionViewModel
 import com.a307.linkcare.feature.auth.data.TokenStore
 import com.a307.linkcare.feature.caregroup.domain.SleepStatisticsResponse
 import com.a307.linkcare.feature.commongroup.domain.MemberDetailInfo
-import com.a307.linkcare.feature.mypage.GroupCharacterResponse
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
+import kotlinx.coroutines.launch
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface TokenStoreEntryPoint {
+    fun tokenStore(): TokenStore
+}
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
         // 💓 혈압
@@ -111,13 +121,18 @@ fun CareGroupHome(
     groupViewModel: MyGroupsViewModel = hiltViewModel(),
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel(),
-    myPageViewModel: MyPageViewModel = hiltViewModel()
+    myPageViewModel: MyPageViewModel = hiltViewModel(),
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑤ AI 제안 추가
 ) {
     val context = LocalContext.current
     val activity = context as Activity
 
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
+
+    // ⑤ AI 빠른 넛지 메시지
+    val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -142,6 +157,13 @@ fun CareGroupHome(
         healthViewModel.loadGroupStepStatistics(groupSeq)
     }
 
+    // TokenStore를 Hilt를 통해 가져옴
+    val tokenStore = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            TokenStoreEntryPoint::class.java
+        ).tokenStore()
+    }
     when {
         groupLoad -> CircularProgressIndicator()
 
@@ -171,7 +193,7 @@ fun CareGroupHome(
 
 //    val context = LocalContext.current
     val currentUserName = remember {
-        com.a307.linkcare.feature.auth.data.TokenStore(context).getName() ?: "나"
+        tokenStore.getName() ?: "나"
     }
 
     // 동기화 상태 관찰
@@ -221,8 +243,6 @@ fun CareGroupHome(
         }
     }
 
-
-
     // 날짜 변경 시 이전 health feedback 클리어
     LaunchedEffect(selectedDate) {
         healthViewModel.clearHealthFeedback()
@@ -235,6 +255,7 @@ fun CareGroupHome(
             healthViewModel.loadHealthFeedbackForMembers(userSeqs, selectedDate)
         }
     }
+
     val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
         // 총 거리
         val totalSteps = stepUiState.goal
@@ -453,7 +474,10 @@ fun CareGroupHome(
                         nameToBold = { it.name },
                         focused = { it.focused },
                         onDismiss = { taps.remove(it) },
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        onIconClick = { tapItem ->
+                            Log.d("NudgeIconClick", "Nudge icon clicked for item: ${tapItem.text}")
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -494,7 +518,19 @@ fun CareGroupHome(
                                 petName = charInfo?.petName
                             )
                         },
-                        isSelf = (m.userPk == TokenStore(context).getUserPk())
+                        isSelf = (m.userPk == TokenStore(context).getUserPk()),
+                        onTapIconClick = {
+                            // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
+                            scope.launch {
+                                aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
+                                // AI 생성 후 로그 출력
+                                if (quickNudgeMessage.isNotEmpty()) {
+                                    Log.d("MemberRowCare", "[AI 넛지] 그룹$groupSeq ${m.name}: $quickNudgeMessage")
+                                } else {
+                                    Log.d("MemberRowCare", "Tap icon clicked for member: ${m.name}")
+                                }
+                            }
+                        }
                     )
 
                     if (index < todayMembers.lastIndex) {

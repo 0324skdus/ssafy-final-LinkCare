@@ -33,6 +33,7 @@ import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
+import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -261,13 +262,14 @@ fun CareGroupEdit(
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 private fun RenderCareGroupEditForm(
     navController: NavHostController,
     groupDetail: com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse,
     viewModel: CareGroupEditViewModel,
     updateState: CareGroupEditViewModel.UpdateState,
-    characterMap: Map<Long, com.a307.linkcare.feature.mypage.GroupCharacterResponse>,
+    characterMap: Map<Long, GroupCharacterResponse>,
     onDelegate: (memberId: Long) -> Unit,
     onKick: (memberId: Long) -> Unit,
     onLeave: () -> Unit,

@@ -9,7 +9,8 @@ data class UserResponse(
     val nickname: String,
     val points: Int,
     val mainCharacterImageUrl: String?,
-    val mainBackgroundImageUrl: String?
+    val mainBackgroundImageUrl: String?,
+    val petName: String?
 )
 
 interface UserApi {

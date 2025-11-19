@@ -1,8 +1,8 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.data
 
-import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
-import com.a307.linkcare.feature.mypage.MyProfileResponse
-import com.a307.linkcare.feature.mypage.UpdateProfileRequest
+import com.a307.linkcare.feature.mypage.domain.GroupDetailResponse
+import com.a307.linkcare.feature.mypage.domain.MyProfileResponse
+import com.a307.linkcare.feature.mypage.domain.UpdateProfileRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PUT
@@ -21,5 +21,5 @@ interface MyPageApi {
     @GET("/api/groups/{groupSeq}/details")
     suspend fun getMyGroupCharacters(
         @Path("groupSeq") groupSeq: Long
-    ): com.a307.linkcare.feature.mypage.GroupDetailResponse
+    ): GroupDetailResponse
 }
