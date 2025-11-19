@@ -14,8 +14,3 @@ data class WeeklyGroupGoalResponse(
     val predictedGrowthRateDistance: Double,
     val selectedMetricType: String? = null  // "STEPS", "KCAL", "DURATION", "DISTANCE"
 )
-
-data class UpdateGoalRequest(
-    val selectedMetricType: String,  // "STEPS", "KCAL", "DURATION", "DISTANCE"
-    val goalValue: Long  // 목표값
-)
