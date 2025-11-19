@@ -173,4 +173,7 @@ dependencies {
 
     // Llama on-device AI model
     implementation(project(":llama"))
+
+    // Swipe to refresh
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.24.13-rc")
 }

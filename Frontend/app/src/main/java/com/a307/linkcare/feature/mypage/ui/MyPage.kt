@@ -70,6 +70,8 @@ import com.a307.linkcare.feature.caregroup.getTotalSleepHours
 import com.a307.linkcare.feature.caregroup.getWaterStatus
 import com.a307.linkcare.feature.caregroup.getWaterSummary
 import com.a307.linkcare.feature.caregroup.round1
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.launch
 
 private val shadowColor = Color(0x1A000000)
@@ -87,6 +89,8 @@ data class MyPageUiState(
 @Composable
 fun MyPage(
     state: MyPageUiState,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     onEditClick: () -> Unit = {},
     onGroupsClick: () -> Unit = {},
@@ -124,100 +128,105 @@ fun MyPage(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(white)
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isRefreshing = isRefreshing),
+        onRefresh = onRefresh
     ) {
-        Column(
-            Modifier
+        Box(
+            modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp)
+                .background(white)
         ) {
-            Spacer(Modifier.height(20.dp))
-
-            // 프로필 카드
-            ProfileCard(
-                state = state,
-                onEditClick = onEditClick,
-                onLogoutClick = performLogout,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            // 소속 그룹 버튼
-            Surface(
-                onClick = onGroupsClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(16.dp),
-                        spotColor = main.copy(alpha = 0.25f)
-                    ),
-                shape = RoundedCornerShape(16.dp),
-                color = main
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    main,
-                                    main.copy(alpha = 0.85f)
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        state.groupCountLabel,
-                        color = white,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+                Spacer(Modifier.height(20.dp))
 
-            Spacer(Modifier.height(20.dp))
+                // 프로필 카드
+                ProfileCard(
+                    state = state,
+                    onEditClick = onEditClick,
+                    onLogoutClick = performLogout,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            // 하단 카드 2열
-            MenuRow(
-                state = state,
-                onStoreClick = onStoreClick,
-                onDecorateClick = onDecorateClick
-            )
+                Spacer(Modifier.height(16.dp))
 
-            Spacer(Modifier.height(24.dp))
-
-            // 오늘의 건강 정보
-            Text(
-                "오늘 나의 건강 정보",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Spacer(Modifier.height(12.dp))
-
-            if (state.healthToday != null) {
-                HealthInfoSection(today = state.healthToday)
-            } else {
-                Box(
+                // 소속 그룹 버튼
+                Surface(
+                    onClick = onGroupsClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    contentAlignment = Alignment.Center
+                        .height(56.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            spotColor = main.copy(alpha = 0.25f)
+                        ),
+                    shape = RoundedCornerShape(16.dp),
+                    color = main
                 ) {
-                    CircularProgressIndicator()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        main,
+                                        main.copy(alpha = 0.85f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            state.groupCountLabel,
+                            color = white,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                // 하단 카드 2열
+                MenuRow(
+                    state = state,
+                    onStoreClick = onStoreClick,
+                    onDecorateClick = onDecorateClick
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // 오늘의 건강 정보
+                Text(
+                    "오늘 나의 건강 정보",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Spacer(Modifier.height(12.dp))
+
+                if (state.healthToday != null) {
+                    HealthInfoSection(today = state.healthToday)
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+
+                Spacer(Modifier.height(24.dp))
             }
-
-
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
