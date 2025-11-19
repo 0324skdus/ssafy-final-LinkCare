@@ -12,23 +12,23 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import dagger.hilt.EntryPoints
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class WatchListenerService : WearableListenerService() {
 
-    @Inject lateinit var workoutRepository: WorkoutRepository
-    @Inject lateinit var exerciseSessionManager: ExerciseSessionManager
+    private lateinit var workoutRepository: WorkoutRepository
+    private lateinit var exerciseSessionManager: ExerciseSessionManager
+    private lateinit var tokenStore: TokenStore
 
     override fun onCreate() {
         super.onCreate()
-        workoutRepository = EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
-            .workoutRepository()
-        Log.d("WatchListenerService", "Service created, repository initialized")
+        val entryPoint = EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
+        workoutRepository = entryPoint.workoutRepository()
+        exerciseSessionManager = entryPoint.exerciseSessionManager()
+        tokenStore = TokenStore(applicationContext)
+        Log.d("WatchListenerService", "Service created, repository and sessionManager initialized")
     }
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
@@ -87,6 +87,16 @@ class WatchListenerService : WearableListenerService() {
         if (messageEvent.path == "/linkcare/session") {
             val state = String(messageEvent.data)
             Log.d("DataLayer", "📨 Session state: $state")
+
+            // 현재 사용자의 운동 상태 업데이트
+            val userId = tokenStore.getUserPk()
+            if (userId != null) {
+                exerciseSessionManager.updateSessionState(userId, state)
+                Log.d("DataLayer", "📱 Updated exercise state for user $userId: $state")
+            } else {
+                Log.w("DataLayer", "⚠️ Cannot update exercise state - user not logged in")
+            }
+
             sendBroadcast(Intent("SESSION_STATE_RECEIVED").apply {
                 putExtra("state", state)
             })

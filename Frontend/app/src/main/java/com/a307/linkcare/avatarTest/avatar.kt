@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -274,7 +275,12 @@ fun AvatarAnimator(
     }
 
     if (frames.isNotEmpty()) {
-        Image(frames[idx.coerceIn(0, frames.lastIndex)], null, modifier)
+        Image(
+            bitmap = frames[idx.coerceIn(0, frames.lastIndex)],
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Fit
+        )
     }
 }
 

@@ -114,6 +114,11 @@ fun HealthGroupHome(
     // 운동 중인 사용자 ID 목록
     val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
+    // 디버깅: exercisingUserIds 변화 감지
+    LaunchedEffect(exercisingUserIds) {
+        Log.d("HealthGroupHome", "🏃 exercisingUserIds changed: $exercisingUserIds")
+    }
+
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
         healthPermissionViewModel.checkPermissions()
@@ -554,6 +559,11 @@ fun HealthGroupHome(
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
                     val isExercising = member.userPk > 0 && exercisingUserIds.contains(member.userPk)
+
+                    // 디버깅: 각 멤버의 운동 상태 확인
+                    if (exercisingUserIds.isNotEmpty()) {
+                        Log.d("HealthGroupHome", "👤 Member ${member.name} (pk=${member.userPk}): isExercising=$isExercising, exercisingIds=$exercisingUserIds")
+                    }
 
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
