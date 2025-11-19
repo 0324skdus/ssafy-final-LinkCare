@@ -53,7 +53,6 @@ import com.a307.linkcare.common.theme.unActiveField
 import com.a307.linkcare.feature.caregroup.CareGroup
 import com.a307.linkcare.feature.caregroup.CareGroupCreate
 import com.a307.linkcare.feature.caregroup.CareGroupEdit
-import com.a307.linkcare.feature.caregroup.CareGroupHome
 import com.a307.linkcare.feature.caregroup.GroupMember
 import com.a307.linkcare.feature.caregroup.domain.ShareOptions
 import com.a307.linkcare.feature.commongroup.ui.GroupSearch
@@ -73,6 +72,8 @@ import androidx.navigation.NavController
 import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
 import com.a307.linkcare.feature.mypage.ui.ProfileEditScreen
 import com.a307.linkcare.common.theme.main
+import com.a307.linkcare.feature.caregroup.CareGroupHomeScreen
+import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHomeScreen
 import com.a307.linkcare.feature.mypage.MyPageEditViewModel
 import com.a307.linkcare.feature.mypage.ui.DecorateRoute
 import com.a307.linkcare.feature.mypage.ui.StoreRoute
@@ -425,10 +426,8 @@ fun MainTabs(
                             currentTab = "care"
                         )
                     } else {
-                        CareGroupHome(
+                        CareGroupHomeScreen(
                             groupSeq = selectedCareGroup!!,
-                            modifier = Modifier,
-//                            vm = groupvm
                         )
                     }
                 }
@@ -500,9 +499,8 @@ fun MainTabs(
                             currentTab = "health"
                         )
                     } else {
-                        HealthGroupHome(
+                        HealthGroupHomeScreen(
                             groupSeq = selectedHealthGroup!!,
-                            modifier = Modifier,
                             vm = groupvm
                         )
                     }
