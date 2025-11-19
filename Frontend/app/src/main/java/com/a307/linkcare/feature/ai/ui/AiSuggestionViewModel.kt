@@ -106,7 +106,7 @@ class AiSuggestionViewModel @Inject constructor(
     /**
      * ④ wellness-other: 헬스 그룹 멤버 격려 메시지 로드
      */
-    fun loadHealthGroupSuggestions(userSeq: Long, goalCriteria: GoalCriteria?) {
+    fun loadHealthGroupSuggestions(userSeq: Long, groupSeq: Long) {
         viewModelScope.launch {
             // 같은 사용자면 이미 캐싱된 데이터 재사용
             if (currentHealthUserSeq == userSeq && _healthGroupSuggestions.value.isNotEmpty()) {
@@ -121,9 +121,9 @@ class AiSuggestionViewModel @Inject constructor(
             }
 
             _isLoading.value = true
-            Log.d(tag, "[HEALTH_SUGGESTIONS] 로드 시작: userSeq=$userSeq, goal=$goalCriteria")
+            Log.d(tag, "[HEALTH_SUGGESTIONS] 로드 시작: userSeq=$userSeq, groupSeq=$groupSeq")
 
-            aiCommentService.generateHealthGroupMemberEncouragement(userSeq, goalCriteria)
+            aiCommentService.generateHealthGroupMemberEncouragement(userSeq, groupSeq)
                 .onSuccess { suggestions ->
                     _healthGroupSuggestions.value = suggestions
                     Log.d(tag, "[HEALTH_SUGGESTIONS] ✅ 성공: ${suggestions.size}개")
@@ -214,7 +214,7 @@ class AiSuggestionViewModel @Inject constructor(
      * 앱 세션 동안 캐싱: 첫 요청만 모델 호출, 이후 순차 출력
      * @param groupSeq 그룹 ID (같은 유저라도 다른 그룹이면 별도 캐시)
      */
-    fun loadQuickWellnessNudgeMessage(groupSeq: Long, userSeq: Long, goalCriteria: GoalCriteria?) {
+    fun loadQuickWellnessNudgeMessage(groupSeq: Long, userSeq: Long) {
         viewModelScope.launch {
             val cacheKey = "wellness_${groupSeq}_$userSeq"
 
@@ -241,9 +241,9 @@ class AiSuggestionViewModel @Inject constructor(
 
             // 캐시 없음 - 모델 호출
             _isLoading.value = true
-            Log.d(tag, "[QUICK_WELLNESS_NUDGE] 🔄 모델 호출 시작: userSeq=$userSeq")
+            Log.d(tag, "[QUICK_WELLNESS_NUDGE] 🔄 모델 호출 시작: userSeq=$userSeq, groupSeq=$groupSeq")
 
-            aiCommentService.generateQuickWellnessNudgeMessage(userSeq, goalCriteria)
+            aiCommentService.generateQuickWellnessNudgeMessage(userSeq, groupSeq)
                 .onSuccess { message ->
                     // 여러 문장으로 분리 (줄바꿈 기준)
                     val messages = message.split("\n")

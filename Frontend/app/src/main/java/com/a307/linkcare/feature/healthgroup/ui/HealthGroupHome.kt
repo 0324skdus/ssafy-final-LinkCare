@@ -115,11 +115,6 @@ fun HealthGroupHome(
     // 운동 중인 사용자 ID 목록
     val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
-    // 디버깅: exercisingUserIds 변화 감지
-    LaunchedEffect(exercisingUserIds) {
-        Log.d("HealthGroupHome", "🏃 exercisingUserIds changed: $exercisingUserIds")
-    }
-
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
         healthPermissionViewModel.checkPermissions()
@@ -243,7 +238,7 @@ fun HealthGroupHome(
     val todayGroupProgress = when (currentMetricType) {
         "STEPS" -> (totalStats?.totalSteps ?: 0).toDouble()
         "KCAL" -> (totalStats?.totalCalories ?: 0.0)
-        "DURATION" -> (totalStats?.totalDuration ?: 0).toDouble()
+        "DURATION" -> ((totalStats?.totalDuration ?: 0) / 60000).toDouble()  // 밀리초 → 분
         "DISTANCE" -> (totalStats?.totalDistances ?: 0.0) / 1000 // m -> km 변환
         else -> (totalStats?.totalSteps ?: 0).toDouble()
     }
@@ -455,7 +450,7 @@ fun HealthGroupHome(
                             value to "$value"
                         }
                         "DURATION" -> {
-                            val value = totalStats?.totalDuration ?: 0
+                            val value = ((totalStats?.totalDuration ?: 0) / 60000).toInt()  // 밀리초 → 분
                             value to "$value"
                         }
                         "DISTANCE" -> {
@@ -547,7 +542,7 @@ fun HealthGroupHome(
                             val prog = when (currentMetricType) {
                                 "STEPS" -> activity.totalSteps
                                 "KCAL" -> activity.totalCalories.toInt()
-                                "DURATION" -> activity.totalDuration
+                                "DURATION" -> (activity.totalDuration / 60000).toInt()  // 밀리초 → 분 (목표값과 단위 맞춤)
                                 else -> 0
                             }
                             val numberOfMembers = membersWithActivity.size.coerceAtLeast(1)
@@ -580,11 +575,6 @@ fun HealthGroupHome(
                     val petName = charInfo?.petName
                     val isExercising = member.userPk > 0 && exercisingUserIds.contains(member.userPk)
 
-                    // 디버깅: 각 멤버의 운동 상태 확인
-                    if (exercisingUserIds.isNotEmpty()) {
-                        Log.d("HealthGroupHome", "👤 Member ${member.name} (pk=${member.userPk}): isExercising=$isExercising, exercisingIds=$exercisingUserIds")
-                    }
-
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
                         avatarUrl = avatarUrl,
@@ -610,15 +600,10 @@ fun HealthGroupHome(
                         unit = currentUnit,
                         onTapIconClick = {
                             // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
+                            Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
+                            Toast.makeText(context, "${member.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
                             scope.launch {
-                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
-                                // AI 생성 후 토스트 표시
-                                if (quickNudgeMessage.isNotEmpty()) {
-                                    Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
-                                    Toast.makeText(context, "${member.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
-                                }
+                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk)
                             }
                         }
                     )
@@ -687,7 +672,7 @@ fun HealthGroupHome(
                                 val weeklyProgress = when (currentMetricType) {
                                     "STEPS" -> weeklyActivity.totalSteps
                                     "KCAL" -> weeklyActivity.totalCalories.toInt()
-                                    "DURATION" -> weeklyActivity.totalDuration
+                                    "DURATION" -> (weeklyActivity.totalDuration / 60000).toInt()  // 밀리초 → 분
                                     "DISTANCE" -> (weeklyActivity.totalDistances / 1000).toInt() // m -> km 변환
                                     else -> 0
                                 }
@@ -776,8 +761,7 @@ fun HealthGroupHome(
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
                     groupSeq = groupSeq,
                     onDismiss = { selectedMember = null },
-                    isLoading = isLoadingDailyActivity,
-                    goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
+                    isLoading = isLoadingDailyActivity
                 )
             }
 
@@ -1025,7 +1009,8 @@ private fun GoalEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = Color.White
     ) {
         Column(
             Modifier

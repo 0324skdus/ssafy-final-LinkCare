@@ -9,7 +9,6 @@ import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.data.HealthGroupRepository
 import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
-import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
 import com.a307.linkcare.feature.healthgroup.domain.MemberWithActivity
 import com.a307.linkcare.feature.healthgroup.domain.WeeklyGroupGoalResponse
 import com.a307.linkcare.feature.caregroup.data.endOfWeek
@@ -54,9 +53,9 @@ class HealthGroupHomeViewModel @Inject constructor(
     val weeklyMembersWithActivity: StateFlow<List<MemberWithActivity>> = _weeklyMembersWithActivity
     // --------------------------
 
-    // 일일 활동 데이터 저장
-    private val _dailyActivityData = MutableStateFlow<Map<Int, DailyActivitySummaryResponse>>(emptyMap())
-    val dailyActivityData: StateFlow<Map<Int, DailyActivitySummaryResponse>> = _dailyActivityData
+    // 일일 활동 데이터 저장 (ActualActivity로 변경)
+    private val _dailyActivityData = MutableStateFlow<Map<Int, ActualActivity>>(emptyMap())
+    val dailyActivityData: StateFlow<Map<Int, ActualActivity>> = _dailyActivityData
 
     private val _isLoadingDailyActivity = MutableStateFlow(false)
     val isLoadingDailyActivity: StateFlow<Boolean> = _isLoadingDailyActivity
@@ -213,13 +212,19 @@ class HealthGroupHomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val targetDate = date ?: LocalDate.now()
-                Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$targetDate")
-                val data = repository.getDailyActivity(userSeq, targetDate)
-                if (data != null) {
+                val dateStr = targetDate.toString()
+                Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$dateStr")
+
+                repository.getActualActivityForUser(userSeq, dateStr).onSuccess { data ->
                     Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
                     _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
-                } else {
-                    Log.d("HealthGroupHomeVM", "No daily activity for userSeq=$userSeq")
+
+                    Log.d("HealthGroupHomeVM", "👣 걸음수: ${data.totalSteps}")
+                    Log.d("HealthGroupHomeVM", "🔥 소모 칼로리: ${data.totalCalories.toInt()} kcal")
+                    Log.d("HealthGroupHomeVM", "📏 운동 거리: ${"%.2f".format(data.totalDistances)} km")
+                    Log.d("HealthGroupHomeVM", "⏱️ 운동 시간: ${(data.totalDuration / 60000)} 분")
+                }.onFailure { e ->
+                    Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
                 }
             } catch (e: Exception) {
                 Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
@@ -240,15 +245,24 @@ class HealthGroupHomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val targetDate = date ?: LocalDate.now()
+                val dateStr = targetDate.toString()
+
                 userSeqs.forEach { userSeq ->
                     try {
-                        Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$targetDate")
-                        val data = repository.getDailyActivity(userSeq, targetDate)
-                        if (data != null) {
+                        Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$dateStr")
+
+                        repository.getActualActivityForUser(userSeq, dateStr).onSuccess { data ->
                             Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
                             _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
-                        } else {
-                            Log.d("HealthGroupHomeVM", "No daily activity for userSeq=$userSeq")
+
+                            // 모든 데이터 로그 출력
+                            Log.d("HealthGroupHomeVM", "👣 걸음수: ${data.totalSteps}")
+                            Log.d("HealthGroupHomeVM", "🔥 소모 칼로리: ${data.totalCalories.toInt()} kcal")
+                            Log.d("HealthGroupHomeVM", "📏 운동 거리: ${"%.2f".format(data.totalDistances)} km")
+                            Log.d("HealthGroupHomeVM", "⏱️ 운동 시간: ${(data.totalDuration / 60000)} 분")
+
+                        }.onFailure { e ->
+                            Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
                         }
                     } catch (e: Exception) {
                         Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
