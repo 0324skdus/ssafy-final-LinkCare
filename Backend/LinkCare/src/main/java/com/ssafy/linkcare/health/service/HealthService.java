@@ -191,7 +191,7 @@ public class HealthService {
 
         DailyActivitySummaryResponse dailyActivitySummaryResponse = DailyActivitySummaryResponse.builder()
                 .exercises(exerciseSessionResponses)
-                .steps(stepService.getTodayStepCount(userSeq))
+                .steps(stepService.getStepsByDate(userSeq, date))
                 .build();
 
         return DailyHealthDetailResponse.builder()

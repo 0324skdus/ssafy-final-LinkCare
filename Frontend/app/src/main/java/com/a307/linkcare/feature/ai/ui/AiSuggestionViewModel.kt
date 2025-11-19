@@ -48,11 +48,41 @@ class AiSuggestionViewModel @Inject constructor(
     // Key: "care_$userSeq" or "wellness_$userSeq", Value: (messages: List<String>, currentIndex: Int)
     private val nudgeCache = mutableMapOf<String, Pair<List<String>, Int>>()
 
+    // 현재 로드된 사용자 추적 (앱 세션 동안 유지)
+    private var currentCareUserSeq: Long? = null
+    private var currentHealthUserSeq: Long? = null
+
+    /**
+     * 케어 그룹 캐시 확인
+     */
+    fun hasCareGroupCache(userSeq: Long): Boolean {
+        return currentCareUserSeq == userSeq && _careGroupSuggestions.value.isNotEmpty()
+    }
+
+    /**
+     * 헬스 그룹 캐시 확인
+     */
+    fun hasHealthGroupCache(userSeq: Long): Boolean {
+        return currentHealthUserSeq == userSeq && _healthGroupSuggestions.value.isNotEmpty()
+    }
+
     /**
      * ③ health-other: 케어 그룹 멤버 격려 메시지 로드
      */
     fun loadCareGroupSuggestions(userSeq: Long) {
         viewModelScope.launch {
+            // 같은 사용자면 이미 캐싱된 데이터 재사용
+            if (currentCareUserSeq == userSeq && _careGroupSuggestions.value.isNotEmpty()) {
+                Log.d(tag, "[CARE_SUGGESTIONS] 💾 캐시 재사용: userSeq=$userSeq")
+                return@launch
+            }
+
+            // 다른 사용자면 캐시 클리어
+            if (currentCareUserSeq != userSeq) {
+                _careGroupSuggestions.value = emptyList()
+                currentCareUserSeq = userSeq
+            }
+
             _isLoading.value = true
             Log.d(tag, "[CARE_SUGGESTIONS] 로드 시작: userSeq=$userSeq")
 
@@ -78,6 +108,18 @@ class AiSuggestionViewModel @Inject constructor(
      */
     fun loadHealthGroupSuggestions(userSeq: Long, goalCriteria: GoalCriteria?) {
         viewModelScope.launch {
+            // 같은 사용자면 이미 캐싱된 데이터 재사용
+            if (currentHealthUserSeq == userSeq && _healthGroupSuggestions.value.isNotEmpty()) {
+                Log.d(tag, "[HEALTH_SUGGESTIONS] 💾 캐시 재사용: userSeq=$userSeq")
+                return@launch
+            }
+
+            // 다른 사용자면 캐시 클리어
+            if (currentHealthUserSeq != userSeq) {
+                _healthGroupSuggestions.value = emptyList()
+                currentHealthUserSeq = userSeq
+            }
+
             _isLoading.value = true
             Log.d(tag, "[HEALTH_SUGGESTIONS] 로드 시작: userSeq=$userSeq, goal=$goalCriteria")
 
@@ -258,6 +300,32 @@ class AiSuggestionViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(tag, "[POKE_NOTIFICATION] ❌ 서버 전송 예외: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * 편지 알림을 서버에 전송
+     */
+    fun sendLetterNotification(receiverUserPk: Long, groupSeq: Long, content: String) {
+        viewModelScope.launch {
+            try {
+                val request = SaveNotificationRequest(
+                    receiverUserPk = receiverUserPk,
+                    groupSeq = groupSeq,
+                    messageType = "LETTER",
+                    content = content
+                )
+
+                val response = notificationApi.saveNotification(request)
+
+                if (response.isSuccessful) {
+                    Log.d(tag, "[LETTER_NOTIFICATION] ✅ 편지 전송 성공: $content")
+                } else {
+                    Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 실패: ${response.code()} - ${response.message()}")
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 예외: ${e.message}", e)
             }
         }
     }

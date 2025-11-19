@@ -11,10 +11,7 @@ import com.ssafy.linkcare.group.enums.RequestStatus;
 import com.ssafy.linkcare.group.event.GroupMemberChangedEvent;
 import com.ssafy.linkcare.group.repository.*;
 import com.ssafy.linkcare.group.scheduler.GroupHeaderScheduler;
-import com.ssafy.linkcare.health.dto.HealthStaticsResponse;
-import com.ssafy.linkcare.health.dto.SleepDetailResponse;
-import com.ssafy.linkcare.health.dto.StepDetailResponse;
-import com.ssafy.linkcare.health.dto.TotalActivityStatisticsResponse;
+import com.ssafy.linkcare.health.dto.*;
 import com.ssafy.linkcare.health.service.HealthService;
 import com.ssafy.linkcare.health.service.SleepService;
 import com.ssafy.linkcare.health.service.StepService;
@@ -1220,6 +1217,56 @@ public class GroupService {
                 .build();
     }
 
+    // 특정 날짜 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    public GroupStepStatisticsResponse getGroupStepStatisticsByDate(Long groupSeq, LocalDate date) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        List<StepDetailResponse> responses = groupMembers.stream()
+                .map(groupMember -> {
+                    int userSeq = Math.toIntExact(groupMember.getUser().getUserPk());
+                    int steps = stepService.getStepsByDate(userSeq, date);
+                    return StepDetailResponse.builder()
+                            .userSeq(userSeq)
+                            .steps(steps)
+                            .build();
+                })
+                .toList();
+
+        int totalSteps = responses.stream().mapToInt(StepDetailResponse::getSteps).sum();
+
+        return GroupStepStatisticsResponse.builder()
+                .members(responses)
+                .totalSteps(totalSteps)
+                .build();
+    }
+
+
+    // 특정 기간 그룹원별 걸음수, 그룹원 총 걸음수 조회
+    public GroupStepStatisticsResponse getGroupStepStatisticsByPeriod(Long groupSeq, LocalDate startDate, LocalDate endDate) {
+        Group group = validateGroup(groupSeq);
+
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup(group);
+
+        List<StepDetailResponse> responses = groupMembers.stream()
+                .map(groupMember -> {
+                    int userSeq = Math.toIntExact(groupMember.getUser().getUserPk());
+                    StepStatisticsResponse stepStatisticsResponse = stepService.getStepStatisticsByDate(userSeq, startDate, endDate);
+                    return StepDetailResponse.builder()
+                            .userSeq(userSeq)
+                            .steps(Math.toIntExact(stepStatisticsResponse.getTotalSteps()))
+                            .build();
+                })
+                .toList();
+
+        int totalSteps = responses.stream().mapToInt(StepDetailResponse::getSteps).sum();
+
+        return GroupStepStatisticsResponse.builder()
+                .members(responses)
+                .totalSteps(totalSteps)
+                .build();
+    }
 
     /*
      * GroupInvitation을 InvitationResponse로 변환

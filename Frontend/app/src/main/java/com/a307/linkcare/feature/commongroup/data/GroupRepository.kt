@@ -337,4 +337,8 @@ class GroupRepository @Inject constructor(
             emptyList()
         }
     }
+
+    // 그룹 멤버 한줄평 조회
+    suspend fun getGroupMemberComments(groupSeq: Long) =
+        api.getGroupMemberComments(groupSeq)
 }

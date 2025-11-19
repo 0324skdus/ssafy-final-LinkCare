@@ -5,6 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.Member
 import com.a307.linkcare.feature.healthgroup.data.HealthGroupRepository
 import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
@@ -25,7 +26,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HealthGroupHomeViewModel @Inject constructor(
-    private val repository: HealthGroupRepository
+    private val repository: HealthGroupRepository,
+    private val groupRepo: GroupRepository
 ) : ViewModel() {
 
     sealed class GoalState {
@@ -260,5 +262,36 @@ class HealthGroupHomeViewModel @Inject constructor(
 
     fun clearDailyActivity() {
         _dailyActivityData.value = emptyMap()
+    }
+
+    // 그룹 멤버 한줄평 저장 (userSeq -> comment)
+    private val _memberComments = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val memberComments: StateFlow<Map<Long, String>> = _memberComments
+
+    fun loadGroupMemberComments(groupSeq: Long) {
+        viewModelScope.launch {
+            try {
+                Log.d("HealthGroupHomeVM", "========== Loading member comments for groupSeq=$groupSeq ==========")
+                val response = groupRepo.getGroupMemberComments(groupSeq)
+
+                val comments = response.data?.comments ?: emptyList()
+                Log.d("HealthGroupHomeVM", "API Response: ${comments.size} total comments")
+                comments.forEach { comment ->
+                    Log.d("HealthGroupHomeVM", "  - userSeq=${comment.userSeq}, userName=${comment.userName}, comment=${comment.comment}")
+                }
+
+                // userSeq -> comment 맵으로 변환 (comment가 null이 아닌 것만)
+                val commentMap = comments
+                    .filter { !it.comment.isNullOrBlank() }
+                    .associate { it.userSeq to it.comment!! }
+
+                _memberComments.value = commentMap
+                Log.d("HealthGroupHomeVM", "Final commentMap: $commentMap")
+                Log.d("HealthGroupHomeVM", "Loaded ${commentMap.size} member comments (non-null)")
+            } catch (e: Exception) {
+                Log.e("HealthGroupHomeVM", "Error loading member comments: ${e.message}", e)
+                _memberComments.value = emptyMap()
+            }
+        }
     }
 }
