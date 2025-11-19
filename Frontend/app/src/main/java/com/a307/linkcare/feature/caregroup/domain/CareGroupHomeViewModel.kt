@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.caregroup.HealthToday
 import com.a307.linkcare.feature.caregroup.data.CareGroupRepository
+import com.a307.linkcare.feature.commongroup.data.GroupRepository
+import com.a307.linkcare.feature.commongroup.domain.MemberCommentResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CareGroupHomeViewModel @Inject constructor(
-    private val repo: CareGroupRepository
+    private val repo: CareGroupRepository,
+    private val groupRepo: GroupRepository
 ) : ViewModel() {
 
     private val _healthData = MutableStateFlow<Map<Int, HealthToday>>(emptyMap())
@@ -209,6 +212,37 @@ class CareGroupHomeViewModel @Inject constructor(
                 }
             } finally {
                 _isLoadingHealthFeedback.value = false
+            }
+        }
+    }
+
+    // 그룹 멤버 한줄평 저장 (userSeq -> comment)
+    private val _memberComments = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val memberComments: StateFlow<Map<Long, String>> = _memberComments
+
+    fun loadGroupMemberComments(groupSeq: Long) {
+        viewModelScope.launch {
+            try {
+                Log.d("CareGroupHomeVM", "========== Loading member comments for groupSeq=$groupSeq ==========")
+                val response = groupRepo.getGroupMemberComments(groupSeq)
+
+                val comments = response.data?.comments ?: emptyList()
+                Log.d("CareGroupHomeVM", "API Response: ${comments.size} total comments")
+                comments.forEach { comment ->
+                    Log.d("CareGroupHomeVM", "  - userSeq=${comment.userSeq}, userName=${comment.userName}, comment=${comment.comment}")
+                }
+
+                // userSeq -> comment 맵으로 변환 (comment가 null이 아닌 것만)
+                val commentMap = comments
+                    .filter { !it.comment.isNullOrBlank() }
+                    .associate { it.userSeq to it.comment!! }
+
+                _memberComments.value = commentMap
+                Log.d("CareGroupHomeVM", "Final commentMap: $commentMap")
+                Log.d("CareGroupHomeVM", "Loaded ${commentMap.size} member comments (non-null)")
+            } catch (e: Exception) {
+                Log.e("CareGroupHomeVM", "Error loading member comments: ${e.message}", e)
+                _memberComments.value = emptyMap()
             }
         }
     }
