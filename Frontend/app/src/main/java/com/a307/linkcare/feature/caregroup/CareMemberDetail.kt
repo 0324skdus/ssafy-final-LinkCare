@@ -114,6 +114,7 @@ fun CareMemberDetail(
     petName: String?,
     myCharInfo: GroupCharacterResponse?,
     today: HealthToday,
+    groupSeq: Long,
     onDismiss: () -> Unit,
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp
@@ -363,21 +364,32 @@ fun CareMemberDetail(
                 }
 
                 var showLetter by remember { mutableStateOf(false) }
+                var loadRequested by remember { mutableStateOf(false) }
 
                 // ③ AI 제안 로드 (health-other)
                 val suggestionViewModel: AiSuggestionViewModel = hiltViewModel()
                 val aiSuggestions by suggestionViewModel.careGroupSuggestions.collectAsState()
-                val isLoading by suggestionViewModel.isLoading.collectAsState()
-                val scope = rememberCoroutineScope()
+                val isAiLoading by suggestionViewModel.isLoading.collectAsState()
+
+                // 로딩 완료 후 다이얼로그 열기
+                LaunchedEffect(loadRequested, isAiLoading, aiSuggestions) {
+                    if (loadRequested && !isAiLoading && aiSuggestions.isNotEmpty()) {
+                        showLetter = true
+                        loadRequested = false
+                    }
+                }
 
                 // 편지쓰기 버튼
                 Button(
-                    enabled = !isSelf && !isLoading,
+                    enabled = !isSelf && !isAiLoading,
                     onClick = {
-                        // AI 제안 먼저 로드한 후 다이얼로그 열기
-                        scope.launch {
-                            suggestionViewModel.loadCareGroupSuggestions(member.userPk)
+                        // 캐시가 있으면 즉시 다이얼로그 열기
+                        if (suggestionViewModel.hasCareGroupCache(member.userPk)) {
                             showLetter = true
+                        } else {
+                            // 캐시 없으면 로드 시작 (LaunchedEffect가 완료 감지)
+                            loadRequested = true
+                            suggestionViewModel.loadCareGroupSuggestions(member.userPk)
                         }
                     },
                     modifier = Modifier
@@ -387,7 +399,7 @@ fun CareMemberDetail(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = main)
                 ) {
-                    if (isLoading) {
+                    if (isAiLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = white,
@@ -419,7 +431,9 @@ fun CareMemberDetail(
                         backgroundUrl = backgroundUrl,
                         petName = petName
                     )
-                    androidx.compose.ui.window.Dialog(onDismissRequest = { showLetter = false }) {
+                    androidx.compose.ui.window.Dialog(onDismissRequest = {
+                        showLetter = false
+                    }) {
                         // AI 생성 제안 또는 기본 제안 사용
                         val suggestions = remember(aiSuggestions) {
                             if (aiSuggestions.isNotEmpty()) {
@@ -439,9 +453,24 @@ fun CareMemberDetail(
                             sender = senderUser,
                             receiver = receiverUser,
                             suggestions = suggestions,
-                            onClose = { showLetter = false },
+                            onClose = {
+                                showLetter = false
+                            },
                             onSend = { suggestion, custom ->
-                                println("보낼 내용: ${suggestion?.text ?: custom}")
+                                val content = if (suggestion != null) {
+                                    suggestion.text
+                                } else {
+                                    custom
+                                }
+
+                                if (content.isNotBlank()) {
+                                    // 편지 전송 API 호출
+                                    suggestionViewModel.sendLetterNotification(
+                                        receiverUserPk = member.userPk,
+                                        groupSeq = groupSeq,
+                                        content = content
+                                    )
+                                }
                                 showLetter = false
                             }
                         )

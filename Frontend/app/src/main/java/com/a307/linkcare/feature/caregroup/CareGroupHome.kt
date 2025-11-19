@@ -677,6 +677,7 @@ fun CareGroupHome(
                 petName = info.petName,
                 myCharInfo = myCharInfo,
                 today = todayHealthByName[info.member.name] ?: HealthToday(),
+                groupSeq = groupSeq,
                 onDismiss = { selectedMember = null },
                 currentUserName = currentUserName
             )

@@ -730,8 +730,9 @@ fun HealthGroupHome(
                     petName = info.petName,
                     myCharInfo = myCharInfo,
                     today = todayHealthByName[info.member.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null },
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
+                    groupSeq = groupSeq,
+                    onDismiss = { selectedMember = null },
                     isLoading = isLoadingDailyActivity,
                     goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
                 )
