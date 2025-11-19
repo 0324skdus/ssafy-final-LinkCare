@@ -1,15 +1,20 @@
 package com.a307.linkcare.feature.notification
 
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -17,6 +22,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.black
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -24,7 +30,8 @@ import java.util.Locale
 fun NotiList(
     viewModel: NotificationViewModel
 ) {
-    // 예: "11.06 14:35"
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val formatter = remember { SimpleDateFormat("MM.dd HH:mm", Locale.KOREA) }
     val readGray = Color(0xFF9E9E9E)
 
@@ -40,61 +47,107 @@ fun NotiList(
             items(items = pokeAlarms, key = { it.alarmId }) { alarm ->
                 val textColor = if (alarm.read) readGray else black
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = white)
+                // 삭제 처리 여부를 추적하는 로컬 상태
+                var isDismissed by remember { mutableStateOf(false) }
+
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = { dismissValue ->
+                        if (dismissValue == SwipeToDismissBoxValue.EndToStart && !isDismissed) {
+                            isDismissed = true
+                            scope.launch {
+                                viewModel.deleteAlarm(alarm.alarmId)
+                                Toast.makeText(context, "알림을 삭제했습니다", Toast.LENGTH_SHORT).show()
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                    positionalThreshold = { it * 0.5f }
+                )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        // currentValue를 사용하여 실제 스와이프 상태 확인
+                        val color = when (dismissState.currentValue) {
+                            SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF6B6B)
+                            else -> Color.Transparent
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(color)
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "삭제",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    },
+                    enableDismissFromStartToEnd = false
                 ) {
-                    Row(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                // 항목 터치 시 읽음 처리
-                                if (!alarm.read) {
-                                    viewModel.markAlarmAsRead(alarm.alarmId)
-                                }
-                            }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = white)
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.tap),
-                            contentDescription = "콕 찌르기 아이콘",
-                            modifier = Modifier.size(37.dp),
-                            tint = Color.Unspecified
-                        )
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            // 첫 번째 줄: 발신자 (볼드)
-                            Text(
-                                text = alarm.senderInfo.nickname,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    // 항목 터치 시 읽음 처리
+                                    if (!alarm.read) {
+                                        viewModel.markAlarmAsRead(alarm.alarmId)
+                                    }
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.tap),
+                                contentDescription = "콕 찌르기 아이콘",
+                                modifier = Modifier.size(37.dp),
+                                tint = Color.Unspecified
                             )
-                            Spacer(Modifier.height(4.dp))
-                            // 두 번째 줄: 내용
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                // 첫 번째 줄: 발신자 (볼드)
+                                Text(
+                                    text = alarm.senderInfo.nickname,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                // 두 번째 줄: 내용
+                                Text(
+                                    text = alarm.content,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = textColor
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            // 오른쪽 날짜
                             Text(
-                                text = alarm.content,
+                                text = parseAndFormatDate(alarm.sentAt, formatter),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = textColor
                             )
                         }
 
-                        Spacer(Modifier.width(12.dp))
-
-                        // 오른쪽 날짜
-                        Text(
-                            text = parseAndFormatDate(alarm.sentAt, formatter),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = textColor
-                        )
+                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                     }
-
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
                 }
             }
         }

@@ -42,13 +42,19 @@ interface NotificationApi {
         @Body request: SaveNotificationRequest
     ): Response<Unit>
 
-    // 안 읽은 알림 조회
-    @GET("/api/alarms/unread")
-    suspend fun getUnreadAlarms(): Response<List<AlarmResponse>>
+    // 모든 알림 조회 (삭제되지 않은 알림)
+    @GET("/api/alarms/all")
+    suspend fun getAllAlarms(): Response<List<AlarmResponse>>
 
     // 알림 읽음 처리
     @PATCH("/api/alarms/{alarmId}/read")
     suspend fun markAlarmAsRead(
+        @Path("alarmId") alarmId: Long
+    ): Response<Unit>
+
+    // 알림 삭제
+    @DELETE("/api/alarms/{alarmId}")
+    suspend fun deleteAlarm(
         @Path("alarmId") alarmId: Long
     ): Response<Unit>
 }
