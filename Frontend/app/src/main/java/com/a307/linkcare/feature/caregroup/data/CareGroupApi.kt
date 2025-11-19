@@ -64,4 +64,12 @@ interface CareGroupApi {
         @Path("groupSeq") groupSeq: Long
     ): Response<GroupStepStatisticsResponse>
 
+    @GET("/api/groups/{groupSeq}/step-statistics/period")
+    suspend fun getGroupStepStatisticsByPeriod(
+        @Path("groupSeq") groupSeq: Long,
+        @Query("startDate") startDate: LocalDate,
+        @Query("endDate") endDate: LocalDate
+    ): Response<GroupStepStatisticsResponse>
+
+
 }
