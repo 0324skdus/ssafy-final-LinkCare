@@ -486,12 +486,15 @@ fun HealthGroupHome(
                 }
 
                 item {
+                    val isLeaderExercising = leader.userPk > 0 && exercisingUserIds.contains(leader.userPk)
+
                     HealthGroupHeaderCard(
                         progress = todayGroupPercent.coerceIn(0f, 1f),
                         bgImgRes = R.drawable.background_1,
                         leaderAvatarRes = leader.avatarRes,
                         avatarUrl = leaderAvatarUrl,
                         backgroundUrl = leaderBgUrl,
+                        isLeaderExercising = isLeaderExercising
                     )
                     Spacer(Modifier.height(12.dp))
                 }
