@@ -309,7 +309,7 @@ character/
 │   ├── SpriteAnimation.kt            # 스프라이트 애니메이션 로직
 │   ├── LayeredSpriteAnimation.kt     # 레이어드 스프라이트
 │   └── PreloadFrames.kt              # 이미지 프리로딩
-├── CharacterRepository.kt            # 캐릭터 데이터 레이어
+├── DecorateRepository.kt            # 캐릭터 데이터 레이어
 └── CharacterViewModel.kt             # 캐릭터 상태
 ```
 

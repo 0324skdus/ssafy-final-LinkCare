@@ -53,10 +53,10 @@ public class BackgroundController {
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "사용자 또는 배경을 찾을 수 없음")
     })
-    @PostMapping("/main/{userBackgroundId}")
-    public ResponseEntity<Void> changeMainBackground(Authentication authentication, @PathVariable Long userBackgroundId) {
+    @PostMapping("/main/{backgroundId}")
+    public ResponseEntity<Void> changeMainBackground(Authentication authentication, @PathVariable Long backgroundId) {
         Long userPk = Long.parseLong(authentication.getName());
-        backgroundService.changeMainBackground(userPk, userBackgroundId);
+        backgroundService.changeMainBackground(userPk, backgroundId);
         return ResponseEntity.ok().build();
     }
 

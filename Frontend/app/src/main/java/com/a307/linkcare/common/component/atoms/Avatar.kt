@@ -2,6 +2,7 @@ package com.a307.linkcare.common.component.atoms
 
 import android.util.Log
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,11 +13,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -27,6 +30,9 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.a307.linkcare.avatarTest.AvatarAnimator
+import com.a307.linkcare.avatarTest.AvatarSelection
+import com.a307.linkcare.avatarTest.Species
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.R
 import com.a307.linkcare.common.util.CropTransparentTransformation
@@ -40,7 +46,8 @@ fun Avatar(
     bubbleText: String,
     bubbleVisible: Boolean,
     onBubbleVisibleChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isExercising: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -71,17 +78,42 @@ fun Avatar(
             )
         }
 
-        // 캐릭터
-        if (!avatarUrl.isNullOrBlank()) {
+        // 캐릭터 (운동 중이면 스프라이트 애니메이션)
+        if (isExercising && !avatarUrl.isNullOrBlank()) {
+            // URL에서 species 추출 (예: ".../bear/..." → BEAR)
+            val species = remember(avatarUrl) {
+                when {
+                    avatarUrl.contains("bear", ignoreCase = true) -> Species.BEAR
+                    avatarUrl.contains("duck", ignoreCase = true) -> Species.DUCK
+                    else -> Species.BEAR // 기본값
+                }
+            }
+
+            AvatarAnimator(
+                modifier = Modifier
+                    .size(35.dp)
+                    .align(Alignment.Center)
+                    .graphicsLayer(scaleX = 0.8f, scaleY = 0.8f), // 크기 조정
+                selection = AvatarSelection(
+                    species = species,
+                    variant = 1, // 기본값
+                    hatId = null,
+                    glassesId = null,
+                    animation = "walk" // 운동 중 → 걷기 애니메이션
+                ),
+                fps = 12
+            )
+        } else if (!avatarUrl.isNullOrBlank()) {
+            // 운동 안 할 때는 정적 이미지
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(avatarUrl)
-                    .transformations(CropTransparentTransformation()) // 🔹 투명 여백 제거
-                    .size(coil.size.Size.ORIGINAL)                    // 🔹 원본 기준으로 자르기
+                    .transformations(CropTransparentTransformation())
+                    .size(coil.size.Size.ORIGINAL)
                     .build(),
                 contentDescription = petName,
                 modifier = Modifier
-                    .size(35.dp)          // 🔹 기존 로컬 캐릭터와 비슷한 실크기
+                    .size(35.dp)
                     .align(Alignment.Center),
                 contentScale = ContentScale.Fit,
                 onError = { error ->
@@ -89,6 +121,7 @@ fun Avatar(
                 }
             )
         } else {
+            // 기본 이미지
             Image(
                 painter = painterResourceCropped(resId = imageRes),
                 contentDescription = null,
