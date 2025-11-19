@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.commongroup.data
 
 import android.net.Uri
+import com.a307.linkcare.feature.commongroup.domain.GroupResponse
 import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.InvitationPreviewResponse
 import com.a307.linkcare.feature.commongroup.domain.InvitationResponse
@@ -322,6 +323,18 @@ class GroupRepository @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("GroupRepository", "그룹 삭제 예외: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    // 그룹 전체 조회
+    suspend fun getAllGroups(type: String?): List<GroupResponse> {
+        return try {
+            val result = api.getAllGroups(type)
+            android.util.Log.d("GroupRepository", "내 그룹 목록 조회 성공: type=$type, count=${result.size}")
+            result
+        } catch (e: Exception) {
+            android.util.Log.e("GroupRepository", "내 그룹 목록 조회 실패: type=$type, error=${e.message}", e)
+            emptyList()
         }
     }
 

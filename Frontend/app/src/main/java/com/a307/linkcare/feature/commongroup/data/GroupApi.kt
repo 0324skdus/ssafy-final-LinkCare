@@ -2,6 +2,7 @@ package com.a307.linkcare.feature.commongroup.data
 
 import com.a307.linkcare.feature.commongroup.domain.GroupCommentsResponse
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
+import com.a307.linkcare.feature.commongroup.domain.GroupResponse
 import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.InvitationPreviewResponse
 import com.a307.linkcare.feature.commongroup.domain.InvitationResponse
@@ -14,6 +15,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -157,4 +159,10 @@ interface GroupApi {
     suspend fun getGroupMemberComments(
         @Path("groupSeq") groupSeq: Long
     ): GroupCommentsResponse
+
+    // 그룹 status 별 조회
+    @GET("/api/groups")
+    suspend fun getAllGroups(
+        @Query("type") type: String? = null
+    ): List<GroupResponse>
 }

@@ -26,8 +26,9 @@ class WatchListenerService : WearableListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
-            .inject(this)
+        workoutRepository = EntryPoints.get(applicationContext, WorkoutServiceEntryPoint::class.java)
+            .workoutRepository()
+        Log.d("WatchListenerService", "Service created, repository initialized")
     }
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
@@ -86,19 +87,8 @@ class WatchListenerService : WearableListenerService() {
         if (messageEvent.path == "/linkcare/session") {
             val state = String(messageEvent.data)
             Log.d("DataLayer", "📨 Session state: $state")
-
-            // 현재 로그인한 사용자 ID 가져오기
-            val userId = TokenStore(applicationContext).getUserPk()
-            if (userId != null) {
-                exerciseSessionManager.updateSessionState(userId, state)
-                Log.d("DataLayer", "🏃 운동 상태 업데이트: userId=$userId, state=$state")
-            }
-
             sendBroadcast(Intent("SESSION_STATE_RECEIVED").apply {
                 putExtra("state", state)
-                if (userId != null) {
-                    putExtra("userId", userId)
-                }
             })
         }
     }

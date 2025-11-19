@@ -62,16 +62,24 @@ fun GroupSearch(
     onQueryChange: (String) -> Unit,
     onBack: () -> Unit,
     onJoinClick: (MyGroupResponse) -> Unit,
-    viewModel: GroupSearchViewModel = hiltViewModel()
+    viewModel: GroupSearchViewModel = hiltViewModel(),
 ) {
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+    // 초기 진입 시 타입별 전체 그룹 로드
+    LaunchedEffect(kind) {
+        viewModel.loadAllGroups(kind.uppercase())
+    }
+
     // 검색어가 변경될 때마다 검색 실행
     LaunchedEffect(query) {
         if (query.isNotBlank()) {
             viewModel.searchGroups(query)
+        } else {
+            // 검색어가 비어있으면 타입별 전체 그룹 보여주기
+            viewModel.loadAllGroups(kind.uppercase())
         }
     }
 
@@ -92,9 +100,6 @@ fun GroupSearch(
 
     Scaffold { padding ->
         when {
-            // 입력 없을 때
-            query.isBlank() -> {}
-
             // 로딩 중
             isLoading -> Box(
                 modifier = Modifier
@@ -113,7 +118,7 @@ fun GroupSearch(
                 message = "앗! 검색 결과가 없어요."
             )
 
-            // 결과 있음
+            // 결과 있음 (검색어가 있을 때 또는 전체 목록 보여줄 때)
             else -> LazyColumn(
                 modifier = Modifier
                     .padding(padding)

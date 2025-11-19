@@ -52,22 +52,22 @@ public class AlarmController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Operation(summary = "안 읽은 알림 목록 조회", description = "현재 로그인한 사용자의 읽지 않은 모든 알림을 조회합니다.")
+    @Operation(summary = "삭제되지 않는 모든 알림 목록 조회", description = "현재 로그인한 사용자의 삭제되지 않는 모든 알림을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
     })
-    @GetMapping("/unread")
-    public ResponseEntity<List<AlarmResponseDto>> getUnreadAlarms(
+    @GetMapping("/all")
+    public ResponseEntity<List<AlarmResponseDto>> getAllAlarms(
             Authentication authentication) {
 
         Long userId = Long.parseLong(authentication.getName());
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        log.info("안 읽은 알림 목록 조회 API 호출: userPk={}", user.getUserPk());
+        log.info("삭제되지 않는 모든 알림 목록 조회 API 호출: userPk={}", user.getUserPk());
 
-        List<AlarmResponseDto> response = alarmService.getUnreadAlarms(user);
+        List<AlarmResponseDto> response = alarmService.getAllAlarms(user);
 
         return ResponseEntity.ok(response);
     }
@@ -89,5 +89,24 @@ public class AlarmController {
         alarmService.readAlarm(alarmId, userId);
 
         return ResponseEntity.ok("알림을 성공적으로 읽음 처리했습니다.");
+    }
+
+
+    @Operation(summary = "알림 삭제", description = "특정 알림을 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "알림 삭제 성공"),
+            @ApiResponse(responseCode = "403", description = "해당 알림을 삭제할 권한이 없음"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음")
+    })
+    @DeleteMapping("/{alarmId}")
+    public ResponseEntity<Void> deleteAlarm(
+            @PathVariable Long alarmId,
+            Authentication authentication) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        alarmService.deleteAlarm(userId, alarmId);
+
+        log.info("콕/편지쓰기 삭제 API 호출: userId={}, alarmId={}", userId, alarmId);
+        return ResponseEntity.ok().build();
     }
 }
