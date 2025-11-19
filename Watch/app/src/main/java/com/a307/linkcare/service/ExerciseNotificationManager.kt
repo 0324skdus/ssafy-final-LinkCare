@@ -26,7 +26,7 @@ import androidx.core.app.NotificationCompat
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
 import com.a307.linkcare.R
-import com.a307.linkcare.app.MainActivity
+import com.a307.linkcare.core.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import javax.inject.Inject

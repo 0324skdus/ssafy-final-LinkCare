@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.component.atoms.Avatar
@@ -36,7 +37,8 @@ fun MemberRowCare(
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
     isSelf: Boolean = false,
-    onTapIconClick: (() -> Unit)? = null
+    onTapIconClick: (() -> Unit)? = null,
+    isExercising: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -53,7 +55,8 @@ fun MemberRowCare(
             petName = petName,
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
-            onBubbleVisibleChange = { showBubble = it }
+            onBubbleVisibleChange = { showBubble = it },
+            isExercising = isExercising
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -140,11 +143,14 @@ fun MemberRowCare(
 
             // 요약(summary)
             m.summary?.let {
+                val formattedSummary = it.replace(". ", ".\n")
                 Text(
-                    text = it,
+                    text = formattedSummary,
                     fontSize = 12.sp,
                     color = Color(0xFF888888),
-                    maxLines = 1
+                    maxLines = 3,
+                    lineHeight = 14.sp,
+                    textAlign = TextAlign.End
                 )
             }
         }
