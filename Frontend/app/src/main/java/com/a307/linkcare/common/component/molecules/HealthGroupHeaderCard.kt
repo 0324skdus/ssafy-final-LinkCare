@@ -13,6 +13,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -30,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.a307.linkcare.R
+import com.a307.linkcare.avatarTest.AvatarAnimator
+import com.a307.linkcare.avatarTest.AvatarSelection
+import com.a307.linkcare.avatarTest.Species
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.common.util.CropTransparentTransformation
 import kotlin.math.roundToInt
@@ -40,7 +45,8 @@ fun HealthGroupHeaderCard(
     @DrawableRes leaderAvatarRes: Int,
     @DrawableRes bgImgRes: Int,
     avatarUrl: String?,
-    backgroundUrl: String?
+    backgroundUrl: String?,
+    isLeaderExercising: Boolean = false
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -94,25 +100,51 @@ fun HealthGroupHeaderCard(
                     )
             )
 
-            // 리더 아바타
+            // 리더 아바타 (운동 중이면 애니메이션)
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(avatarUrl.takeUnless { it.isNullOrBlank() } ?: leaderAvatarRes)
-                        .crossfade(true)
-                        .transformations(CropTransparentTransformation())
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .offset(x = (-30).dp, y = (-10).dp),
-                    contentScale = ContentScale.Fit
-                )
+                if (isLeaderExercising && !avatarUrl.isNullOrBlank()) {
+                    // URL에서 species 추출
+                    val species = remember(avatarUrl) {
+                        when {
+                            avatarUrl.contains("bear", ignoreCase = true) -> Species.BEAR
+                            avatarUrl.contains("duck", ignoreCase = true) -> Species.DUCK
+                            else -> Species.BEAR
+                        }
+                    }
+
+                    AvatarAnimator(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .offset(x = (-30).dp, y = (-10).dp),
+                        selection = AvatarSelection(
+                            species = species,
+                            variant = 1,
+                            hatId = null,
+                            glassesId = null,
+                            animation = "walk"
+                        ),
+                        fps = 12
+                    )
+                } else {
+                    // 운동 안 할 때는 정적 이미지
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(avatarUrl.takeUnless { it.isNullOrBlank() } ?: leaderAvatarRes)
+                            .crossfade(true)
+                            .transformations(CropTransparentTransformation())
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .offset(x = (-30).dp, y = (-10).dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
 
             // 진행바
