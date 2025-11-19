@@ -49,8 +49,7 @@ import com.a307.linkcare.feature.commongroup.ui.User
 import com.a307.linkcare.feature.commongroup.domain.Member
 import kotlinx.coroutines.launch
 import com.a307.linkcare.feature.mypage.domain.GroupCharacterResponse
-import com.a307.linkcare.feature.healthgroup.domain.DailyActivitySummaryResponse
-import com.a307.linkcare.feature.healthgroup.domain.ExerciseSessionResponse
+import com.a307.linkcare.feature.healthgroup.domain.ActualActivity
 import kotlin.math.roundToInt
 
 @Composable
@@ -61,13 +60,12 @@ fun HealthMemberDetail(
     petName: String?,
     myCharInfo: GroupCharacterResponse?,
     today: HealthToday,
-    dailyActivity: DailyActivitySummaryResponse?,
+    dailyActivity: ActualActivity?,
     groupSeq: Long,
     onDismiss: () -> Unit,
     currentUserName: String = "나",
     maxWidth: Dp = 380.dp,
-    isLoading: Boolean = false,
-    goalCriteria: GoalCriteria? = null
+    isLoading: Boolean = false
 ) {
 
     val context = LocalContext.current
@@ -183,46 +181,60 @@ fun HealthMemberDetail(
                             }
                         }
                     } else {
-                        // 일일 활동
-                        val exercises = dailyActivity?.exercises ?: emptyList()
-                        val steps = dailyActivity?.steps ?: 0
+                        // 일일 활동 (ActualActivity 사용)
+                        val totalCalories = dailyActivity?.totalCalories?.toInt() ?: 0
+                        val totalDistance = dailyActivity?.totalDistances ?: 0.0
+                        val totalDuration = dailyActivity?.totalDuration ?: 0
+                        val totalDurationMin = (totalDuration / 60000).toInt()  // 밀리초 → 분
+                        val steps = dailyActivity?.totalSteps ?: 0
+
+                        val summary = if (dailyActivity == null) {
+                            "오늘 운동 기록이 없습니다"
+                        } else if (totalCalories > 0 || totalDuration > 0) {
+                            "${totalCalories} kcal 소모 (${totalDurationMin}분)"
+                        } else {
+                            "$steps 걸음"
+                        }
+
+                        val status = if (totalDurationMin >= 30) "양호" else if (totalDurationMin >= 15) "보통" else null
+
                         HealthAccordion(
                             icon = "🏃",
                             title = "일일 활동",
-                            summary = getActivitySummaryForResponse(exercises, steps),
-                            status = getActivityStatusForResponse(exercises)
+                            summary = summary,
+                            status = status
                         ) {
-                            if (exercises.isEmpty()) {
+                            if (dailyActivity == null || (totalCalories == 0 && totalDuration == 0 && steps == 0)) {
                                 EmptyDataText()
                             } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    exercises.forEachIndexed { idx, session ->
-                                        ActivitySessionCardForResponse(session, idx + 1)
-                                    }
-                                    HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 4.dp))
-                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    if (totalCalories > 0) {
                                         DetailRow(
                                             "총 칼로리 소모",
-                                            "${exercises.sumOf { it.calories.toInt() }} kcal",
+                                            "$totalCalories kcal",
                                             bold = true
                                         )
+                                    }
+                                    if (totalDuration > 0) {
                                         DetailRow(
                                             "총 운동 시간",
-                                            formatTotalDuration(exercises.sumOf { it.duration } / 1000),
+                                            "${totalDurationMin}분",
                                             bold = true
                                         )
+                                    }
+                                    if (totalDistance > 0) {
                                         DetailRow(
                                             "총 거리",
-                                            "${(exercises.sumOf { it.distance.toDouble() } / 1000).toFloat().round1()} km",
+                                            "${"%.2f".format(totalDistance)} km",
                                             bold = true
                                         )
-                                        if (steps > 0) {
-                                            DetailRow(
-                                                "걸음 수",
-                                                "$steps 걸음",
-                                                bold = true
-                                            )
-                                        }
+                                    }
+                                    if (steps > 0) {
+                                        DetailRow(
+                                            "걸음 수",
+                                            "$steps 걸음",
+                                            bold = true
+                                        )
                                     }
                                 }
                             }
@@ -258,7 +270,7 @@ fun HealthMemberDetail(
                         } else {
                             // 캐시 없으면 로드 시작 (LaunchedEffect가 완료 감지)
                             loadRequested = true
-                            suggestionViewModel.loadHealthGroupSuggestions(member.userPk, goalCriteria)
+                            suggestionViewModel.loadHealthGroupSuggestions(member.userPk, groupSeq)
                         }
                     },
                     modifier = Modifier
@@ -446,61 +458,6 @@ private fun HealthAccordion(
 }
 
 @Composable
-private fun ActivitySessionCardForResponse(session: ExerciseSessionResponse, index: Int) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF8F9FA),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                "운동 세션 $index",
-                fontWeight = FontWeight.SemiBold,
-                color = black,
-                fontSize = 14.sp
-            )
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MetricItem("칼로리", "${session.calories.toInt()} kcal")
-                    MetricItem("평균 심박수", "${session.meanPulseRate.toInt()} bpm")
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MetricItem("거리", "${(session.distance / 1000f).round1()} km")
-                    MetricItem("시간", formatDuration(session.duration / 1000))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MetricItem(label: String, value: String) {
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF6B7280)
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            value,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = black
-        )
-    }
-}
-
-@Composable
 private fun DetailRow(
     label: String,
     value: String,
@@ -560,27 +517,6 @@ private fun StatusBadge(status: String) {
             fontWeight = FontWeight.SemiBold,
             fontSize = 11.sp
         )
-    }
-}
-
-private fun getActivitySummaryForResponse(exercises: List<ExerciseSessionResponse>, steps: Int): String {
-    if (exercises.isEmpty() && steps == 0) return "오늘 운동 기록이 없습니다"
-    val totalCalories = exercises.sumOf { it.calories.toInt() }
-    val totalMin = exercises.sumOf { it.duration } / 1000 / 60  // 밀리초 -> 초 -> 분
-    return if (exercises.isNotEmpty()) {
-        "$totalCalories kcal 소모 (${totalMin}분)"
-    } else {
-        "$steps 걸음"
-    }
-}
-
-private fun getActivityStatusForResponse(exercises: List<ExerciseSessionResponse>): String? {
-    if (exercises.isEmpty()) return null
-    val totalMin = exercises.sumOf { it.duration } / 1000 / 60  // 밀리초 -> 초 -> 분
-    return when {
-        totalMin >= 30 -> "양호"
-        totalMin >= 15 -> "보통"
-        else -> "미달"
     }
 }
 
