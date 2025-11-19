@@ -10,6 +10,7 @@ import com.a307.linkcare.feature.mypage.data.ShopApi
 import com.a307.linkcare.feature.mypage.data.ShopRepository
 import com.a307.linkcare.feature.health.data.HealthSyncApi
 import com.a307.linkcare.feature.notification.data.NotificationApi
+import com.a307.linkcare.feature.watch.data.ExerciseSessionApi
 import com.a307.linkcare.feature.workout.data.remote.WorkoutApi
 import com.a307.linkcare.sdk.health.data.remote.HealthApiService
 import com.a307.linkcare.sdk.health.data.serializer.*
@@ -149,4 +150,9 @@ object NetworkModule {
     fun provideDecorateRepository(api: DecorateApi): DecorateRepository {
         return DecorateRepository(api)
     }
+
+    @Provides
+    @Singleton
+    fun provideExerciseSessionApi(retrofit: Retrofit): ExerciseSessionApi =
+        retrofit.create(ExerciseSessionApi::class.java)
 }
