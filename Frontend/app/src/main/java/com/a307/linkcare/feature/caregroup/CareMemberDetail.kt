@@ -1,6 +1,7 @@
 package com.a307.linkcare.feature.caregroup
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.window.Dialog
@@ -121,6 +123,7 @@ fun CareMemberDetail(
 ) {
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val isSelf = remember(member.userPk, TokenStore(context).getUserPk()) {
         member.userPk == TokenStore(context).getUserPk()
     }
@@ -465,11 +468,18 @@ fun CareMemberDetail(
 
                                 if (content.isNotBlank()) {
                                     // 편지 전송 API 호출
-                                    suggestionViewModel.sendLetterNotification(
-                                        receiverUserPk = member.userPk,
-                                        groupSeq = groupSeq,
-                                        content = content
-                                    )
+                                    scope.launch {
+                                        val result = suggestionViewModel.sendLetterNotification(
+                                            receiverUserPk = member.userPk,
+                                            groupSeq = groupSeq,
+                                            content = content
+                                        )
+                                        result.onSuccess {
+                                            Toast.makeText(context, "편지를 보냈어요!", Toast.LENGTH_SHORT).show()
+                                        }.onFailure { e ->
+                                            Toast.makeText(context, "편지 전송 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 }
                                 showLetter = false
                             }

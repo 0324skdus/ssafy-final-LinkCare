@@ -307,26 +307,27 @@ class AiSuggestionViewModel @Inject constructor(
     /**
      * 편지 알림을 서버에 전송
      */
-    fun sendLetterNotification(receiverUserPk: Long, groupSeq: Long, content: String) {
-        viewModelScope.launch {
-            try {
-                val request = SaveNotificationRequest(
-                    receiverUserPk = receiverUserPk,
-                    groupSeq = groupSeq,
-                    messageType = "LETTER",
-                    content = content
-                )
+    suspend fun sendLetterNotification(receiverUserPk: Long, groupSeq: Long, content: String): Result<Unit> {
+        try {
+            val request = SaveNotificationRequest(
+                receiverUserPk = receiverUserPk,
+                groupSeq = groupSeq,
+                messageType = "LETTER",
+                content = content
+            )
 
-                val response = notificationApi.saveNotification(request)
+            val response = notificationApi.saveNotification(request)
 
-                if (response.isSuccessful) {
-                    Log.d(tag, "[LETTER_NOTIFICATION] ✅ 편지 전송 성공: $content")
-                } else {
-                    Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 실패: ${response.code()} - ${response.message()}")
-                }
-            } catch (e: Exception) {
-                Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 예외: ${e.message}", e)
+            if (response.isSuccessful) {
+                Log.d(tag, "[LETTER_NOTIFICATION] ✅ 편지 전송 성공: $content")
+                return Result.success(Unit)
+            } else {
+                Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 실패: ${response.code()} - ${response.message()}")
+                return Result.failure(Exception("편지 전송 실패: ${response.code()}"))
             }
+        } catch (e: Exception) {
+            Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 예외: ${e.message}", e)
+            return Result.failure(e)
         }
     }
 
