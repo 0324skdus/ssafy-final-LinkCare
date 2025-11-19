@@ -30,7 +30,9 @@ fun CaloriesText(calories: Double?) {
                     fontSize = 20.sp
                 )
             } else {
-                Text(text = "--")
+                Text(text = "--",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray)
             }
             Text(
                 text = "cal",

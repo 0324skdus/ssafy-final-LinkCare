@@ -151,16 +151,28 @@ constructor(
     }
 
     suspend fun endExercise() {
+        if (!exerciseClient.isExerciseInProgress()) {
+            logger.log("Cannot end - no exercise in progress")
+            return
+        }
         logger.log("Ending exercise")
         exerciseClient.endExercise()
     }
 
     suspend fun pauseExercise() {
+        if (!exerciseClient.isExerciseInProgress()) {
+            logger.log("Cannot pause - no exercise in progress")
+            return
+        }
         logger.log("Pausing exercise")
         exerciseClient.pauseExercise()
     }
 
     suspend fun resumeExercise() {
+        if (!exerciseClient.isExerciseInProgress()) {
+            logger.log("Cannot resume - no exercise in progress")
+            return
+        }
         logger.log("Resuming exercise")
         exerciseClient.resumeExercise()
     }

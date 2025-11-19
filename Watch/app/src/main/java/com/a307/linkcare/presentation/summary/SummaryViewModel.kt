@@ -3,7 +3,7 @@ package com.a307.linkcare.presentation.summary
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.a307.linkcare.app.Screen
+import com.a307.linkcare.core.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Duration
 import javax.inject.Inject
