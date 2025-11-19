@@ -34,9 +34,9 @@ public class CharacterController {
     }
 
     @PostMapping("/main/{userCharacterId}")
-    public ResponseEntity<Void> changeMainCharacter(Authentication authentication, @PathVariable Long userCharacterId) {
+    public ResponseEntity<Void> changeMainCharacter(Authentication authentication, @PathVariable Long characterId) {
         Long userPk = Long.parseLong(authentication.getName());
-        characterService.changeMainCharacter(userPk, userCharacterId);
+        characterService.changeMainCharacter(userPk, characterId);
         return ResponseEntity.ok().build();
     }
 
