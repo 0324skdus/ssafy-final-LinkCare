@@ -240,9 +240,9 @@ fun HealthMemberDetail(
                 val aiSuggestions by suggestionViewModel.healthGroupSuggestions.collectAsState()
                 val isAiLoading by suggestionViewModel.isLoading.collectAsState()
 
-                // 로딩 완료 후 다이얼로그 열기
-                LaunchedEffect(loadRequested, isAiLoading, aiSuggestions) {
-                    if (loadRequested && !isAiLoading && aiSuggestions.isNotEmpty()) {
+                // 로딩 완료 후 다이얼로그 열기 (AI 실패해도 열림)
+                LaunchedEffect(loadRequested, isAiLoading) {
+                    if (loadRequested && !isAiLoading) {
                         showLetter = true
                         loadRequested = false
                     }

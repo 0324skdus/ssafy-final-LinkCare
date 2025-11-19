@@ -163,9 +163,12 @@ fun CareGroupHome(
 
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
+        Log.d("CareGroupHome", "========== LaunchedEffect triggered for groupSeq=$groupSeq ==========")
         myPageViewModel.loadGroupCharacters(groupSeq)
         groupViewModel.loadGroupDetail(groupSeq)
         healthViewModel.loadGroupStepStatistics(groupSeq)
+        Log.d("CareGroupHome", "Calling loadGroupMemberComments for groupSeq=$groupSeq")
+        healthViewModel.loadGroupMemberComments(groupSeq)  // 한줄평 로드
     }
 
     // TokenStore를 Hilt를 통해 가져옴
@@ -206,6 +209,9 @@ fun CareGroupHome(
     val currentUserName = remember {
         tokenStore.getName() ?: "나"
     }
+
+    // 그룹 멤버 한줄평 수집
+    val memberComments by healthViewModel.memberComments.collectAsState()
 
     // 동기화 상태 관찰
     val syncState by syncViewModel.syncState.collectAsState()
@@ -267,7 +273,11 @@ fun CareGroupHome(
         }
     }
 
-    val members = remember(membersResponse, stepUiState, healthFeedbackMap) {
+    val members = remember(membersResponse, stepUiState, healthFeedbackMap, memberComments) {
+        Log.d("CareGroupHome", "========== Creating members list ==========")
+        Log.d("CareGroupHome", "memberComments available: ${memberComments.size} comments")
+        Log.d("CareGroupHome", "memberComments map: $memberComments")
+
         // 총 거리
         val totalSteps = stepUiState.goal
         val stepsByUserSeq = stepUiState.members.associateBy(
@@ -308,12 +318,15 @@ fun CareGroupHome(
 
             Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
 
+            val bubbleText = memberComments[m.userSeq] ?: ""
+            Log.d("CareGroupHome", "Member ${m.userName} (userSeq=${m.userSeq}): bubbleText='$bubbleText'")
+
             Member(
                 name = m.userName,
                 progresses = steps,
                 goal = goal,
                 avatarRes = R.drawable.char_bear_1,   // TODO: m.mainCharacterBaseImageUrl 매핑
-                bubbleText = "",
+                bubbleText = bubbleText,
                 isLeader = m.isLeader,
                 userPk = m.userSeq,
                 status = status,
@@ -396,12 +409,7 @@ fun CareGroupHome(
         }
     )
 
-    val taps = remember {
-        mutableStateListOf(
-            Tap(1, "싸피님", "싸피님 3일째 수면이 부족합니다.", focused = true),
-            Tap(2, "아이님", "아이님 심박수가 낮습니다.")
-        )
-    }
+
 
     // 지표 탭 상태
     var metricType by rememberSaveable { mutableStateOf(MetricType.ACTIVITY) }
@@ -476,21 +484,7 @@ fun CareGroupHome(
                 }
             }
 
-                item {
-                    NudgeHost(
-                        items = taps,
-                        key = { it.id },
-                        message = { it.text },
-                        nameToBold = { it.name },
-                        focused = { it.focused },
-                        onDismiss = { taps.remove(it) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        onIconClick = { tapItem ->
-                            Log.d("NudgeIconClick", "Nudge icon clicked for item: ${tapItem.text}")
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
+
 
                 item {
                     HeaderCard(
@@ -535,9 +529,10 @@ fun CareGroupHome(
                             // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
                             scope.launch {
                                 aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
-                                // AI 생성 후 로그 출력
+                                // AI 생성 후 토스트 표시
                                 if (quickNudgeMessage.isNotEmpty()) {
                                     Log.d("MemberRowCare", "[AI 넛지] 그룹$groupSeq ${m.name}: $quickNudgeMessage")
+                                    Toast.makeText(context, "${m.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Log.d("MemberRowCare", "Tap icon clicked for member: ${m.name}")
                                 }

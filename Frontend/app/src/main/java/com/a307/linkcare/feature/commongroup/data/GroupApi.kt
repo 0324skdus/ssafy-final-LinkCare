@@ -1,5 +1,6 @@
 package com.a307.linkcare.feature.commongroup.data
 
+import com.a307.linkcare.feature.commongroup.domain.GroupCommentsResponse
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
 import com.a307.linkcare.feature.commongroup.domain.GroupTotalActivityStats
 import com.a307.linkcare.feature.commongroup.domain.InvitationPreviewResponse
@@ -150,4 +151,10 @@ interface GroupApi {
     suspend fun deleteGroup(
         @Path("groupSeq") groupSeq: Long
     ): Response<Unit>
+
+    // 그룹 멤버 한줄평 조회
+    @GET("/api/ai/comments/group/{groupSeq}")
+    suspend fun getGroupMemberComments(
+        @Path("groupSeq") groupSeq: Long
+    ): GroupCommentsResponse
 }
