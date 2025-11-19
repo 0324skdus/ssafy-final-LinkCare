@@ -44,6 +44,10 @@ build/
 gradle-app.setting
 .gradletasknamecache
 
+# Kotlin
+.kotlin/
+**/.kotlin/
+
 # Android Studio
 captures/
 .externalNativeBuild/
