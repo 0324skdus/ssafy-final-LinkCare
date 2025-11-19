@@ -676,7 +676,7 @@ fun CareGroupHome(
 
             LaunchedEffect(info.member.userPk) {
                 if (info.member.userPk > 0) {
-                    healthViewModel.loadHealthData(info.member.userPk.toInt())
+                    healthViewModel.loadHealthData(info.member.userPk.toInt(), selectedDate)
                 }
             }
 
