@@ -27,6 +27,7 @@ import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.domain.Member
 import org.apache.commons.lang3.text.FormattableUtils.append
+import android.util.Log
 
 @Composable
 fun MemberRowHealth(
@@ -39,7 +40,8 @@ fun MemberRowHealth(
     onClick: (() -> Unit)? = null,
     isSelf: Boolean = false,
     isDistanceMetric: Boolean = false,
-    unit: String = ""
+    unit: String = "",
+    onTapIconClick: (() -> Unit)? = null
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -145,7 +147,9 @@ fun MemberRowHealth(
             Image(
                 painter = painterResource(R.drawable.tap),
                 contentDescription = null,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier
+                    .size(30.dp)
+                    .then(if (onTapIconClick != null) Modifier.clickable { onTapIconClick() } else Modifier)
             )
         } else {
             Spacer(Modifier.width(8.dp))

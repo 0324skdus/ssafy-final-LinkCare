@@ -1,4 +1,4 @@
-package com.a307.linkcare.feature.mypage
+package com.a307.linkcare.feature.mypage.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,6 +21,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.mypage.domain.MyProfileResponse
 import java.util.Calendar
 
 enum class Gender { MALE, FEMALE }
@@ -32,7 +31,8 @@ data class Profile(
     val gender: Gender,
     val birthDate: String,   // yyyy-MM-dd
     val heightCm: Int,
-    val weightKg: Int
+    val weightKg: Int,
+    val petName: String?
 )
 
 fun MyProfileResponse.toProfile(): Profile =
@@ -41,7 +41,8 @@ fun MyProfileResponse.toProfile(): Profile =
         gender = if (gender == "남") Gender.MALE else Gender.FEMALE,
         birthDate = birth,
         heightCm = height.toInt(),
-        weightKg = weight.toInt()
+        weightKg = weight.toInt(),
+        petName = petName
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,7 @@ fun ProfileEditScreen(
     var gender by rememberSaveable { mutableStateOf(initial.gender) }
     var height by rememberSaveable { mutableStateOf(initial.heightCm.toString()) }
     var weight by rememberSaveable { mutableStateOf(initial.weightKg.toString()) }
+    var petName by rememberSaveable { mutableStateOf(initial.petName ?: "") }
 
     // 생년월일 파싱
     val (initY, initM, initD) = remember(initial.birthDate) {
@@ -80,7 +82,8 @@ fun ProfileEditScreen(
         gender != initial.gender ||
                 newBirthDate != initial.birthDate ||
                 heightInt != initial.heightCm ||
-                weightInt != initial.weightKg
+                weightInt != initial.weightKg ||
+                petName != initial.petName
 
     val isValid = validBirth && validHeight && validWeight
 
@@ -100,7 +103,8 @@ fun ProfileEditScreen(
                                 gender = gender,
                                 birthDate = newBirthDate,
                                 heightCm = heightInt ?: initial.heightCm,
-                                weightKg = weightInt ?: initial.weightKg
+                                weightKg = weightInt ?: initial.weightKg,
+                                petName = petName
                             )
                         )
                     },
@@ -141,6 +145,15 @@ fun ProfileEditScreen(
                         fontSize = 14.sp
                     )
                 }
+
+                // ----- 펫 이름 -----
+                Text("캐릭터 이름", color = black, style = MaterialTheme.typography.labelLarge)
+                LcInputField(
+                    value = petName,
+                    onValueChange = { petName = it },
+                    placeholder = "캐릭터 이름 입력",
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 // ----- 성별 -----
                 Text("성별", color = black, style = MaterialTheme.typography.labelLarge)

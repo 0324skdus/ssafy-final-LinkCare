@@ -18,6 +18,9 @@ import com.a307.linkcare.sdk.health.domain.sync.step.StepReader
 import com.a307.linkcare.sdk.health.domain.sync.waterIntake.WaterIntakeReader
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +46,9 @@ class HealthSyncViewModel @Inject constructor(
     ) : ViewModel() {
 
     private val TAG = "HealthSyncViewModel"
+
+    // Application scope - 화면 전환에 영향받지 않음
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     sealed class SyncState {
         object Idle : SyncState()
@@ -86,6 +92,52 @@ class HealthSyncViewModel @Inject constructor(
 
                 // 백엔드로 전송
                 val result = repository.uploadUserDailyHealthData(userId, healthData)
+
+                if (result.isSuccess) {
+                    Log.d(TAG, "Sync successful")
+                    _syncState.value = SyncState.Success("동기화 완료!")
+                } else {
+                    Log.e(TAG, "Sync failed: ${result.exceptionOrNull()?.message}")
+                    _syncState.value = SyncState.Error("동기화 실패: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Sync error", e)
+                _syncState.value = SyncState.Error("동기화 중 오류 발생: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * 전체 데이터 동기화 (백그라운드)
+     * 화면 전환에 영향받지 않고 계속 실행됨
+     */
+    fun syncAllHealthData() {
+        applicationScope.launch {
+            _syncState.value = SyncState.Loading
+            try {
+
+                val userId = tokenStore.getUserPk()?.toInt()
+                if (userId == null) {
+                    _syncState.value = SyncState.Error("사용자 정보를 찾을 수 없습니다")
+                    return@launch
+                }
+
+                Log.d(TAG, "Starting All Health data sync for user: $userId")
+                val healthData = readAllHealthData()
+
+                // 읽은 데이터 로그
+                Log.d(TAG, "=== 읽은 건강 데이터 ===")
+                Log.d(TAG, "ActivitySummary: ${healthData.activitySummary?.size} items")
+                Log.d(TAG, "HeartRate: ${healthData.heartRate?.size} items")
+                Log.d(TAG, "Sleep: ${healthData.sleep?.size} items")
+                Log.d(TAG, "WaterIntake: ${healthData.waterIntake?.size} items")
+                Log.d(TAG, "BloodPressure: ${healthData.bloodPressure?.size} items")
+                Log.d(TAG, "Exercise: ${healthData.exercise?.size} items")
+                Log.d(TAG, "Step: ${healthData.step?.size}")
+                Log.d(TAG, "=====================")
+
+                // 백엔드로 전송
+                val result = repository.uploadUserAllHealthData(userId, healthData)
 
                 if (result.isSuccess) {
                     Log.d(TAG, "Sync successful")
@@ -149,6 +201,56 @@ class HealthSyncViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Error reading steps", e)
                 null
+            }
+        )
+    }
+
+    /**
+     * 삼성헬스에서 하루치 데이터 읽기
+     */
+    private suspend fun readAllHealthData(): AllHealthData {
+        return AllHealthData(
+            activitySummary = try {
+                activitySummaryReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading activity summary", e)
+                emptyList()
+            },
+            heartRate = try {
+                heartRateReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading heart rate", e)
+                emptyList()
+            },
+            sleep = try {
+                sleepReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading sleep", e)
+                emptyList()
+            },
+            waterIntake = try {
+                waterIntakeReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading water intake", e)
+                emptyList()
+            },
+            bloodPressure = try {
+                bloodPressureReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading blood pressure", e)
+                emptyList()
+            },
+            exercise = try {
+                exerciseReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading exercise", e)
+                emptyList()
+            },
+            step = try {
+                stepReader.readAll(1L, null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading steps", e)
+                emptyList()
             }
         )
     }

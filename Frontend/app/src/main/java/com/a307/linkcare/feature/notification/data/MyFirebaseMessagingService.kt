@@ -173,64 +173,45 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
-        Log.d(TAG, "푸시 알림 수신: ${message.from}")
+        val notificationType = message.data["type"]
+        val groupType = message.data["groupType"]
+        val title = message.data["title"] ?: "LinkCare"
+        val body  = message.data["body"] ?: "새로운 알림이 있습니다"
 
-        // 알림 데이터가 있는 경우
-        if (message.data.isNotEmpty()) {
-            Log.d(TAG, "알림 데이터: ${message.data}")
-
-            // 알림 타입 확인
-            val notificationType = message.data["type"]
-            val groupType = message.data["groupType"]
-
-            // GROUP_JOIN_APPROVED 알림인 경우 자동 새로고침
+        // 타입에 따른 처리
+        if (!message.data.isNullOrEmpty()) {
             if (notificationType == "GROUP_JOIN_APPROVED") {
-                Log.d(TAG, "그룹 가입 승인 알림 수신, 자동 새로고침 트리거")
                 sendGroupJoinedBroadcast(groupType)
             }
 
-            // 데이터 타입 확인
-            when (message.data["type"]) {
-                "DAILY_SYNC" -> {
-                    Log.d(TAG, "일일 건강 데이터 동기화 요청 수신")
-                    handleDailySyncRequest()
-                }
-                "EXERCISE_SYNC" -> {
-                    Log.d(TAG, "운동 데이터 동기화 요청 수신")
-                    handleExerciseSyncRequest()
-                }
-                else -> {
-                    Log.d(TAG, "알 수 없는 타입: ${message.data["type"]}")
-                }
+            when (notificationType) {
+                "DAILY_SYNC" -> handleDailySyncRequest()
+                "EXERCISE_SYNC" -> handleExerciseSyncRequest()
+                else -> Log.d(TAG, "알 수 없는 타입: $notificationType")
             }
         }
 
-        // 알림 메시지가 있는 경우 (포그라운드/백그라운드 모두 알림 표시)
-        message.notification?.let {
-            Log.d(TAG, "알림 제목: ${it.title}")
-            Log.d(TAG, "알림 내용: ${it.body}")
-
-            // 앱이 포그라운드든 백그라운드든 항상 알림 표시
-            showNotification(it.title, it.body)
-
-            // 새 알림 브로드캐스트 전송 (UI 실시간 업데이트용)
-            sendNewNotificationBroadcast()
-        }
+        // 항상 우리가 직접 알림 + 브로드캐스트
+        showNotification(title, body)
+        sendNewNotificationBroadcast()
     }
 
     private fun sendNewNotificationBroadcast() {
+        Log.d(TAG, "📢 sendNewNotificationBroadcast 호출됨!")
+
         // SharedFlow를 사용한 이벤트 전송
         try {
             if (::notificationEventManager.isInitialized) {
                 serviceScope.launch {
+                    Log.d(TAG, "✅ SharedFlow emit 직전!")
                     notificationEventManager.notifyNewNotification()
-                    Log.d(TAG, "새 알림 이벤트 전송 (SharedFlow)")
+                    Log.d(TAG, "✅ SharedFlow emit 완료! (replay=1)")
                 }
             } else {
-                Log.w(TAG, "NotificationEventManager가 초기화되지 않음")
+                Log.w(TAG, "❌ NotificationEventManager가 초기화되지 않음")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "SharedFlow 이벤트 전송 실패: ${e.message}", e)
+            Log.e(TAG, "❌ SharedFlow 이벤트 전송 실패: ${e.message}", e)
         }
 
         // 기존 브로드캐스트도 유지 (호환성)
@@ -239,7 +220,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
         sendBroadcast(intent)
-        Log.d(TAG, "새 알림 브로드캐스트 전송 (Backup)")
+        Log.d(TAG, "📻 브로드캐스트 전송 완료 (Backup)")
     }
 
     private fun sendGroupJoinedBroadcast(groupType: String?) {
