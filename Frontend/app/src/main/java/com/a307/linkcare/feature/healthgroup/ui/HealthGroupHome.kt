@@ -184,14 +184,24 @@ fun HealthGroupHome(
     // ⑥ AI 빠른 넛지 메시지
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
 
+    // 그룹 멤버 한줄평 수집
+    val memberComments by goalVm.memberComments.collectAsState()
+
     // -------------------------
 
-    val members = remember(membersResponse, characterMap) {
+    val members = remember(membersResponse, characterMap, memberComments) {
+        Log.d("HealthGroupHome", "========== Creating members list ==========")
+        Log.d("HealthGroupHome", "memberComments available: ${memberComments.size} comments")
+        Log.d("HealthGroupHome", "memberComments map: $memberComments")
+
         membersResponse.map { m ->
             val charInfo = characterMap[m.userSeq]
             val avatarUrl = charInfo?.mainCharacterImageUrl
             val bgUrl = charInfo?.mainBackgroundImageUrl
             val petName = charInfo?.petName
+
+            val bubbleText = memberComments[m.userSeq] ?: "AI 추천 메시지 준비중..."
+            Log.d("HealthGroupHome", "Member ${m.userName} (userSeq=${m.userSeq}): bubbleText='$bubbleText'")
 
             Member(
                 name = m.userName,
@@ -199,7 +209,7 @@ fun HealthGroupHome(
                 isLeader = m.isLeader,
                 progresses = 0,
                 goal = detail?.goalCriteria?.minStep ?: 30000,
-                bubbleText = "AI 추천 메시지 준비중...",
+                bubbleText = bubbleText,
                 userPk = m.userSeq
             )
         }
@@ -273,9 +283,12 @@ fun HealthGroupHome(
 
     // --- 데이터 요청 트리거 ---
     LaunchedEffect(groupSeq) {
+        Log.d("HealthGroupHome", "========== LaunchedEffect triggered for groupSeq=$groupSeq ==========")
         vm.loadGroupDetail(groupSeq)
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         goalVm.loadCurrentGoals(groupSeq, today.format(formatter))
+        Log.d("HealthGroupHome", "Calling loadGroupMemberComments for groupSeq=$groupSeq")
+        goalVm.loadGroupMemberComments(groupSeq)  // 한줄평 로드
     }
 
     LaunchedEffect(selectedDate, members) {
@@ -328,7 +341,8 @@ fun HealthGroupHome(
                 totalGroupGoal = currentGoalValue.toInt()
             }
             is HealthGroupHomeViewModel.GoalState.Error -> {
-                scope.launch { snackbar.showSnackbar("목표 조회 실패: ${state.msg}") }
+                // 에러 발생 시 사용자에게 토스트를 보여주지 않고 조용히 처리
+                android.util.Log.e("HealthGroupHome", "목표 조회 실패: ${state.msg}")
             }
             is HealthGroupHomeViewModel.GoalState.Loading -> {
 //                android.util.Log.d("HealthGroupHome", "⏳ UI: Loading 상태")
@@ -582,9 +596,10 @@ fun HealthGroupHome(
                             // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
                             scope.launch {
                                 aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk, goalCriteria)
-                                // AI 생성 후 로그 출력
+                                // AI 생성 후 토스트 표시
                                 if (quickNudgeMessage.isNotEmpty()) {
                                     Log.d("MemberRowHealth", "[AI 넛지] 그룹$groupSeq ${member.name}: $quickNudgeMessage")
+                                    Toast.makeText(context, "${member.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
                                 }
@@ -742,8 +757,9 @@ fun HealthGroupHome(
                     petName = info.petName,
                     myCharInfo = myCharInfo,
                     today = todayHealthByName[info.member.name] ?: HealthToday(),
-                    onDismiss = { selectedMember = null },
                     dailyActivity = todayActivityByUserPk[info.member.userPk.toInt()],
+                    groupSeq = groupSeq,
+                    onDismiss = { selectedMember = null },
                     isLoading = isLoadingDailyActivity,
                     goalCriteria = goalCriteria  // ④ AI 제안에 목표값 전달
                 )
