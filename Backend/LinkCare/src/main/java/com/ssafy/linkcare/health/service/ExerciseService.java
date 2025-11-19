@@ -125,6 +125,7 @@ public class ExerciseService {
         // ExerciseSession 생성
         ExerciseSession session = ExerciseSession.builder()
                 .exercise(exercise)
+                .exerciseType("WALKING")
                 .calories(data.getCalories())
                 .distance(data.getDistance())
                 .duration(data.getDurationSec())
@@ -678,6 +679,7 @@ public class ExerciseService {
                 .map(dto -> ExerciseSessionResponse.builder()
                         .startTime(dto.getStartTime())
                         .endTime(dto.getEndTime())
+                        .exerciseType(dto.getExerciseType())
                         .calories(dto.getCalories())
                         .distance(dto.getDistance())
                         .duration(dto.getDuration())

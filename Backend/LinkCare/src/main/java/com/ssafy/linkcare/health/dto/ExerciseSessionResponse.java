@@ -27,6 +27,7 @@ public class ExerciseSessionResponse {
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private String exerciseType;
     private Float distance;
     private Float calories;
     private Integer meanPulseRate;
