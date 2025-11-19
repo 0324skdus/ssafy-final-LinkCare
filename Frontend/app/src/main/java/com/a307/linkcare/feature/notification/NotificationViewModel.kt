@@ -130,13 +130,13 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    // 안 읽은 알림 로드 (POKE, LETTER)
-    fun loadUnreadAlarms() {
+    // 모든 알림 로드 (POKE, LETTER) - read 상태 구분하여 표시
+    fun loadAllAlarms() {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "[LOAD_ALARMS] 안 읽은 알림 조회 시작")
+            Log.d("NotificationViewModel", "[LOAD_ALARMS] 모든 알림 조회 시작")
 
             try {
-                val response = notificationApi.getUnreadAlarms()
+                val response = notificationApi.getAllAlarms()
 
                 if (response.isSuccessful && response.body() != null) {
                     val allAlarms: List<AlarmResponse> = response.body()!!
@@ -150,8 +150,8 @@ class NotificationViewModel @Inject constructor(
                     _letterAlarms.value = letters
 
                     Log.d("NotificationViewModel", "[LOAD_ALARMS] ✅ 성공: 전체 ${allAlarms.size}개")
-                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 콕 찌르기: ${pokes.size}개")
-                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 편지: ${letters.size}개")
+                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 콕 찌르기: ${pokes.size}개 (읽음: ${pokes.count { it.read }}, 안읽음: ${pokes.count { !it.read }})")
+                    Log.d("NotificationViewModel", "[LOAD_ALARMS]   - 편지: ${letters.size}개 (읽음: ${letters.count { it.read }}, 안읽음: ${letters.count { !it.read }})")
                 } else {
                     Log.e("NotificationViewModel", "[LOAD_ALARMS] ❌ 실패: HTTP ${response.code()}")
                 }
@@ -233,6 +233,37 @@ class NotificationViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e("NotificationViewModel", "[MARK_ALL_READ] ❌ 전체 처리 예외", e)
+            }
+        }
+    }
+
+    // 알림 삭제 (Alarm용)
+    fun deleteAlarm(alarmId: Long) {
+        viewModelScope.launch {
+            Log.d("NotificationViewModel", "[DELETE_ALARM] 알림 삭제 시작: alarmId=$alarmId")
+
+            try {
+                val response = notificationApi.deleteAlarm(alarmId)
+
+                if (response.isSuccessful) {
+                    Log.d("NotificationViewModel", "[DELETE_ALARM] ✅ 서버 삭제 성공")
+
+                    // 로컬 상태에서 제거
+                    val updated: List<AlarmResponse> = _alarms.value.filter { it.alarmId != alarmId }
+                    _alarms.value = updated
+
+                    // 다시 분리
+                    val pokes: List<AlarmResponse> = updated.filter { it.messageType == "POKE" }
+                    val letters: List<AlarmResponse> = updated.filter { it.messageType == "LETTER" }
+                    _pokeAlarms.value = pokes
+                    _letterAlarms.value = letters
+
+                    Log.d("NotificationViewModel", "[DELETE_ALARM] 로컬 상태 업데이트 완료")
+                } else {
+                    Log.e("NotificationViewModel", "[DELETE_ALARM] ❌ 서버 삭제 실패: HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("NotificationViewModel", "[DELETE_ALARM] ❌ 예외 발생", e)
             }
         }
     }

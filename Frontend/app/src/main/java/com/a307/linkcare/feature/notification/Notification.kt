@@ -17,7 +17,7 @@ fun Notification(
 
     // 화면 진입 시 알림 로드
     LaunchedEffect(Unit) {
-        viewModel.loadUnreadAlarms()
+        viewModel.loadAllAlarms()
         viewModel.loadNotifications("GROUP")
     }
 
