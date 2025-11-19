@@ -8,9 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
@@ -88,7 +90,11 @@ fun SummaryScreen(
             item {
                 Button(
                     label = { Text(stringResource(id = R.string.restart)) },
-                    onClick = onRestartClick
+                    onClick = onRestartClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4A89F6),
+                        contentColor = Color.White
+                    )
                 )
             }
         }

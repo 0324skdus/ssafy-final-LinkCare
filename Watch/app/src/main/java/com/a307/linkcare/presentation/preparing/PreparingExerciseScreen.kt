@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.CurvedLayout
 import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.curvedText
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
@@ -165,6 +166,12 @@ fun PreparingExerciseScreen(
             val backgroundRes = when (backgroundId) {
                 1 -> R.drawable.background_default
                 2 -> R.drawable.background_2
+                3 -> R.drawable.background_3
+                4 -> R.drawable.background_4
+                5 -> R.drawable.background_5
+                6 -> R.drawable.background_6
+                7 -> R.drawable.background_7
+                8 -> R.drawable.background_8
                 else -> R.drawable.background_default
             }
 
@@ -177,9 +184,12 @@ fun PreparingExerciseScreen(
 
             // 🔥 5) 캐릭터 리소스 매핑 (Int 기반)
             val characterRes = when (characterId) {
-                1 -> R.drawable.duck_walk1
-                2 -> R.drawable.bear_walk1
-                else -> R.drawable.duck_walk1
+                1 -> R.drawable.bear_walk1
+                2 -> R.drawable.bear2_walk1
+                3 -> R.drawable.bear3_walk1
+                4 -> R.drawable.duck_walk1
+                5 -> R.drawable.duck2_walk1
+                else -> R.drawable.bear_walk1
             }
 
             Image(
@@ -190,7 +200,6 @@ fun PreparingExerciseScreen(
                     .align(Alignment.Center)
                     .fillMaxWidth(1.0f)
                     .scale(1.5f)
-                    .offset(x = 10.dp, y = 8.dp)
             )
 
             // Start 버튼 등 나머지 UI
@@ -203,7 +212,11 @@ fun PreparingExerciseScreen(
             ) {
                 FilledIconButton(
                     onClick = onStart,
-                    enabled = uiState is PreparingScreenState.Preparing
+                    enabled = uiState is PreparingScreenState.Preparing,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color(0xFF4A89F6),
+                        contentColor = Color.White
+                    )
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
