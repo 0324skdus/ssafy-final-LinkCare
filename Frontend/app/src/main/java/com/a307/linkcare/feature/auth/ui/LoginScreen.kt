@@ -489,14 +489,28 @@ private fun syncThemeToWatch(context: Context) {
 
 /**
  * 캐릭터 이미지 URL에서 캐릭터 ID 추출
- * 예: char_duck_1 -> 1, char_bear_1 -> 2
+ * URL 형식: Characters/bear/v1/base.png, Characters/duck/v2/base.png 등
+ * 워치 ID 매핑: 1=bear_v1, 2=bear_v2, 3=bear_v3, 4=duck_v1, 5=duck_v2
  */
 private fun extractCharacterId(url: String?): Int? {
     if (url == null) return null
+
+    val isBear = url.contains("bear", ignoreCase = true)
+    val isDuck = url.contains("duck", ignoreCase = true)
+
+    // variant 추출 (v1, v2, v3)
+    val variantMatch = Regex("/(v\\d)/").find(url)
+    val variant = variantMatch?.groupValues?.get(1) ?: "v1"
+
     return when {
-        url.contains("duck") -> 1
-        url.contains("bear") -> 2
-        else -> null
+        isBear && variant == "v1" -> 1
+        isBear && variant == "v2" -> 2
+        isBear && variant == "v3" -> 3
+        isDuck && variant == "v1" -> 4
+        isDuck && variant == "v2" -> 5
+        isBear -> 1  // fallback
+        isDuck -> 4  // fallback
+        else -> 1
     }
 }
 
