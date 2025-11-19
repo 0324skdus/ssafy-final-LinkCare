@@ -34,7 +34,8 @@ fun MemberRowCare(
     bubbleVisible: Boolean,
     onAvatarToggle: () -> Unit,
     onClick: (() -> Unit)? = null,
-    isSelf: Boolean = false
+    isSelf: Boolean = false,
+    isExercising: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -51,7 +52,8 @@ fun MemberRowCare(
             petName = petName,
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
-            onBubbleVisibleChange = { showBubble = it }
+            onBubbleVisibleChange = { showBubble = it },
+            isExercising = isExercising
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

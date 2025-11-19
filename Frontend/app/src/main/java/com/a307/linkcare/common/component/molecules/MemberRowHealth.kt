@@ -39,7 +39,8 @@ fun MemberRowHealth(
     onClick: (() -> Unit)? = null,
     isSelf: Boolean = false,
     isDistanceMetric: Boolean = false,
-    unit: String = ""
+    unit: String = "",
+    isExercising: Boolean = false
 ) {
     var showBubble by remember { mutableStateOf(false) }
     Row(
@@ -57,6 +58,7 @@ fun MemberRowHealth(
             bubbleText = m.bubbleText,
             bubbleVisible = showBubble,
             onBubbleVisibleChange = { showBubble = it },
+            isExercising = isExercising
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

@@ -99,7 +99,18 @@ fun HealthGroupHome(
     val context = LocalContext.current
     val activity = context as Activity
 
+    // ExerciseSessionManager 주입 (Singleton via EntryPoint)
+    val exerciseSessionManager = remember {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            com.a307.linkcare.feature.caregroup.ExerciseSessionEntryPoint::class.java
+        ).exerciseSessionManager()
+    }
+
     val permissionState by healthPermissionViewModel.state.collectAsState()
+
+    // 운동 중인 사용자 ID 목록
+    val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
     // 화면 들어올 때 한 번 권한 상태 체크
     LaunchedEffect(Unit) {
@@ -534,6 +545,7 @@ fun HealthGroupHome(
                     val avatarUrl = charInfo?.mainCharacterImageUrl
                     val bgUrl = charInfo?.mainBackgroundImageUrl
                     val petName = charInfo?.petName
+                    val isExercising = member.userPk > 0 && exercisingUserIds.contains(member.userPk)
 
                     MemberRowHealth(
                         m = member.copy(progresses = progress, goal = goal),
@@ -545,6 +557,7 @@ fun HealthGroupHome(
                             expandedMemberName =
                                 if (expandedMemberName == member.name) null else member.name
                         },
+                        isExercising = isExercising,
                         onClick = {
                             val charInfo = characterMap[member.userPk]
                             selectedMember = MemberDetailInfo(
