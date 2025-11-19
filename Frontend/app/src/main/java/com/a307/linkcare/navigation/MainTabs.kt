@@ -658,7 +658,42 @@ fun MainTabs(
 
                 // 그룹 조회
                 composable(Route.MyGroups.route) {
-                    MyGroups(navController = navController)
+                    MyGroups(
+                        navController = navController,
+                        onGroupClick = { group ->
+                            // PENDING 상태면 클릭 불가
+                            if (group.isPending) return@MyGroups
+
+                            when (group.type) {
+                                com.a307.linkcare.feature.mypage.ui.GroupType.CARE -> {
+                                    // 케어 그룹 선택
+                                    val index = careGroups.indexOfFirst { it.groupSeq == group.id }
+                                    if (index != -1) {
+                                        selectedIndexCare = index
+                                        selectedCareGroup = group.id
+                                    }
+                                    // 케어 탭으로 이동
+                                    navController.navigate(Route.Care.route) {
+                                        popUpTo(Route.Main.route) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                                com.a307.linkcare.feature.mypage.ui.GroupType.HEALTH -> {
+                                    // 헬스 그룹 선택
+                                    val index = healthGroups.indexOfFirst { it.groupSeq == group.id }
+                                    if (index != -1) {
+                                        selectedIndexHealth = index
+                                        selectedHealthGroup = group.id
+                                    }
+                                    // 헬스 탭으로 이동
+                                    navController.navigate(Route.Health.route) {
+                                        popUpTo(Route.Main.route) { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+                        }
+                    )
                 }
 
                 composable(Route.Store.route) {
