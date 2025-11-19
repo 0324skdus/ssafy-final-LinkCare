@@ -51,6 +51,9 @@ class NotificationViewModel @Inject constructor(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
@@ -95,6 +98,7 @@ class NotificationViewModel @Inject constructor(
             if (!silent) {
                 _isLoading.value = true
             }
+            _isRefreshing.value = true
             _errorMessage.value = null
 
             repository.getMyNotifications(category)
@@ -114,6 +118,7 @@ class NotificationViewModel @Inject constructor(
             if (!silent) {
                 _isLoading.value = false
             }
+            _isRefreshing.value = false
 
             Log.d("NotificationViewModel", "loadNotifications 완료")
         }
@@ -123,6 +128,7 @@ class NotificationViewModel @Inject constructor(
     fun loadAllAlarms() {
         viewModelScope.launch {
             Log.d("NotificationViewModel", "[LOAD_ALARMS] 모든 알림 조회 시작")
+            _isRefreshing.value = true
 
             try {
                 val response = notificationApi.getAllAlarms()
@@ -141,6 +147,7 @@ class NotificationViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("NotificationViewModel", "[LOAD_ALARMS] ❌ 예외", e)
             }
+            _isRefreshing.value = false
         }
     }
 
