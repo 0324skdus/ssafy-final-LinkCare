@@ -63,7 +63,7 @@ class OnboardingViewModel @Inject constructor(
                     weight = f.weight,
                     gender = f.gender,
                     exerciseStartYear = null,
-                    petName = f.petName
+                    petName = null
                 )
 
                 // 초기 캐릭터 선택 API
