@@ -119,8 +119,7 @@ fun HealthGroupHeaderCard(
 
                     AvatarAnimator(
                         modifier = Modifier
-                            .size(150.dp)
-                            .offset(x = (-30).dp, y = (-10).dp),
+                            .offset(x = 70.dp, y = (-40).dp),
                         selection = AvatarSelection(
                             species = species,
                             variant = 1,
