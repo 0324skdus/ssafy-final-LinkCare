@@ -48,6 +48,31 @@ class GroupSearchViewModel @Inject constructor(
         }
     }
 
+    fun loadAllGroups(type: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            val groups = repo.getAllGroups(type)
+            _searchResults.value = groups.map { groupResponse ->
+                // GroupResponse를 MyGroupResponse로 변환
+                MyGroupResponse(
+                    groupSeq = groupResponse.groupSeq.toLong(),
+                    groupName = groupResponse.groupName,
+                    groupDescription = groupResponse.groupDescription,
+                    currentMembers = groupResponse.currentMembers,
+                    capacity = groupResponse.capacity,
+                    imageUrl = groupResponse.imageUrl ?: "",
+                    type = groupResponse.type,
+                    createdAt = groupResponse.createdAt,
+                    joinStatus = groupResponse.joinStatus
+                )
+            }
+
+            _isLoading.value = false
+        }
+    }
+
     suspend fun joinGroup(groupSeq: Long, permissions: PermissionAgreementDto): Result<Unit> {
         return repo.joinGroupBySearch(groupSeq, permissions)
     }
