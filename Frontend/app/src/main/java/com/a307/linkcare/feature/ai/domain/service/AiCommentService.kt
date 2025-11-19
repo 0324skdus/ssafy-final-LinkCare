@@ -18,6 +18,7 @@ import com.a307.linkcare.feature.commongroup.data.GroupRepository
 import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.commongroup.domain.GroupDetailResponse
 import com.a307.linkcare.feature.commongroup.domain.MyGroupResponse
+import com.a307.linkcare.feature.healthgroup.data.HealthGroupRepository
 import com.a307.linkcare.sdk.health.domain.sync.exercise.ExerciseReader
 import com.a307.linkcare.sdk.health.domain.sync.heartRate.HeartRateReader
 import com.a307.linkcare.sdk.health.domain.sync.step.StepReader
@@ -42,6 +43,7 @@ class AiCommentService @Inject constructor(
     private val application: Application,
     private val aiApi: AiApi,
     private val groupRepository: GroupRepository,
+    private val healthGroupRepository: HealthGroupRepository,
     private val loadModelUseCase: LoadModelUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val tokenStore: TokenStore,
@@ -112,7 +114,7 @@ class AiCommentService @Inject constructor(
     /**
      * ② wellness-self: 헬스 그룹용 본인 운동 상태 요약
      * - 모든 헬스 그룹에 대해 실행
-     * - 각 그룹의 목표값 포함
+     * - 각 그룹의 selectedMetricType과 1인 하루 목표값 포함
      * - wellness_self.gguf 모델 사용
      * - POST /api/ai/comment
      */
@@ -142,11 +144,18 @@ class AiCommentService @Inject constructor(
 
             // 4. 각 그룹별로 코멘트 생성 및 저장
             for (group in healthGroups) {
-                // 4-1. 그룹 상세 정보 조회 (목표값 포함)
-                val groupDetail = groupRepository.getGroupDetail(group.groupSeq)
+                // 4-1. 개인 일일 목표 조회
+                val dailyGoal = getDailyPersonalGoal(group.groupSeq)
+                if (dailyGoal == null) {
+                    Log.w(tag, "[WELLNESS_SELF] ⚠️ 그룹 목표 없음: ${group.groupName}")
+                    continue
+                }
 
                 // 4-2. 목표값 추가
-                val dataWithGoal = addGoalData(todayHealthData, groupDetail.goalCriteria)
+                val dataWithGoal = todayHealthData.copy(
+                    bestMetric = dailyGoal.first,
+                    bestValue = dailyGoal.second
+                )
 
                 // 4-3. AI 코멘트 생성
                 val comment = generateComment(dataWithGoal, modelInfo)
@@ -212,16 +221,16 @@ class AiCommentService @Inject constructor(
 
     /**
      * ④ wellness-other: 헬스 그룹 멤버 격려 메시지 (3문장)
-     * - 특정 사용자의 운동 데이터 + 그룹 목표값 포함
+     * - 특정 사용자의 운동 데이터 + 헬스 그룹 목표값 포함
      * - wellness_other.gguf 모델 사용
      * - UI에 표시용 (서버 저장 안 함)
      */
     suspend fun generateHealthGroupMemberEncouragement(
         userSeq: Long,
-        goalCriteria: GoalCriteria?
+        groupSeq: Long
     ): Result<List<String>> {
         return try {
-            Log.d(tag, "[WELLNESS_OTHER] ④ 헬스 멤버 격려 메시지 생성: userSeq=$userSeq")
+            Log.d(tag, "[WELLNESS_OTHER] ④ 헬스 멤버 격려 메시지 생성: userSeq=$userSeq, groupSeq=$groupSeq")
 
             // 1. 사용자 운동 데이터 조회
             val stats = getUserHealthStats(userSeq).getOrElse {
@@ -229,11 +238,21 @@ class AiCommentService @Inject constructor(
             }
             Log.d(tag, "[WELLNESS_OTHER] 사용자 데이터: $stats")
 
-            // 2. HealthData로 변환 + 목표값 추가
-            val healthData = convertStatsToHealthData(stats)
-            val dataWithGoal = addGoalData(healthData, goalCriteria)
+            // 2. 개인 일일 목표 조회
+            val dailyGoal = getDailyPersonalGoal(groupSeq)
+            if (dailyGoal == null) {
+                Log.w(tag, "[WELLNESS_OTHER] ⚠️ 그룹 목표 없음")
+                return Result.failure(Exception("그룹 목표를 찾을 수 없습니다"))
+            }
 
-            // 3. wellness_other 모델 로드
+            // 3. HealthData로 변환 + 목표값 추가
+            val healthData = convertStatsToHealthData(stats)
+            val dataWithGoal = healthData.copy(
+                bestMetric = dailyGoal.first,
+                bestValue = dailyGoal.second
+            )
+
+            // 4. wellness_other 모델 로드
             val modelInfo = getModelInfo(ModelCategory.WELLNESS, ModelPerspective.OTHER)
                 ?: return Result.failure(Exception("wellness_other 모델을 찾을 수 없습니다"))
 
@@ -241,11 +260,11 @@ class AiCommentService @Inject constructor(
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
 
-            // 4. AI 코멘트 생성 (3문장)
+            // 5. AI 코멘트 생성 (3문장)
             val comment = generateComment(dataWithGoal, modelInfo)
             Log.d(tag, "[WELLNESS_OTHER] 생성된 격려 메시지: $comment")
 
-            // 5. 3문장으로 분리
+            // 6. 3문장으로 분리
             val sentences = parseSentences(comment, expectedCount = 3)
 
             Result.success(sentences)
@@ -302,21 +321,31 @@ class AiCommentService @Inject constructor(
      */
     suspend fun generateQuickWellnessNudgeMessage(
         userSeq: Long,
-        goalCriteria: GoalCriteria?
+        groupSeq: Long
     ): Result<String> {
         return try {
-            Log.d(tag, "[WELLNESS_SHORT] ⑥ 빠른 넛지 메시지 생성: userSeq=$userSeq")
+            Log.d(tag, "[WELLNESS_SHORT] ⑥ 빠른 넛지 메시지 생성: userSeq=$userSeq, groupSeq=$groupSeq")
 
             // 1. 사용자 운동 데이터 조회
             val stats = getUserHealthStats(userSeq).getOrElse {
                 return Result.failure(it)
             }
 
-            // 2. HealthData로 변환 + 목표값 추가
-            val healthData = convertStatsToHealthData(stats)
-            val dataWithGoal = addGoalData(healthData, goalCriteria)
+            // 2. 개인 일일 목표 조회
+            val dailyGoal = getDailyPersonalGoal(groupSeq)
+            if (dailyGoal == null) {
+                Log.w(tag, "[WELLNESS_SHORT] ⚠️ 그룹 목표 없음")
+                return Result.failure(Exception("그룹 목표를 찾을 수 없습니다"))
+            }
 
-            // 3. wellness_other_short 모델 로드
+            // 3. HealthData로 변환 + 목표값 추가
+            val healthData = convertStatsToHealthData(stats)
+            val dataWithGoal = healthData.copy(
+                bestMetric = dailyGoal.first,
+                bestValue = dailyGoal.second
+            )
+
+            // 4. wellness_other_short 모델 로드
             val modelInfo = getModelInfo(ModelCategory.WELLNESS, ModelPerspective.OTHER_SHORT)
                 ?: return Result.failure(Exception("wellness_other_short 모델을 찾을 수 없습니다"))
 
@@ -324,7 +353,7 @@ class AiCommentService @Inject constructor(
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
 
-            // 4. AI 코멘트 생성 (짧은 메시지)
+            // 5. AI 코멘트 생성 (짧은 메시지)
             val comment = generateComment(dataWithGoal, modelInfo)
             Log.d(tag, "[WELLNESS_SHORT] 생성된 넛지 메시지: $comment")
 
@@ -336,6 +365,57 @@ class AiCommentService @Inject constructor(
     }
 
     // ========== Private Helper Functions ==========
+
+    /**
+     * 그룹의 개인 일일 목표 조회
+     * @param groupSeq 헬스 그룹 ID
+     * @return Pair(지표명, 목표값) 또는 null
+     */
+    private suspend fun getDailyPersonalGoal(groupSeq: Long): Pair<String, String>? {
+        return try {
+            // 1. 그룹 목표 조회
+            val goalResponse = healthGroupRepository.getCurrentGoals(groupSeq).getOrNull()
+            if (goalResponse == null) {
+                Log.w(tag, "[GET_DAILY_GOAL] ⚠️ 그룹 목표 없음: groupSeq=$groupSeq")
+                return null
+            }
+
+            // 2. 그룹 멤버수 조회
+            val groupDetail = groupRepository.getGroupDetail(groupSeq)
+            val memberCount = groupDetail.currentMembers.coerceAtLeast(1)
+
+            // 3. selectedMetricType에 따른 개인 일일 목표 계산
+            val (metricName, goalValue) = when (goalResponse.selectedMetricType ?: "STEPS") {
+                "STEPS" -> {
+                    val dailyGoal = (goalResponse.goalSteps / memberCount / 7).toInt()
+                    "걸음수" to dailyGoal.toString()
+                }
+                "KCAL" -> {
+                    val dailyGoal = (goalResponse.goalKcal / memberCount / 7).toInt()
+                    "칼로리" to dailyGoal.toString()
+                }
+                "DURATION" -> {
+                    val dailyGoal = (goalResponse.goalDuration / memberCount / 7).toInt()
+                    "운동시간" to dailyGoal.toString()
+                }
+                "DISTANCE" -> {
+                    val dailyGoal = (goalResponse.goalDistance / memberCount / 7)
+                    "거리" to String.format("%.1f", dailyGoal)
+                }
+                else -> {
+                    // 기본값: STEPS
+                    val dailyGoal = (goalResponse.goalSteps / memberCount / 7).toInt()
+                    "걸음수" to dailyGoal.toString()
+                }
+            }
+
+            Log.d(tag, "[GET_DAILY_GOAL] ✅ groupSeq=$groupSeq, metric=$metricName, goal=$goalValue")
+            Pair(metricName, goalValue)
+        } catch (e: Exception) {
+            Log.e(tag, "[GET_DAILY_GOAL] ❌ 에러: ${e.message}", e)
+            null
+        }
+    }
 
     /**
      * 오늘 00:00부터 현재까지의 건강 데이터 수집
@@ -351,7 +431,7 @@ class AiCommentService @Inject constructor(
 
         // 운동 데이터
         val exerciseData = exerciseReader.readToday()
-        val totalDuration = (exerciseData.totalDuration / 60).toInt() // 분 단위
+        val totalDuration = (exerciseData.totalDuration / 60000).toInt() // 밀리초 → 분
         val totalDistance = exerciseData.exercises
             .flatMap { it.sessions ?: emptyList() }
             .sumOf { (it.distance ?: 0f).toDouble() } / 1000 // km 단위
@@ -394,7 +474,7 @@ class AiCommentService @Inject constructor(
     }
 
     /**
-     * 목표값 데이터 추가
+     * 목표값 데이터 추가 (케어 그룹용)
      */
     private fun addGoalData(
         data: HealthData,
@@ -412,7 +492,7 @@ class AiCommentService @Inject constructor(
     }
 
     /**
-     * 가장 중요한 목표 지표 선택
+     * 가장 중요한 목표 지표 선택 (케어 그룹용)
      */
     private fun selectBestMetric(
         data: HealthData,
