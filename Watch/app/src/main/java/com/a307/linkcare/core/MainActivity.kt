@@ -1,4 +1,4 @@
-package com.a307.linkcare.app
+package com.a307.linkcare.core
 
 import android.os.Bundle
 import android.util.Log

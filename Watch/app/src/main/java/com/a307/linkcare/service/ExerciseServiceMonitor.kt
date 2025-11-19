@@ -27,6 +27,14 @@ constructor(
             )
         )
 
+    // 새 운동 시작 전 상태 리셋
+    fun resetState() {
+        exerciseServiceState.value = ExerciseServiceState(
+            exerciseState = null,
+            exerciseMetrics = ExerciseMetrics()
+        )
+    }
+
     suspend fun monitor() {
         exerciseClientManager.exerciseUpdateFlow.collect {
             when (it) {

@@ -1,4 +1,4 @@
-package com.a307.linkcare.app
+package com.a307.linkcare.core
 
 import androidx.navigation.NavController
 import com.a307.linkcare.presentation.summary.SummaryScreenState
