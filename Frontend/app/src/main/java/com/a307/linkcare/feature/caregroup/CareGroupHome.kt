@@ -440,7 +440,7 @@ fun CareGroupHome(
         }
     }
 
-    Scaffold { paddingValues ->
+    Scaffold { _ ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
@@ -458,7 +458,6 @@ fun CareGroupHome(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
             LazyColumn(Modifier.fillMaxSize()) {
 
