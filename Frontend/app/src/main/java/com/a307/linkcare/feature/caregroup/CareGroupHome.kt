@@ -233,6 +233,19 @@ fun CareGroupHome(
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
+    // 그룹 상세 정보 로드
+    LaunchedEffect(groupSeq) {
+        myPageViewModel.loadGroupCharacters(groupSeq)
+        groupViewModel.loadGroupDetail(groupSeq)
+    }
+
+    // selectedDate 변경 시 주차별 걸음 수 통계 로드
+    LaunchedEffect(groupSeq, selectedDate) {
+        val startDate = selectedDate.startOfWeek()
+        val endDate = selectedDate.endOfWeek()
+        healthViewModel.loadGroupStepStatisticsByPeriod(groupSeq, startDate, endDate)
+    }
+
     // 동기화 완료 시 토스트 표시, 새로고침 종료 및 멤버 상세 데이터 다시 로드
     LaunchedEffect(syncState, membersResponse, selectedDate) {
         when (syncState) {
