@@ -75,6 +75,7 @@ data class Sleep(
 data class ExerciseSession(
     val startTime: String = "",
     val endTime: String = "",
+    val exerciseType: String = "",
     val distance: Float = 0f,  // meter
     val calories: Float = 0f,
     val meanPulseRate: Float = 0f,
@@ -557,12 +558,35 @@ internal fun ActivitySessionCard(session: ExerciseSession, index: Int) {
             Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                "운동 세션 $index",
-                fontWeight = FontWeight.SemiBold,
-                color = black,
-                fontSize = 14.sp
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val exerciseLabel = when (session.exerciseType.uppercase()) {
+                    "WALKING" -> "걷기"
+                    "RUNNING" -> "달리기"
+                    else -> "운동"
+                }
+                Text(
+                    "$exerciseLabel $index",
+                    fontWeight = FontWeight.SemiBold,
+                    color = black,
+                    fontSize = 14.sp
+                )
+                if (session.meanPulseRate > 0) {
+                    Surface(
+                        color = Color(0xFF4CAF50),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            "워치",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
