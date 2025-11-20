@@ -64,9 +64,12 @@ fun NudgeLetterCard(
     val isCustomSelected = selectedId == -1
     val canSend = if (isCustomSelected) customText.isNotBlank() else selectedId != -1
 
-    Box(modifier = modifier) { //.width(324.dp).height(532.dp)
+    Box(modifier = modifier.wrapContentSize()) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .heightIn(max = 700.dp),  // 최대 높이 제한 (스크롤 가능)
             color = Color.White,
             shape = RoundedCornerShape(26.dp),
             border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
@@ -142,7 +145,7 @@ fun NudgeLetterCard(
                             Spacer(Modifier.height(10.dp))
                             OutlinedCard(
                                 Modifier.fillMaxWidth()
-                                    .heightIn(min = 140.dp, max = 260.dp), // <-- 스크롤 고려
+                                    .heightIn(min = 100.dp, max = 260.dp), // <-- 스크롤 고려
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Box(Modifier.fillMaxSize().padding(12.dp)) {

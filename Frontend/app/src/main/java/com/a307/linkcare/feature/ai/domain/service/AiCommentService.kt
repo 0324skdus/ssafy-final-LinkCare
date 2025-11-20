@@ -2,6 +2,9 @@ package com.a307.linkcare.feature.ai.domain.service
 
 import android.app.Application
 import android.util.Log
+import com.a307.linkcare.common.util.AiResponseValidator
+import com.a307.linkcare.common.util.AiLetterResponseValidator
+import com.a307.linkcare.common.util.AiNudgeResponseValidator
 import com.a307.linkcare.feature.ai.data.api.AiApi
 import com.a307.linkcare.feature.ai.data.model.AiCommentRequest
 import com.a307.linkcare.feature.ai.data.model.UserHealthStatsResponse
@@ -69,34 +72,26 @@ class AiCommentService @Inject constructor(
                 return Result.success(emptyList())
             }
 
-            Log.d(tag, "[CARE_SELF] 케어 그룹 ${careGroups.size}개 - 코멘트 생성 시작")
+            Log.d(tag, "[CARE_SELF] 케어 그룹 ${careGroups.size}개 - 더미 코멘트 생성 시작")
 
             // 2. 오늘 00:00부터 현재까지의 건강 데이터 수집
             val todayHealthData = collectTodayHealthData()
 
-            // 3. health_self 모델 로드
-            val modelInfo = getModelInfo(ModelCategory.HEALTH, ModelPerspective.SELF)
-                ?: return Result.failure(Exception("health_self 모델을 찾을 수 없습니다"))
-
-            loadModelUseCase(modelInfo).getOrElse {
-                return Result.failure(Exception("모델 로드 실패: ${it.message}"))
-            }
-
             val results = mutableListOf<String>()
 
-            // 4. 각 그룹별로 코멘트 생성 및 저장
+            // 3. 각 그룹별로 더미 코멘트 생성 및 저장
             for (group in careGroups) {
-                // 4-1. 그룹 상세 정보 조회 (ShareOptions 포함)
-                val groupDetail = groupRepository.getGroupDetail(group.groupSeq)
+                // 3-1. 활동 수준 결정
+                val activityLevel = determineActivityLevel(todayHealthData)
 
-                // 4-2. ShareOptions에 따라 데이터 필터링
-                val filteredData = filterHealthDataByPermissions(todayHealthData, groupDetail)
+                // 3-2. 더미 코멘트 생성
+                val comment = AiResponseValidator.getDummyResponse(
+                    groupType = AiResponseValidator.GroupType.CARE,
+                    activityLevel = activityLevel
+                )
+                Log.d(tag, "[CARE_SELF] 💬 더미 생성: $comment")
 
-                // 4-3. AI 코멘트 생성
-                val comment = generateComment(filteredData, modelInfo)
-                Log.d(tag, "[CARE_SELF] 생성: $comment")
-
-                // 4-4. 서버에 저장
+                // 3-3. 서버에 저장
                 val saveResult = saveCommentToServer(group.groupSeq, comment)
                 if (saveResult.isSuccess) {
                     results.add("${group.groupName}: $comment")
@@ -127,41 +122,26 @@ class AiCommentService @Inject constructor(
                 return Result.success(emptyList())
             }
 
-            Log.d(tag, "[WELLNESS_SELF] 헬스 그룹 ${healthGroups.size}개 - 코멘트 생성 시작")
+            Log.d(tag, "[WELLNESS_SELF] 헬스 그룹 ${healthGroups.size}개 - 더미 코멘트 생성 시작")
 
             // 2. 오늘 00:00부터 현재까지의 운동 데이터 수집
             val todayHealthData = collectTodayHealthData()
 
-            // 3. wellness_self 모델 로드
-            val modelInfo = getModelInfo(ModelCategory.WELLNESS, ModelPerspective.SELF)
-                ?: return Result.failure(Exception("wellness_self 모델을 찾을 수 없습니다"))
-
-            loadModelUseCase(modelInfo).getOrElse {
-                return Result.failure(Exception("모델 로드 실패: ${it.message}"))
-            }
-
             val results = mutableListOf<String>()
 
-            // 4. 각 그룹별로 코멘트 생성 및 저장
+            // 3. 각 그룹별로 더미 코멘트 생성 및 저장
             for (group in healthGroups) {
-                // 4-1. 개인 일일 목표 조회
-                val dailyGoal = getDailyPersonalGoal(group.groupSeq)
-                if (dailyGoal == null) {
-                    Log.w(tag, "[WELLNESS_SELF] ⚠️ 그룹 목표 없음: ${group.groupName}")
-                    continue
-                }
+                // 3-1. 활동 수준 결정
+                val activityLevel = determineActivityLevel(todayHealthData)
 
-                // 4-2. 목표값 추가
-                val dataWithGoal = todayHealthData.copy(
-                    bestMetric = dailyGoal.first,
-                    bestValue = dailyGoal.second
+                // 3-2. 더미 코멘트 생성
+                val comment = AiResponseValidator.getDummyResponse(
+                    groupType = AiResponseValidator.GroupType.HEALTH,
+                    activityLevel = activityLevel
                 )
+                Log.d(tag, "[WELLNESS_SELF] 💬 더미 생성: $comment")
 
-                // 4-3. AI 코멘트 생성
-                val comment = generateComment(dataWithGoal, modelInfo)
-                Log.d(tag, "[WELLNESS_SELF] 생성: $comment")
-
-                // 4-4. 서버에 저장
+                // 3-3. 서버에 저장
                 val saveResult = saveCommentToServer(group.groupSeq, comment)
                 if (saveResult.isSuccess) {
                     results.add("${group.groupName}: $comment")
@@ -179,7 +159,7 @@ class AiCommentService @Inject constructor(
     /**
      * ③ health-other: 케어 그룹 멤버 격려 메시지 (3문장)
      * - 특정 사용자의 건강 데이터 조회
-     * - health_other.gguf 모델 사용
+     * - AI 사용하지 않고 5초 로딩 후 더미 데이터 반환
      * - UI에 표시용 (서버 저장 안 함)
      */
     suspend fun generateCareGroupMemberEncouragement(
@@ -197,22 +177,18 @@ class AiCommentService @Inject constructor(
             // 2. HealthData로 변환
             val healthData = convertStatsToHealthData(stats)
 
-            // 3. health_other 모델 로드
-            val modelInfo = getModelInfo(ModelCategory.HEALTH, ModelPerspective.OTHER)
-                ?: return Result.failure(Exception("health_other 모델을 찾을 수 없습니다"))
+            // 3. 5초 로딩 시뮬레이션
+            kotlinx.coroutines.delay(5000)
 
-            loadModelUseCase(modelInfo).getOrElse {
-                return Result.failure(Exception("모델 로드 실패: ${it.message}"))
-            }
+            // 4. 활동 수준 결정 및 더미 데이터 반환
+            val activityLevel = determineActivityLevelForLetter(healthData)
+            val dummySentences = AiLetterResponseValidator.getDummyLetter(
+                groupType = AiLetterResponseValidator.GroupType.CARE,
+                activityLevel = activityLevel
+            )
+            Log.d(tag, "[HEALTH_OTHER] 더미 데이터 반환: $dummySentences")
 
-            // 4. AI 코멘트 생성 (3문장)
-            val comment = generateComment(healthData, modelInfo)
-            Log.d(tag, "[HEALTH_OTHER] 생성된 격려 메시지: $comment")
-
-            // 5. 3문장으로 분리
-            val sentences = parseSentences(comment, expectedCount = 3)
-
-            Result.success(sentences)
+            Result.success(dummySentences)
         } catch (e: Exception) {
             Log.e(tag, "[HEALTH_OTHER] ❌ 에러", e)
             Result.failure(e)
@@ -222,7 +198,7 @@ class AiCommentService @Inject constructor(
     /**
      * ④ wellness-other: 헬스 그룹 멤버 격려 메시지 (3문장)
      * - 특정 사용자의 운동 데이터 + 헬스 그룹 목표값 포함
-     * - wellness_other.gguf 모델 사용
+     * - AI 사용하지 않고 5초 로딩 후 더미 데이터 반환
      * - UI에 표시용 (서버 저장 안 함)
      */
     suspend fun generateHealthGroupMemberEncouragement(
@@ -252,22 +228,18 @@ class AiCommentService @Inject constructor(
                 bestValue = dailyGoal.second
             )
 
-            // 4. wellness_other 모델 로드
-            val modelInfo = getModelInfo(ModelCategory.WELLNESS, ModelPerspective.OTHER)
-                ?: return Result.failure(Exception("wellness_other 모델을 찾을 수 없습니다"))
+            // 4. 5초 로딩 시뮬레이션
+            kotlinx.coroutines.delay(5000)
 
-            loadModelUseCase(modelInfo).getOrElse {
-                return Result.failure(Exception("모델 로드 실패: ${it.message}"))
-            }
+            // 5. 활동 수준 결정 및 더미 데이터 반환
+            val activityLevel = determineActivityLevelForLetter(dataWithGoal)
+            val dummySentences = AiLetterResponseValidator.getDummyLetter(
+                groupType = AiLetterResponseValidator.GroupType.HEALTH,
+                activityLevel = activityLevel
+            )
+            Log.d(tag, "[WELLNESS_OTHER] 더미 데이터 반환: $dummySentences")
 
-            // 5. AI 코멘트 생성 (3문장)
-            val comment = generateComment(dataWithGoal, modelInfo)
-            Log.d(tag, "[WELLNESS_OTHER] 생성된 격려 메시지: $comment")
-
-            // 6. 3문장으로 분리
-            val sentences = parseSentences(comment, expectedCount = 3)
-
-            Result.success(sentences)
+            Result.success(dummySentences)
         } catch (e: Exception) {
             Log.e(tag, "[WELLNESS_OTHER] ❌ 에러", e)
             Result.failure(e)
@@ -302,10 +274,11 @@ class AiCommentService @Inject constructor(
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
 
-            // 4. AI 코멘트 생성 (짧은 메시지)
+            // 4. AI 코멘트 생성 (짧은 메시지 - 여러 문장)
             val comment = generateComment(healthData, modelInfo)
-            Log.d(tag, "[HEALTH_SHORT] 생성된 넛지 메시지: $comment")
+            Log.d(tag, "[HEALTH_SHORT] AI 생성: $comment")
 
+            // 5. 그대로 반환 (ViewModel에서 문장 분리 및 검증 처리)
             Result.success(comment)
         } catch (e: Exception) {
             Log.e(tag, "[HEALTH_SHORT] ❌ 에러", e)
@@ -353,10 +326,11 @@ class AiCommentService @Inject constructor(
                 return Result.failure(Exception("모델 로드 실패: ${it.message}"))
             }
 
-            // 5. AI 코멘트 생성 (짧은 메시지)
+            // 5. AI 코멘트 생성 (짧은 메시지 - 여러 문장)
             val comment = generateComment(dataWithGoal, modelInfo)
-            Log.d(tag, "[WELLNESS_SHORT] 생성된 넛지 메시지: $comment")
+            Log.d(tag, "[WELLNESS_SHORT] AI 생성: $comment")
 
+            // 6. 그대로 반환 (ViewModel에서 문장 분리 및 검증 처리)
             Result.success(comment)
         } catch (e: Exception) {
             Log.e(tag, "[WELLNESS_SHORT] ❌ 에러", e)
@@ -738,6 +712,50 @@ class AiCommentService @Inject constructor(
         }
 
         return result
+    }
+
+    /**
+     * 건강 데이터를 기반으로 활동 수준 결정 (Self 모델용)
+     * - 걸음수 5000 이상 또는 운동시간 30분 이상 → SUFFICIENT
+     * - 그 외 → INSUFFICIENT
+     */
+    private fun determineActivityLevel(healthData: HealthData): AiResponseValidator.ActivityLevel {
+        return when {
+            healthData.steps >= 5000 || healthData.duration >= 30 -> {
+                AiResponseValidator.ActivityLevel.SUFFICIENT
+            }
+            else -> {
+                AiResponseValidator.ActivityLevel.INSUFFICIENT
+            }
+        }
+    }
+
+    /**
+     * 건강 데이터를 기반으로 활동 수준 결정 (Letter 모델용)
+     */
+    private fun determineActivityLevelForLetter(healthData: HealthData): AiLetterResponseValidator.ActivityLevel {
+        return when {
+            healthData.steps >= 5000 || healthData.duration >= 30 -> {
+                AiLetterResponseValidator.ActivityLevel.SUFFICIENT
+            }
+            else -> {
+                AiLetterResponseValidator.ActivityLevel.INSUFFICIENT
+            }
+        }
+    }
+
+    /**
+     * 건강 데이터를 기반으로 활동 수준 결정 (Nudge 모델용)
+     */
+    private fun determineActivityLevelForNudge(healthData: HealthData): AiNudgeResponseValidator.ActivityLevel {
+        return when {
+            healthData.steps >= 5000 || healthData.duration >= 30 -> {
+                AiNudgeResponseValidator.ActivityLevel.SUFFICIENT
+            }
+            else -> {
+                AiNudgeResponseValidator.ActivityLevel.INSUFFICIENT
+            }
+        }
     }
 
     /**

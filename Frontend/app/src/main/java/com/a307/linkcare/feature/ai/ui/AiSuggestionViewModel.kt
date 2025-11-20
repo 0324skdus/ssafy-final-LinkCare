@@ -3,6 +3,8 @@ package com.a307.linkcare.feature.ai.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.common.util.AiLetterResponseValidator
+import com.a307.linkcare.common.util.AiNudgeResponseValidator
 import com.a307.linkcare.feature.ai.domain.service.AiCommentService
 import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
 import com.a307.linkcare.feature.notification.data.NotificationApi
@@ -67,7 +69,7 @@ class AiSuggestionViewModel @Inject constructor(
     }
 
     /**
-     * ③ health-other: 케어 그룹 멤버 격려 메시지 로드
+     * ③ health-other: 케어 그룹 멤버 격려 메시지 로드 - 더미 모드 (4초 로딩)
      */
     fun loadCareGroupSuggestions(userSeq: Long) {
         viewModelScope.launch {
@@ -84,27 +86,41 @@ class AiSuggestionViewModel @Inject constructor(
             }
 
             _isLoading.value = true
-            Log.d(tag, "[CARE_SUGGESTIONS] 로드 시작: userSeq=$userSeq")
 
-            aiCommentService.generateCareGroupMemberEncouragement(userSeq)
-                .onSuccess { suggestions ->
-                    _careGroupSuggestions.value = suggestions
-                    Log.d(tag, "[CARE_SUGGESTIONS] ✅ 성공: ${suggestions.size}개")
-                    suggestions.forEachIndexed { index, text ->
-                        Log.d(tag, "[CARE_SUGGESTIONS]   ${index + 1}. $text")
-                    }
-                }
-                .onFailure { error ->
-                    Log.e(tag, "[CARE_SUGGESTIONS] ❌ 실패: ${error.message}")
-                    _careGroupSuggestions.value = emptyList()
-                }
+            // 현재 시간 확인 (한국 시간대)
+            val currentTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul"))
+            val currentHour = currentTime.hour
+            val timeOfDay = when (currentHour) {
+                in 6..11 -> "MORNING"
+                in 12..17 -> "AFTERNOON"
+                in 18..21 -> "EVENING"
+                else -> "NIGHT"
+            }
+
+            Log.d(tag, "[CARE_SUGGESTIONS] 💬 더미 데이터 생성 시작 (4초 로딩): userSeq=$userSeq")
+            Log.d(tag, "[CARE_SUGGESTIONS] ⏰ 한국 시간: ${currentHour}시, 시간대: $timeOfDay (전체: ${currentTime.toLocalTime()})")
+
+            // 4초 로딩 시뮬레이션
+            kotlinx.coroutines.delay(4000)
+
+            // 더미 편지 데이터 3문장 생성
+            val dummyLetter = AiLetterResponseValidator.getDummyLetter(
+                groupType = AiLetterResponseValidator.GroupType.CARE,
+                activityLevel = AiLetterResponseValidator.ActivityLevel.UNKNOWN
+            )
+
+            _careGroupSuggestions.value = dummyLetter
+            Log.d(tag, "[CARE_SUGGESTIONS] ✅ 더미 데이터 생성 완료: ${dummyLetter.size}개 문장")
+            dummyLetter.forEachIndexed { index, text ->
+                Log.d(tag, "[CARE_SUGGESTIONS]   ${index + 1}. $text")
+            }
 
             _isLoading.value = false
         }
     }
 
     /**
-     * ④ wellness-other: 헬스 그룹 멤버 격려 메시지 로드
+     * ④ wellness-other: 헬스 그룹 멤버 격려 메시지 로드 - 더미 모드 (4초 로딩)
      */
     fun loadHealthGroupSuggestions(userSeq: Long, groupSeq: Long) {
         viewModelScope.launch {
@@ -121,28 +137,43 @@ class AiSuggestionViewModel @Inject constructor(
             }
 
             _isLoading.value = true
-            Log.d(tag, "[HEALTH_SUGGESTIONS] 로드 시작: userSeq=$userSeq, groupSeq=$groupSeq")
 
-            aiCommentService.generateHealthGroupMemberEncouragement(userSeq, groupSeq)
-                .onSuccess { suggestions ->
-                    _healthGroupSuggestions.value = suggestions
-                    Log.d(tag, "[HEALTH_SUGGESTIONS] ✅ 성공: ${suggestions.size}개")
-                    suggestions.forEachIndexed { index, text ->
-                        Log.d(tag, "[HEALTH_SUGGESTIONS]   ${index + 1}. $text")
-                    }
-                }
-                .onFailure { error ->
-                    Log.e(tag, "[HEALTH_SUGGESTIONS] ❌ 실패: ${error.message}")
-                    _healthGroupSuggestions.value = emptyList()
-                }
+            // 현재 시간 확인 (한국 시간대)
+            val currentTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul"))
+            val currentHour = currentTime.hour
+            val timeOfDay = when (currentHour) {
+                in 6..11 -> "MORNING"
+                in 12..17 -> "AFTERNOON"
+                in 18..21 -> "EVENING"
+                else -> "NIGHT"
+            }
+
+            Log.d(tag, "[HEALTH_SUGGESTIONS] 💬 더미 데이터 생성 시작 (4초 로딩): userSeq=$userSeq, groupSeq=$groupSeq")
+            Log.d(tag, "[HEALTH_SUGGESTIONS] ⏰ 한국 시간: ${currentHour}시, 시간대: $timeOfDay (전체: ${currentTime.toLocalTime()})")
+
+            // 4초 로딩 시뮬레이션
+            kotlinx.coroutines.delay(4000)
+
+            // 더미 편지 데이터 3문장 생성
+            val dummyLetter = AiLetterResponseValidator.getDummyLetter(
+                groupType = AiLetterResponseValidator.GroupType.HEALTH,
+                activityLevel = AiLetterResponseValidator.ActivityLevel.UNKNOWN
+            )
+
+            _healthGroupSuggestions.value = dummyLetter
+            Log.d(tag, "[HEALTH_SUGGESTIONS] ✅ 더미 데이터 생성 완료: ${dummyLetter.size}개 문장")
+            dummyLetter.forEachIndexed { index, text ->
+                Log.d(tag, "[HEALTH_SUGGESTIONS]   ${index + 1}. $text")
+            }
 
             _isLoading.value = false
         }
     }
 
     /**
-     * ⑤ health_other_short: 빠른 넛지 메시지 로드 (케어 그룹)
-     * 앱 세션 동안 캐싱: 첫 요청만 모델 호출, 이후 순차 출력
+     * ⑤ health_other_short: 빠른 넛지 메시지 로드 (케어 그룹) - 더미 모드
+     * 앱 세션 동안 캐싱: 첫 요청만 더미 생성, 이후 순차 출력
+     * - 더미 데이터로 10개의 문장 생성 및 캐싱
      * @param groupSeq 그룹 ID (같은 유저라도 다른 그룹이면 별도 캐시)
      */
     fun loadQuickNudgeMessage(groupSeq: Long, userSeq: Long) {
@@ -170,48 +201,56 @@ class AiSuggestionViewModel @Inject constructor(
                 }
             }
 
-            // 캐시 없음 - 모델 호출
-            _isLoading.value = true
-            Log.d(tag, "[QUICK_NUDGE] 🔄 모델 호출 시작: userSeq=$userSeq")
+            // 캐시 없음 - 더미 데이터 10개 생성
+            Log.d(tag, "[QUICK_NUDGE] 💬 더미 데이터 10개 생성 시작: userSeq=$userSeq")
 
-            aiCommentService.generateQuickNudgeMessage(userSeq)
-                .onSuccess { message ->
-                    // 여러 문장으로 분리 (줄바꿈 기준)
-                    val messages = message.split("\n")
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() }
+            // 더미 데이터 10개 생성 (중복 허용, 최대 20회 시도)
+            val dummyMessages = mutableListOf<String>()
+            val dummySet = mutableSetOf<String>()
+            var attempts = 0
+            val maxAttempts = 20
 
-                    if (messages.isNotEmpty()) {
-                        // 첫 번째 문장 반환
-                        val firstMessage = messages[0]
-                        _quickNudgeMessage.value = firstMessage
-
-                        // 캐시 저장 (다음 인덱스 계산)
-                        val nextIndex = if (messages.size > 1) 1 else 0
-                        nudgeCache[cacheKey] = messages to nextIndex
-
-                        Log.d(tag, "[QUICK_NUDGE] ✅ 모델 응답 캐싱: 총 ${messages.size}개 문장")
-                        Log.d(tag, "[QUICK_NUDGE] 📤 첫 문장 출력: $firstMessage")
-
-                        // 서버에 알림 저장
-                        sendPokeNotification(userSeq, groupSeq, firstMessage)
-                    } else {
-                        _quickNudgeMessage.value = ""
-                        Log.w(tag, "[QUICK_NUDGE] ⚠️ 빈 응답")
-                    }
+            while (dummyMessages.size < 10 && attempts < maxAttempts) {
+                val dummy = AiNudgeResponseValidator.getDummyNudge(
+                    groupType = AiNudgeResponseValidator.GroupType.CARE,
+                    activityLevel = AiNudgeResponseValidator.ActivityLevel.UNKNOWN
+                )
+                if (dummySet.add(dummy)) { // 중복 체크
+                    dummyMessages.add(dummy)
                 }
-                .onFailure { error ->
-                    Log.e(tag, "[QUICK_NUDGE] ❌ 실패: ${error.message}")
-                    _quickNudgeMessage.value = ""
-                }
+                attempts++
+            }
 
-            _isLoading.value = false
+            // 10개 미만이면 중복 허용으로 채우기
+            while (dummyMessages.size < 10) {
+                val dummy = AiNudgeResponseValidator.getDummyNudge(
+                    groupType = AiNudgeResponseValidator.GroupType.CARE,
+                    activityLevel = AiNudgeResponseValidator.ActivityLevel.UNKNOWN
+                )
+                dummyMessages.add(dummy)
+            }
+
+            // 첫 번째 문장 반환
+            val firstMessage = dummyMessages[0]
+            _quickNudgeMessage.value = firstMessage
+
+            // 캐시 저장
+            nudgeCache[cacheKey] = dummyMessages to 1
+
+            Log.d(tag, "[QUICK_NUDGE] ✅ 더미 데이터 캐싱: 총 ${dummyMessages.size}개 문장")
+            dummyMessages.forEachIndexed { index, msg ->
+                Log.d(tag, "[QUICK_NUDGE]   ${index + 1}. $msg")
+            }
+
+            // 서버에 알림 저장
+            sendPokeNotification(userSeq, groupSeq, firstMessage)
         }
     }
 
     /**
-     * ⑥ wellness_other_short: 빠른 넛지 메시지 로드 (헬스 그룹)
-     * 앱 세션 동안 캐싱: 첫 요청만 모델 호출, 이후 순차 출력
+     * ⑥ wellness_other_short: 빠른 넛지 메시지 로드 (헬스 그룹) - 더미 모드
+     * 앱 세션 동안 캐싱: 첫 요청만 더미 생성, 이후 순차 출력
+     * - 더미 데이터로 10개의 문장 생성 및 캐싱
      * @param groupSeq 그룹 ID (같은 유저라도 다른 그룹이면 별도 캐시)
      */
     fun loadQuickWellnessNudgeMessage(groupSeq: Long, userSeq: Long) {
@@ -239,42 +278,49 @@ class AiSuggestionViewModel @Inject constructor(
                 }
             }
 
-            // 캐시 없음 - 모델 호출
-            _isLoading.value = true
-            Log.d(tag, "[QUICK_WELLNESS_NUDGE] 🔄 모델 호출 시작: userSeq=$userSeq, groupSeq=$groupSeq")
+            // 캐시 없음 - 더미 데이터 10개 생성
+            Log.d(tag, "[QUICK_WELLNESS_NUDGE] 💬 더미 데이터 10개 생성 시작: userSeq=$userSeq, groupSeq=$groupSeq")
 
-            aiCommentService.generateQuickWellnessNudgeMessage(userSeq, groupSeq)
-                .onSuccess { message ->
-                    // 여러 문장으로 분리 (줄바꿈 기준)
-                    val messages = message.split("\n")
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() }
+            // 더미 데이터 10개 생성 (중복 허용, 최대 20회 시도)
+            val dummyMessages = mutableListOf<String>()
+            val dummySet = mutableSetOf<String>()
+            var attempts = 0
+            val maxAttempts = 20
 
-                    if (messages.isNotEmpty()) {
-                        // 첫 번째 문장 반환
-                        val firstMessage = messages[0]
-                        _quickNudgeMessage.value = firstMessage
-
-                        // 캐시 저장 (다음 인덱스 계산)
-                        val nextIndex = if (messages.size > 1) 1 else 0
-                        nudgeCache[cacheKey] = messages to nextIndex
-
-                        Log.d(tag, "[QUICK_WELLNESS_NUDGE] ✅ 모델 응답 캐싱: 총 ${messages.size}개 문장")
-                        Log.d(tag, "[QUICK_WELLNESS_NUDGE] 📤 첫 문장 출력: $firstMessage")
-
-                        // 서버에 알림 저장
-                        sendPokeNotification(userSeq, groupSeq, firstMessage)
-                    } else {
-                        _quickNudgeMessage.value = ""
-                        Log.w(tag, "[QUICK_WELLNESS_NUDGE] ⚠️ 빈 응답")
-                    }
+            while (dummyMessages.size < 10 && attempts < maxAttempts) {
+                val dummy = AiNudgeResponseValidator.getDummyNudge(
+                    groupType = AiNudgeResponseValidator.GroupType.HEALTH,
+                    activityLevel = AiNudgeResponseValidator.ActivityLevel.UNKNOWN
+                )
+                if (dummySet.add(dummy)) { // 중복 체크
+                    dummyMessages.add(dummy)
                 }
-                .onFailure { error ->
-                    Log.e(tag, "[QUICK_WELLNESS_NUDGE] ❌ 실패: ${error.message}")
-                    _quickNudgeMessage.value = ""
-                }
+                attempts++
+            }
 
-            _isLoading.value = false
+            // 10개 미만이면 중복 허용으로 채우기
+            while (dummyMessages.size < 10) {
+                val dummy = AiNudgeResponseValidator.getDummyNudge(
+                    groupType = AiNudgeResponseValidator.GroupType.HEALTH,
+                    activityLevel = AiNudgeResponseValidator.ActivityLevel.UNKNOWN
+                )
+                dummyMessages.add(dummy)
+            }
+
+            // 첫 번째 문장 반환
+            val firstMessage = dummyMessages[0]
+            _quickNudgeMessage.value = firstMessage
+
+            // 캐시 저장
+            nudgeCache[cacheKey] = dummyMessages to 1
+
+            Log.d(tag, "[QUICK_WELLNESS_NUDGE] ✅ 더미 데이터 캐싱: 총 ${dummyMessages.size}개 문장")
+            dummyMessages.forEachIndexed { index, msg ->
+                Log.d(tag, "[QUICK_WELLNESS_NUDGE]   ${index + 1}. $msg")
+            }
+
+            // 서버에 알림 저장
+            sendPokeNotification(userSeq, groupSeq, firstMessage)
         }
     }
 
@@ -307,26 +353,27 @@ class AiSuggestionViewModel @Inject constructor(
     /**
      * 편지 알림을 서버에 전송
      */
-    fun sendLetterNotification(receiverUserPk: Long, groupSeq: Long, content: String) {
-        viewModelScope.launch {
-            try {
-                val request = SaveNotificationRequest(
-                    receiverUserPk = receiverUserPk,
-                    groupSeq = groupSeq,
-                    messageType = "LETTER",
-                    content = content
-                )
+    suspend fun sendLetterNotification(receiverUserPk: Long, groupSeq: Long, content: String): Result<Unit> {
+        try {
+            val request = SaveNotificationRequest(
+                receiverUserPk = receiverUserPk,
+                groupSeq = groupSeq,
+                messageType = "LETTER",
+                content = content
+            )
 
-                val response = notificationApi.saveNotification(request)
+            val response = notificationApi.saveNotification(request)
 
-                if (response.isSuccessful) {
-                    Log.d(tag, "[LETTER_NOTIFICATION] ✅ 편지 전송 성공: $content")
-                } else {
-                    Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 실패: ${response.code()} - ${response.message()}")
-                }
-            } catch (e: Exception) {
-                Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 예외: ${e.message}", e)
+            if (response.isSuccessful) {
+                Log.d(tag, "[LETTER_NOTIFICATION] ✅ 편지 전송 성공: $content")
+                return Result.success(Unit)
+            } else {
+                Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 실패: ${response.code()} - ${response.message()}")
+                return Result.failure(Exception("편지 전송 실패: ${response.code()}"))
             }
+        } catch (e: Exception) {
+            Log.e(tag, "[LETTER_NOTIFICATION] ❌ 편지 전송 예외: ${e.message}", e)
+            return Result.failure(e)
         }
     }
 
@@ -337,5 +384,77 @@ class AiSuggestionViewModel @Inject constructor(
         _careGroupSuggestions.value = emptyList()
         _healthGroupSuggestions.value = emptyList()
         _quickNudgeMessage.value = ""
+    }
+
+    // ========== Private Helper Functions ==========
+
+    /**
+     * AI 응답을 문장 단위로 분리
+     * 예: "오늘도 힘차게!\n걷는 즐거움!" → ["오늘도 힘차게!", "걷는 즐거움!"]
+     */
+    private fun parseSentences(text: String): List<String> {
+        // 1. 줄바꿈으로 먼저 분리
+        val lines = text.split("\n")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+
+        val sentences = mutableListOf<String>()
+
+        // 2. 각 줄을 마침표, 느낌표, 물음표로 추가 분리
+        for (line in lines) {
+            // 문장 부호로 분리 (부호 포함하여 분리)
+            val parts = line.split(Regex("(?<=[.!?])\\s*"))
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+
+            sentences.addAll(parts)
+        }
+
+        return sentences
+    }
+
+    /**
+     * 목표 개수만큼 문장 확보
+     * - 유효한 문장이 부족하면 더미 데이터로 채움
+     * @param validMessages 검증된 유효한 문장 리스트
+     * @param groupType 그룹 타입 (CARE 또는 HEALTH)
+     * @param targetCount 목표 문장 개수 (기본 10개)
+     */
+    private fun ensureTenMessages(
+        validMessages: List<String>,
+        groupType: AiNudgeResponseValidator.GroupType,
+        targetCount: Int = 10
+    ): List<String> {
+        val result = validMessages.toMutableList()
+
+        // 이미 목표 개수 이상이면 목표 개수만큼만 반환
+        if (result.size >= targetCount) {
+            return result.take(targetCount)
+        }
+
+        // 부족한 만큼 더미 데이터로 채우기
+        val needCount = targetCount - result.size
+        Log.d(tag, "[ENSURE_TEN] 부족한 문장: ${needCount}개, 더미로 채움")
+
+        // 활동 수준은 UNKNOWN으로 (일반적인 격려 메시지)
+        val activityLevel = AiNudgeResponseValidator.ActivityLevel.UNKNOWN
+
+        // 중복되지 않도록 더미 메시지를 충분히 생성
+        val dummyPool = mutableSetOf<String>()
+        while (dummyPool.size < needCount * 2) { // 여유있게 2배 생성
+            val dummy = AiNudgeResponseValidator.getDummyNudge(
+                groupType = groupType,
+                activityLevel = activityLevel
+            )
+            dummyPool.add(dummy)
+        }
+
+        // 이미 있는 문장과 중복되지 않는 더미 선택
+        val availableDummies = dummyPool.filter { it !in result }
+        result.addAll(availableDummies.take(needCount))
+
+        Log.d(tag, "[ENSURE_TEN] 최종 문장 수: ${result.size}개 (유효: ${validMessages.size}, 더미: ${result.size - validMessages.size})")
+
+        return result
     }
 }

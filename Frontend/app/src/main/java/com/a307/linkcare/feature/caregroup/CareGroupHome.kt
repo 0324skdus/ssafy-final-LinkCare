@@ -143,6 +143,16 @@ fun CareGroupHome(
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
     val scope = rememberCoroutineScope()
 
+    // 콕 찌르기 전송 완료 시 토스트 표시
+    var lastNudgeMessage by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(quickNudgeMessage) {
+        if (quickNudgeMessage.isNotEmpty() && quickNudgeMessage != lastNudgeMessage) {
+            lastNudgeMessage = quickNudgeMessage
+            Log.d("CareGroupHome", "[콕 찌르기 전송 완료] 메시지: $quickNudgeMessage")
+            Toast.makeText(context, "콕 찌르기를 보냈어요!", Toast.LENGTH_LONG).show()
+        }
+    }
+
     // 운동 중인 사용자 ID 목록
     val exercisingUserIds by exerciseSessionManager.exercisingUserIds.collectAsState()
 
@@ -543,16 +553,8 @@ fun CareGroupHome(
                         isSelf = (m.userPk == TokenStore(context).getUserPk()),
                         onTapIconClick = {
                             // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
-                            scope.launch {
-                                aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
-                                // AI 생성 후 토스트 표시
-                                if (quickNudgeMessage.isNotEmpty()) {
-                                    Log.d("MemberRowCare", "[AI 넛지] 그룹$groupSeq ${m.name}: $quickNudgeMessage")
-                                    Toast.makeText(context, "${m.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Log.d("MemberRowCare", "Tap icon clicked for member: ${m.name}")
-                                }
-                            }
+                            Log.d("MemberRowCare", "[콕 찌르기 시작] 그룹=$groupSeq, 대상=${m.name}(${m.userPk})")
+                            aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
                         }
                     )
 
