@@ -185,6 +185,16 @@ fun HealthGroupHome(
     // ⑥ AI 빠른 넛지 메시지
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
 
+    // 콕 찌르기 전송 완료 시 토스트 표시
+    var lastNudgeMessage by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(quickNudgeMessage) {
+        if (quickNudgeMessage.isNotEmpty() && quickNudgeMessage != lastNudgeMessage) {
+            lastNudgeMessage = quickNudgeMessage
+            Log.d("HealthGroupHome", "[콕 찌르기 전송 완료] 메시지: $quickNudgeMessage")
+            Toast.makeText(context, "콕 찌르기를 보냈어요!", Toast.LENGTH_LONG).show()
+        }
+    }
+
     // 그룹 멤버 한줄평 수집
     val memberComments by goalVm.memberComments.collectAsState()
 
@@ -600,11 +610,8 @@ fun HealthGroupHome(
                         unit = currentUnit,
                         onTapIconClick = {
                             // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
-                            Log.d("MemberRowHealth", "Tap icon clicked for member: ${member.name}")
-                            Toast.makeText(context, "${member.name}님에게 콕 찌르기를 보냈어요!", Toast.LENGTH_SHORT).show()
-                            scope.launch {
-                                aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk)
-                            }
+                            Log.d("MemberRowHealth", "[콕 찌르기 시작] 그룹=$groupSeq, 대상=${member.name}(${member.userPk})")
+                            aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk)
                         }
                     )
                     if (index < membersWithActivity.lastIndex) {
