@@ -3,9 +3,7 @@
 package com.a307.linkcare.navigation
 
 import android.util.Log
-import android.os.Build
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -22,19 +20,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.feature.ai.domain.worker.AiWorkManager
-import com.a307.linkcare.feature.auth.OnboardingViewModel
-import com.a307.linkcare.feature.auth.data.RetrofitClient
-import com.a307.linkcare.feature.auth.domain.SendVerificationCodeRequest
-import com.a307.linkcare.feature.auth.domain.SignupRequest
-import com.a307.linkcare.feature.auth.domain.VerifyCodeRequest
-import com.a307.linkcare.feature.auth.ui.IntroScreen
-import com.a307.linkcare.feature.auth.ui.LoginScreen
-import com.a307.linkcare.feature.auth.ui.SignupBirthScreen
-import com.a307.linkcare.feature.auth.ui.SignupCharacterScreen
-import com.a307.linkcare.feature.auth.ui.SignupGenderScreen
-import com.a307.linkcare.feature.auth.ui.SignupHeightScreen
-import com.a307.linkcare.feature.auth.ui.SignupScreen
-import com.a307.linkcare.feature.intro.IntroTourScreen
+import com.a307.linkcare.feature.auth.ui.onboarding.OnboardingViewModel
+import com.a307.linkcare.common.network.RetrofitClient
+import com.a307.linkcare.feature.auth.data.model.request.SendVerificationCodeRequest
+import com.a307.linkcare.feature.auth.data.model.request.SignupRequest
+import com.a307.linkcare.feature.auth.data.model.request.VerifyCodeRequest
+import com.a307.linkcare.feature.auth.ui.intro.IntroScreen
+import com.a307.linkcare.feature.auth.ui.login.LoginScreen
+import com.a307.linkcare.feature.auth.ui.onboarding.SignupBirthScreen
+import com.a307.linkcare.feature.auth.ui.onboarding.SignupCharacterScreen
+import com.a307.linkcare.feature.auth.ui.onboarding.SignupGenderScreen
+import com.a307.linkcare.feature.auth.ui.onboarding.SignupHeightScreen
+import com.a307.linkcare.feature.auth.ui.signup.SignupScreen
+import com.a307.linkcare.feature.commongroup.ui.invite.InvitationPreviewScreen
+import com.a307.linkcare.feature.auth.ui.intro.IntroTourScreen
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -251,7 +250,7 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val token = backStackEntry.arguments?.getString(Route.InvitationPreview.ARG_TOKEN)
             if (token != null) {
-                com.a307.linkcare.feature.commongroup.ui.InvitationPreviewScreen(
+                InvitationPreviewScreen(
                     invitationToken = token,
                     navController = navController
                 )

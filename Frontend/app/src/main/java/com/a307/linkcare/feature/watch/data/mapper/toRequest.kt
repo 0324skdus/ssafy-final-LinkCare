@@ -1,7 +1,7 @@
 package com.a307.linkcare.feature.watch.data.mapper
 
-import com.a307.linkcare.feature.watch.model.WorkoutSummary
-import com.a307.linkcare.feature.workout.data.dto.WorkoutSummaryRequest
+import com.a307.linkcare.feature.watch.domain.model.WorkoutSummary
+import com.a307.linkcare.feature.workout.domain.dto.WorkoutSummaryRequest
 
 fun WorkoutSummary.toRequest(): WorkoutSummaryRequest {
     return WorkoutSummaryRequest(

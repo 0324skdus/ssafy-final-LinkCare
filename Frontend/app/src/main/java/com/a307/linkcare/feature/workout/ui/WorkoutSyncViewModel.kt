@@ -2,9 +2,9 @@ package com.a307.linkcare.feature.workout.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.feature.watch.model.WorkoutSummary
-import com.a307.linkcare.feature.workout.data.dto.WorkoutSummaryRequest
-import com.a307.linkcare.feature.workout.data.repository.WorkoutRepository
+import com.a307.linkcare.feature.watch.domain.model.WorkoutSummary
+import com.a307.linkcare.feature.workout.domain.dto.WorkoutSummaryRequest
+import com.a307.linkcare.feature.workout.domain.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject

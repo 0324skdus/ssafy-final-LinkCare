@@ -1,13 +1,12 @@
 package com.a307.linkcare.sdk.health.presentation
 
-import android.app.Activity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.feature.auth.ArePermissionsGrantedUseCase
-import com.a307.linkcare.feature.auth.RequestPermissionsUseCase
-import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.sdk.health.data.repository.HealthRepository
+import com.a307.linkcare.feature.auth.domain.usecase.ArePermissionsGrantedUseCase
+import com.a307.linkcare.feature.auth.domain.usecase.RequestPermissionsUseCase
+import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.sdk.health.domain.repository.HealthRepository
 import com.a307.linkcare.sdk.health.domain.sync.*
 import com.a307.linkcare.sdk.health.domain.sync.activitySummary.ActivitySummaryReader
 import com.a307.linkcare.sdk.health.domain.sync.bloodPressure.BloodPressureReader
@@ -16,14 +15,12 @@ import com.a307.linkcare.sdk.health.domain.sync.heartRate.HeartRateReader
 import com.a307.linkcare.sdk.health.domain.sync.sleep.SleepReader
 import com.a307.linkcare.sdk.health.domain.sync.step.StepReader
 import com.a307.linkcare.sdk.health.domain.sync.waterIntake.WaterIntakeReader
-import com.samsung.android.sdk.health.data.error.HealthDataException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject

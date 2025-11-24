@@ -1,9 +1,7 @@
 package com.a307.linkcare
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -16,9 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.a307.linkcare.common.theme.LinkCareTheme
-import com.a307.linkcare.feature.auth.data.ProfileApi
-import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.feature.auth.domain.UpdateFcmTokenRequest
+import com.a307.linkcare.feature.auth.data.api.ProfileApi
+import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.feature.auth.data.model.request.UpdateFcmTokenRequest
 import com.a307.linkcare.navigation.AppNavGraph
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,8 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.a307.linkcare.common.component.atoms.GroupContributionBar
 import com.a307.linkcare.common.theme.black
-import com.a307.linkcare.common.theme.white
-import com.a307.linkcare.feature.commongroup.domain.Member
+import com.a307.linkcare.feature.commongroup.domain.model.Member
 import java.text.NumberFormat
 
 // 데이터 클래스 정의

@@ -18,7 +18,7 @@ import androidx.navigation.NavHostController
 import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.component.atoms.*
-import com.a307.linkcare.feature.healthgroup.domain.ShareOptions
+import com.a307.linkcare.feature.healthgroup.data.model.request.ShareOptions
 import com.a307.linkcare.R
 
 

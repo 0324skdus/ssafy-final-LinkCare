@@ -25,9 +25,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
-import com.a307.linkcare.feature.commongroup.domain.Member
-import org.apache.commons.lang3.text.FormattableUtils.append
-import android.util.Log
+import com.a307.linkcare.feature.commongroup.domain.model.Member
 
 @Composable
 fun MemberRowHealth(

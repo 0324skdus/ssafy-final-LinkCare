@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.ui.draw.clip
 import com.a307.linkcare.common.component.molecules.*
-import com.a307.linkcare.feature.commongroup.domain.Member
+import com.a307.linkcare.feature.commongroup.domain.model.Member
 
 @Composable
 fun GroupContributionBar(

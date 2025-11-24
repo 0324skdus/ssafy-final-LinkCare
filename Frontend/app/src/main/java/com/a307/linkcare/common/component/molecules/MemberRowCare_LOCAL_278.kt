@@ -23,8 +23,7 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.gray
 import com.a307.linkcare.common.theme.point
 import com.a307.linkcare.common.theme.white
-import com.a307.linkcare.feature.commongroup.domain.Member
-import android.util.Log
+import com.a307.linkcare.feature.commongroup.domain.model.Member
 
 @Composable
 fun MemberRowCare(

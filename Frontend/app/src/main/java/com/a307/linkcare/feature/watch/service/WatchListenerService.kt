@@ -2,11 +2,12 @@ package com.a307.linkcare.feature.watch.service
 
 import android.content.Intent
 import android.util.Log
-import com.a307.linkcare.feature.auth.data.TokenStore
-import com.a307.linkcare.feature.watch.data.ExerciseSessionManager
+import com.a307.linkcare.common.di.WorkoutServiceEntryPoint
+import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.feature.watch.manager.ExerciseSessionManager
 import com.a307.linkcare.feature.watch.data.mapper.toRequest
-import com.a307.linkcare.feature.watch.model.WorkoutSummary
-import com.a307.linkcare.feature.workout.data.repository.WorkoutRepository
+import com.a307.linkcare.feature.watch.domain.model.WorkoutSummary
+import com.a307.linkcare.feature.workout.domain.repository.WorkoutRepository
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent

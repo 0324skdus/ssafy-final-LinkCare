@@ -50,33 +50,35 @@ import com.a307.linkcare.common.component.molecules.HeaderDropDown
 import com.a307.linkcare.common.component.molecules.HeaderSearch
 import com.a307.linkcare.common.component.molecules.HeaderTitleOnly
 import com.a307.linkcare.common.theme.unActiveField
-import com.a307.linkcare.feature.caregroup.CareGroup
-import com.a307.linkcare.feature.caregroup.CareGroupCreate
-import com.a307.linkcare.feature.caregroup.CareGroupEdit
-import com.a307.linkcare.feature.caregroup.GroupMember
-import com.a307.linkcare.feature.caregroup.domain.ShareOptions
-import com.a307.linkcare.feature.commongroup.ui.GroupSearch
-import com.a307.linkcare.feature.commongroup.ui.MainWithNoGroup
-import com.a307.linkcare.feature.healthgroup.ui.HealthGroup
-import com.a307.linkcare.feature.healthgroup.ui.HealthGroupCreate
-import com.a307.linkcare.feature.healthgroup.ui.HealthGroupEdit
-import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHome
-import com.a307.linkcare.feature.mypage.ui.MyGroups
-import com.a307.linkcare.feature.mypage.ui.MyPage
-import com.a307.linkcare.feature.mypage.MyPageApiState
-import com.a307.linkcare.feature.mypage.MyPageViewModel
-import com.a307.linkcare.feature.notification.Notification
-import com.a307.linkcare.feature.notification.data.MyFirebaseMessagingService
+import com.a307.linkcare.feature.caregroup.ui.edit.CareGroup
+import com.a307.linkcare.feature.caregroup.ui.create.CareGroupCreate
+import com.a307.linkcare.feature.caregroup.ui.edit.CareGroupEdit
+import com.a307.linkcare.feature.caregroup.ui.edit.GroupMember
+import com.a307.linkcare.feature.caregroup.data.model.request.ShareOptions
+import com.a307.linkcare.feature.commongroup.ui.search.GroupSearch
+import com.a307.linkcare.feature.commongroup.ui.home.MainWithNoGroup
+import com.a307.linkcare.feature.healthgroup.ui.edit.HealthGroup
+import com.a307.linkcare.feature.healthgroup.ui.create.HealthGroupCreate
+import com.a307.linkcare.feature.healthgroup.ui.edit.HealthGroupEdit
+import com.a307.linkcare.feature.mypage.ui.mygroups.MyGroups
+import com.a307.linkcare.feature.mypage.ui.mypage.MyPage
+import com.a307.linkcare.feature.mypage.ui.mypage.MyPageApiState
+import com.a307.linkcare.feature.mypage.ui.mypage.MyPageViewModel
+import com.a307.linkcare.feature.notification.ui.Notification
+import com.a307.linkcare.feature.notification.service.MyFirebaseMessagingService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.a307.linkcare.feature.commongroup.MyGroupsViewModel
-import com.a307.linkcare.feature.mypage.ui.ProfileEditScreen
+import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
+import com.a307.linkcare.feature.mypage.ui.profileedit.ProfileEditScreen
 import com.a307.linkcare.common.theme.main
-import com.a307.linkcare.feature.caregroup.CareGroupHomeScreen
-import com.a307.linkcare.feature.healthgroup.ui.HealthGroupHomeScreen
-import com.a307.linkcare.feature.mypage.MyPageEditViewModel
-import com.a307.linkcare.feature.mypage.ui.DecorateRoute
-import com.a307.linkcare.feature.mypage.ui.StoreRoute
+import com.a307.linkcare.feature.caregroup.ui.home.CareGroupHomeScreen
+import com.a307.linkcare.feature.commongroup.data.model.dto.PermissionAgreementDto
+import com.a307.linkcare.feature.commongroup.ui.search.GroupSearchViewModel
+import com.a307.linkcare.feature.healthgroup.ui.home.HealthGroupHomeScreen
+import com.a307.linkcare.feature.mypage.ui.profileedit.MyPageEditViewModel
+import com.a307.linkcare.feature.mypage.ui.decorate.DecorateRoute
+import com.a307.linkcare.feature.mypage.ui.store.StoreRoute
+import com.a307.linkcare.feature.mypage.ui.mygroups.GroupType
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -433,7 +435,7 @@ fun MainTabs(
                 }
 
                 composable(Route.CareSearch) {
-                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
+                    val searchViewModel: GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "care",
                         query = careSearchQuery,
@@ -442,7 +444,7 @@ fun MainTabs(
                         onJoinClick = { group ->
                             scope.launch {
                                 // 케어 그룹은 선택 권한 동의 필요
-                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                val permissions = PermissionAgreementDto(
                                     isSleepAllowed = true,
                                     isWaterIntakeAllowed = true,
                                     isBloodPressureAllowed = true,
@@ -507,7 +509,7 @@ fun MainTabs(
                 }
 
                 composable(Route.HealthSearch) {
-                    val searchViewModel: com.a307.linkcare.feature.commongroup.GroupSearchViewModel = hiltViewModel()
+                    val searchViewModel: GroupSearchViewModel = hiltViewModel()
                     GroupSearch(
                         kind = "health",
                         query = healthSearchQuery,
@@ -516,7 +518,7 @@ fun MainTabs(
                         onJoinClick = { group ->
                             scope.launch {
                                 // 헬스 그룹도 동일하게 모든 권한 동의로 처리
-                                val permissions = com.a307.linkcare.feature.commongroup.domain.PermissionAgreementDto(
+                                val permissions = PermissionAgreementDto(
                                     isSleepAllowed = true,
                                     isWaterIntakeAllowed = true,
                                     isBloodPressureAllowed = true,
@@ -666,7 +668,7 @@ fun MainTabs(
                             if (group.isPending) return@MyGroups
 
                             when (group.type) {
-                                com.a307.linkcare.feature.mypage.ui.GroupType.CARE -> {
+                                GroupType.CARE -> {
                                     // 케어 그룹 선택
                                     val index = careGroups.indexOfFirst { it.groupSeq == group.id }
                                     if (index != -1) {
@@ -679,7 +681,7 @@ fun MainTabs(
                                         launchSingleTop = true
                                     }
                                 }
-                                com.a307.linkcare.feature.mypage.ui.GroupType.HEALTH -> {
+                                GroupType.HEALTH -> {
                                     // 헬스 그룹 선택
                                     val index = healthGroups.indexOfFirst { it.groupSeq == group.id }
                                     if (index != -1) {
@@ -745,7 +747,7 @@ private fun mockHealthGroup(id: String) = HealthGroup(
         GroupMember(1, "김싸피(나)", R.drawable.char_bear_1, isLeader = true),
         GroupMember(2, "김아이", R.drawable.char_bear_2, isLeader = false)
     ),
-    share = com.a307.linkcare.feature.healthgroup.domain.ShareOptions(
+    share = com.a307.linkcare.feature.healthgroup.data.model.request.ShareOptions(
         exercise = true,
         heartRate = true,
         steps = true

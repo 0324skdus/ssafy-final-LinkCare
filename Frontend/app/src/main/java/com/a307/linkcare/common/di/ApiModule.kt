@@ -2,15 +2,13 @@ package com.a307.linkcare.common.di
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
-import com.a307.linkcare.feature.caregroup.data.CareGroupApi
-import com.a307.linkcare.feature.caregroup.data.HealthFeedbackApi
-import com.a307.linkcare.feature.healthgroup.data.HealthGroupApi
-import com.a307.linkcare.feature.commongroup.data.GroupApi
-import com.a307.linkcare.feature.mypage.data.MyPageApi
-import com.a307.linkcare.feature.mypage.data.MyPageRepository
-import com.a307.linkcare.feature.mypage.data.MyPageRepositoryImpl
-import com.a307.linkcare.feature.mypage.data.ShopApi
-import com.a307.linkcare.feature.mypage.data.ShopRepository
+import com.a307.linkcare.feature.caregroup.data.api.CareGroupApi
+import com.a307.linkcare.feature.caregroup.data.api.HealthFeedbackApi
+import com.a307.linkcare.feature.healthgroup.data.api.HealthGroupApi
+import com.a307.linkcare.feature.commongroup.data.api.GroupApi
+import com.a307.linkcare.feature.mypage.data.api.MyPageApi
+import com.a307.linkcare.feature.mypage.domain.repository.MyPageRepository
+import com.a307.linkcare.feature.mypage.data.repository.MyPageRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

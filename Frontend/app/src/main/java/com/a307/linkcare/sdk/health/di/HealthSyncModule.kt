@@ -5,8 +5,6 @@ import android.content.SharedPreferences
 import com.samsung.android.sdk.health.data.DeviceManager
 import com.samsung.android.sdk.health.data.HealthDataService
 import com.samsung.android.sdk.health.data.HealthDataStore
-import com.samsung.android.sdk.health.data.device.Device
-import com.a307.linkcare.sdk.health.data.repository.HealthRepository
 import com.a307.linkcare.sdk.health.domain.sync.bloodPressure.BloodPressureReader
 import com.a307.linkcare.sdk.health.domain.sync.exercise.ExerciseReader
 import com.a307.linkcare.sdk.health.domain.sync.heartRate.HeartRateReader

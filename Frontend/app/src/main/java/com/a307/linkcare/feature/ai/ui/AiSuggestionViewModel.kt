@@ -6,9 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.common.util.AiLetterResponseValidator
 import com.a307.linkcare.common.util.AiNudgeResponseValidator
 import com.a307.linkcare.feature.ai.domain.service.AiCommentService
-import com.a307.linkcare.feature.commongroup.domain.GoalCriteria
-import com.a307.linkcare.feature.notification.data.NotificationApi
-import com.a307.linkcare.feature.notification.domain.SaveNotificationRequest
+import com.a307.linkcare.feature.notification.data.api.NotificationApi
+import com.a307.linkcare.feature.notification.domain.model.request.SaveNotificationRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

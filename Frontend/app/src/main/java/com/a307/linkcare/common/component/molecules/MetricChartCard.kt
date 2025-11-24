@@ -30,8 +30,8 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a307.linkcare.common.theme.black
-import com.a307.linkcare.feature.caregroup.domain.MemberSeries
-import com.a307.linkcare.feature.caregroup.domain.WeeklyChartData
+import com.a307.linkcare.feature.caregroup.data.model.request.MemberSeries
+import com.a307.linkcare.feature.caregroup.data.model.request.WeeklyChartData
 
 @Composable
 fun MetricChartCard(

@@ -9,11 +9,10 @@ import android.util.Log
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import androidx.hilt.work.HiltWorkerFactory
-import com.a307.linkcare.R
 import com.kakao.sdk.common.KakaoSdk
 import com.a307.linkcare.feature.ai.domain.lifecycle.AiCommentLifecycleObserver
 import com.a307.linkcare.feature.ai.domain.worker.AiWorkManager
-import com.a307.linkcare.feature.auth.data.RetrofitClient
+import com.a307.linkcare.common.network.RetrofitClient
 import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
 import javax.inject.Inject
