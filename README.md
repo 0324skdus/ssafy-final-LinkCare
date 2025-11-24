@@ -1,7 +1,7 @@
 ## Link Care (A307)
 LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 
-<img src="Docs/images/introduction.JPG" width="500"/>
+<img src="Docs/images/introduction.JPG" width="600"/>
 
 ## 1️⃣ 프로젝트 개요
 
@@ -72,9 +72,9 @@ LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 | 기능 | 설명 | 이미지 |
 |------|------|-----------|
 | **로그인 / 마이페이지** | 사용자 정보 확인 및 캐릭터 변경, 닉네임 수정 | <img src="Docs/images/login_mypage.JPG" width="300"/> |
-| **그룹 홈 & 그룹 생성** | 그룹 참여, 그룹 목표 확인, 상태 비교 | <img src="Docs/images/groups.JPG" width="300"/> |
-| **탭 전환 (HEALTH / CARE)** | 건강 데이터/케어 활동 간 전환 | <img src="Docs/images/tap.JPG" width="300"/> |
-| **메시지 / 편지 / 콕찌르기** | 멤버 간 동기부여·응원 기능 | <img src="Docs/images/letter.JPG" width="300"/> |
+| **탭 전환 (HEALTH / CARE)** | 건강 데이터/케어 활동 간 전환 | <img src="Docs/images/groups.JPG" width="300"/> |
+| **콕찌르기** | 빠르게 행동을 유도하는 즉각적 동기 자극 기능 | <img src="Docs/images/tap.JPG" width="300"/> |
+| **편지쓰기, 알림** | 응원·격려·목표 공유 등 연결감 강화를 위한 깊은 소통 | <img src="Docs/images/letter.JPG" width="300"/> |
 
 ---
 
