@@ -1,6 +1,8 @@
 ## Link Care (A307)
 LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 
+<img src="Docs/images/introduction.JPG" width="140"/>
+
 ## 1️⃣ 프로젝트 개요
 
 ### 개발 기간
@@ -65,7 +67,18 @@ LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 
 ---
 
-## 3️⃣ 기술 스택
+## 3️⃣ 주요 기능 화면
+
+| 기능 | 설명 | 이미지 |
+|------|------|-----------|
+| **로그인 / 마이페이지** | 사용자 정보 확인 및 캐릭터 변경, 닉네임 수정 | <img src="Docs/images/login_mypage.JPG" width="200"/> |
+| **그룹 홈 & 그룹 생성** | 그룹 참여, 그룹 목표 확인, 상태 비교 | <img src="Docs/images/groups.JPG" width="200"/> |
+| **탭 전환 (HEALTH / CARE)** | 건강 데이터/케어 활동 간 전환 | <img src="Docs/images/tap.JPG" width="200"/> |
+| **메시지 / 편지 / 콕찌르기** | 멤버 간 동기부여·응원 기능 | <img src="Docs/images/letter.JPG" width="200"/> |
+
+---
+
+## 4️⃣ 기술 스택
 
 | 영역 | 기술 |
 |------|------|
@@ -79,7 +92,7 @@ LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 
 ---
 
-## 4️⃣ 아키텍처
+## 5️⃣ 아키텍처
 📍 Wear OS
 → Health Services → Data Layer → Mobile AI Character Engine
 
