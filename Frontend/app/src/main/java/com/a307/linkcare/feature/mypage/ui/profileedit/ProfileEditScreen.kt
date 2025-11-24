@@ -21,19 +21,11 @@ import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
 import com.a307.linkcare.common.theme.*
+import com.a307.linkcare.feature.mypage.data.model.dto.Profile
 import com.a307.linkcare.feature.mypage.data.model.response.MyProfileResponse
 import java.util.Calendar
 
 enum class Gender { MALE, FEMALE }
-
-data class Profile(
-    val name: String,
-    val gender: Gender,
-    val birthDate: String,   // yyyy-MM-dd
-    val heightCm: Int,
-    val weightKg: Int,
-    val petName: String?
-)
 
 fun MyProfileResponse.toProfile(): Profile =
     Profile(

@@ -40,7 +40,6 @@ fun LetterList(
     val formatter = remember { SimpleDateFormat("MM.dd HH:mm", Locale.KOREA) }
     val readGray = Color(0xFF9E9E9E)
 
-    // ViewModel에서 편지 데이터 가져오기
     val letterAlarms by viewModel.letterAlarms.collectAsState()
 
     Column(
@@ -78,7 +77,6 @@ fun LetterList(
                 SwipeToDismissBox(
                     state = dismissState,
                     backgroundContent = {
-                        // currentValue를 사용하여 실제 스와이프 상태 확인
                         val color = when (dismissState.currentValue) {
                             SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF6B6B)
                             else -> Color.Transparent
@@ -120,7 +118,6 @@ fun LetterList(
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 1) 편지 아이콘 (기본 아이콘 사용)
                             Icon(
                                 painter = painterResource(R.drawable.ic_launcher_foreground),
                                 contentDescription = "${letter.senderInfo.nickname} 캐릭터",
@@ -133,14 +130,12 @@ fun LetterList(
                             Spacer(Modifier.width(12.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
-                                // 첫 번째 줄: 발신자 (볼드)
                                 Text(
                                     text = letter.senderInfo.nickname,
                                     fontWeight = FontWeight.Bold,
                                     color = textColor
                                 )
                                 Spacer(Modifier.height(4.dp))
-                                // 두 번째 줄: 내용 (2줄까지)
                                 Text(
                                     text = letter.content,
                                     style = MaterialTheme.typography.bodySmall,
@@ -151,7 +146,6 @@ fun LetterList(
 
                             Spacer(Modifier.width(12.dp))
 
-                            // 2) 우측 끝 날짜
                             Text(
                                 text = parseAndFormatDate(letter.sentAt, formatter),
                                 style = MaterialTheme.typography.bodySmall,
@@ -165,7 +159,6 @@ fun LetterList(
             }
         }
 
-        // 3) 모두 읽음 버튼
         Button(
             onClick = {
                 viewModel.markAllAlarmsAsRead()
@@ -182,7 +175,6 @@ fun LetterList(
     }
 }
 
-// ISO 8601 날짜 파싱 헬퍼 함수
 private fun parseAndFormatDate(isoDate: String, formatter: SimpleDateFormat): String {
     return try {
         // 여러 형식 시도
@@ -206,7 +198,7 @@ private fun parseAndFormatDate(isoDate: String, formatter: SimpleDateFormat): St
             }
         }
 
-        // Date → "MM.dd HH:mm" (한국 시간대로)
+        // Date → "MM.dd HH:mm"
         if (date != null) {
             formatter.timeZone = TimeZone.getTimeZone("Asia/Seoul")
             formatter.format(date)

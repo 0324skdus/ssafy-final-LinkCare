@@ -43,26 +43,21 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.TimeoutCancellationException
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
-import com.a307.linkcare.R
-import com.a307.linkcare.common.component.molecules.BottomBar
-import com.a307.linkcare.common.component.molecules.HeaderBack
-import com.a307.linkcare.common.component.molecules.HeaderDropDown
-import com.a307.linkcare.common.component.molecules.HeaderSearch
-import com.a307.linkcare.common.component.molecules.HeaderTitleOnly
+import com.a307.linkcare.common.component.molecules.footer.BottomBar
+import com.a307.linkcare.common.component.molecules.header.HeaderBack
+import com.a307.linkcare.common.component.molecules.header.HeaderDropDown
+import com.a307.linkcare.common.component.molecules.header.HeaderSearch
+import com.a307.linkcare.common.component.molecules.header.HeaderTitleOnly
 import com.a307.linkcare.common.theme.unActiveField
-import com.a307.linkcare.feature.caregroup.ui.edit.CareGroup
 import com.a307.linkcare.feature.caregroup.ui.create.CareGroupCreate
 import com.a307.linkcare.feature.caregroup.ui.edit.CareGroupEdit
-import com.a307.linkcare.feature.caregroup.ui.edit.GroupMember
-import com.a307.linkcare.feature.caregroup.data.model.request.ShareOptions
 import com.a307.linkcare.feature.commongroup.ui.search.GroupSearch
 import com.a307.linkcare.feature.commongroup.ui.home.MainWithNoGroup
-import com.a307.linkcare.feature.healthgroup.ui.edit.HealthGroup
 import com.a307.linkcare.feature.healthgroup.ui.create.HealthGroupCreate
 import com.a307.linkcare.feature.healthgroup.ui.edit.HealthGroupEdit
 import com.a307.linkcare.feature.mypage.ui.mygroups.MyGroups
 import com.a307.linkcare.feature.mypage.ui.mypage.MyPage
-import com.a307.linkcare.feature.mypage.ui.mypage.MyPageApiState
+import com.a307.linkcare.feature.mypage.ui.state.MyPageApiState
 import com.a307.linkcare.feature.mypage.ui.mypage.MyPageViewModel
 import com.a307.linkcare.feature.notification.ui.Notification
 import com.a307.linkcare.feature.notification.service.MyFirebaseMessagingService
@@ -79,6 +74,7 @@ import com.a307.linkcare.feature.mypage.ui.profileedit.MyPageEditViewModel
 import com.a307.linkcare.feature.mypage.ui.decorate.DecorateRoute
 import com.a307.linkcare.feature.mypage.ui.store.StoreRoute
 import com.a307.linkcare.feature.mypage.ui.mygroups.GroupType
+import com.a307.linkcare.feature.mypage.ui.state.UiState
 
 private fun NavController.goBackToMyPage() {
     navigate(Route.MyPage.route) {
@@ -527,7 +523,7 @@ fun MainTabs(
                                 searchViewModel.joinGroup(group.groupSeq, permissions)
                                     .onSuccess {
                                         Toast.makeText(context, "가입 신청이 완료되었습니다", Toast.LENGTH_SHORT).show()
-                                        // 검색 결과 새로고침 (상태 업데이트)
+                                        // 검색 결과 새로고침
                                         if (healthSearchQuery.isNotBlank()) {
                                             searchViewModel.searchGroups(healthSearchQuery)
                                         }
@@ -624,7 +620,7 @@ fun MainTabs(
                     val uiState = viewModel.uiState
 
                     when (uiState) {
-                        is MyPageEditViewModel.UiState.Loading -> {
+                        is UiState.Loading -> {
                             // 로딩 UI
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -634,7 +630,7 @@ fun MainTabs(
                             }
                         }
 
-                        is MyPageEditViewModel.UiState.Error -> {
+                        is UiState.Error -> {
                             // 에러 UI (간단 예시)
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -644,7 +640,7 @@ fun MainTabs(
                             }
                         }
 
-                        is MyPageEditViewModel.UiState.Success -> {
+                        is UiState.Success -> {
                             ProfileEditScreen(
                                 initial = uiState.profile,
                                 onSave = { updated ->
@@ -714,42 +710,3 @@ fun MainTabs(
         }
     }
 }
-
-/** 더미 데이터 */
-private fun mockCareGroup(id: String) = CareGroup(
-    id = id.toLongOrNull() ?: 0L,
-    name = "그룹$id",
-    description = "샘플 설명입니다.",
-    maxMember = 6,
-    inviteLink = "https://linkcare.app/invite/$id",
-    members = listOf(
-        GroupMember(1, "김싸피(나)", R.drawable.char_bear_1, isLeader = true),
-        GroupMember(2, "김아이", R.drawable.char_bear_2, isLeader = false)
-    ),
-    share = ShareOptions(
-        exercise = true,
-        heartRate = true,
-        steps = true,
-        sleep = true,
-        water = true,
-        bloodPressure = true,
-        bloodSugar = true
-    )
-)
-
-private fun mockHealthGroup(id: String) = HealthGroup(
-    id = id.toLongOrNull() ?: 0L,
-    name = "그룹$id",
-    description = "샘플 설명입니다.",
-    maxMember = 6,
-    inviteLink = "https://linkcare.app/invite/$id",
-    members = listOf(
-        GroupMember(1, "김싸피(나)", R.drawable.char_bear_1, isLeader = true),
-        GroupMember(2, "김아이", R.drawable.char_bear_2, isLeader = false)
-    ),
-    share = com.a307.linkcare.feature.healthgroup.data.model.request.ShareOptions(
-        exercise = true,
-        heartRate = true,
-        steps = true
-    )
-)

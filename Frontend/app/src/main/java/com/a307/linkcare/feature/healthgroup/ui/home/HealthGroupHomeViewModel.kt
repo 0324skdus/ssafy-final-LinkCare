@@ -53,7 +53,7 @@ class HealthGroupHomeViewModel @Inject constructor(
     val weeklyMembersWithActivity: StateFlow<List<MemberWithActivity>> = _weeklyMembersWithActivity
     // --------------------------
 
-    // 일일 활동 데이터 저장 (ActualActivity로 변경)
+    // 일일 활동 데이터 저장
     private val _dailyActivityData = MutableStateFlow<Map<Int, ActualActivity>>(emptyMap())
     val dailyActivityData: StateFlow<Map<Int, ActualActivity>> = _dailyActivityData
 
@@ -138,7 +138,6 @@ class HealthGroupHomeViewModel @Inject constructor(
 
     // 초기 로드: 현재 목표 조회 -> 없으면 AI 생성
     fun loadCurrentGoals(groupSeq: Long, requestDate: String) = viewModelScope.launch {
-        Log.d("HealthGroupHomeViewModel", "🔍 초기 목표 로드")
         _goalState.value = GoalState.Loading
 
         // 먼저 현재 목표 조회
@@ -148,35 +147,28 @@ class HealthGroupHomeViewModel @Inject constructor(
             onSuccess = { existingGoals ->
                 if (existingGoals != null) {
                     // 목표가 이미 있음
-                    Log.d("HealthGroupHomeViewModel", "✅ 기존 목표 있음")
                     _goalState.value = GoalState.Success(existingGoals)
                 } else {
                     // 목표가 없음 -> AI로 생성
-                    Log.d("HealthGroupHomeViewModel", "💡 목표 없음, AI로 생성")
                     generateGroupGoals(groupSeq, requestDate)
                 }
             },
             onFailure = {
-                Log.e("HealthGroupHomeViewModel", "❌ 목표 조회 실패: ${it.message}")
                 _goalState.value = GoalState.Error(it.message ?: "Unknown error")
             }
         )
     }
 
     fun generateGroupGoals(groupSeq: Long, requestDate: String) = viewModelScope.launch {
-        Log.d("HealthGroupHomeViewModel", "🎯 ViewModel: AI 목표 생성 시작")
         _goalState.value = GoalState.Loading
 
         val result = repository.generateGroupGoals(groupSeq, requestDate)
 
         _goalState.value = result.fold(
             onSuccess = {
-                Log.d("HealthGroupHomeViewModel", "✅ ViewModel: 성공 상태로 변경")
-                Log.d("HealthGroupHomeViewModel", "  - 목표 데이터: ${it.goalSteps} 걸음, ${it.goalKcal} kcal")
                 GoalState.Success(it)
             },
             onFailure = {
-                Log.e("HealthGroupHomeViewModel", "❌ ViewModel: 실패 상태로 변경 - ${it.message}")
                 GoalState.Error(it.message ?: "Unknown error")
             }
         )
@@ -187,18 +179,15 @@ class HealthGroupHomeViewModel @Inject constructor(
         metricType: String,
         goalValue: Long
     ) = viewModelScope.launch {
-        Log.d("HealthGroupHomeViewModel", "💾 목표 저장 시작")
         _goalState.value = GoalState.Loading
 
         val result = repository.updateGoal(groupSeq, metricType, goalValue)
 
         _goalState.value = result.fold(
             onSuccess = {
-                Log.d("HealthGroupHomeViewModel", "✅ 목표 저장 완료")
                 GoalState.Success(it)
             },
             onFailure = {
-                Log.e("HealthGroupHomeViewModel", "❌ 목표 저장 실패: ${it.message}")
                 GoalState.Error(it.message ?: "Unknown error")
             }
         )
@@ -213,21 +202,15 @@ class HealthGroupHomeViewModel @Inject constructor(
             try {
                 val targetDate = date ?: LocalDate.now()
                 val dateStr = targetDate.toString()
-                Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$dateStr")
 
                 repository.getActualActivityForUser(userSeq, dateStr).onSuccess { data ->
-                    Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
                     _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
 
-                    Log.d("HealthGroupHomeVM", "👣 걸음수: ${data.totalSteps}")
-                    Log.d("HealthGroupHomeVM", "🔥 소모 칼로리: ${data.totalCalories.toInt()} kcal")
-                    Log.d("HealthGroupHomeVM", "📏 운동 거리: ${"%.2f".format(data.totalDistances)} km")
-                    Log.d("HealthGroupHomeVM", "⏱️ 운동 시간: ${(data.totalDuration / 60000)} 분")
                 }.onFailure { e ->
-                    Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+//                    Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
                 }
             } catch (e: Exception) {
-                Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+//                Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
             }
         }
     }
@@ -235,11 +218,10 @@ class HealthGroupHomeViewModel @Inject constructor(
     fun loadDailyActivityForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
         // 이미 로딩 중이면 중복 요청 방지
         if (_isLoadingDailyActivity.value) {
-            Log.d("HealthGroupHomeVM", "Already loading daily activity, skipping duplicate request")
+//            Log.d("HealthGroupHomeVM", "Already loading daily activity, skipping duplicate request")
             return
         }
 
-        Log.d("HealthGroupHomeVM", "loadDailyActivityForMembers called with ${userSeqs.size} members, date=$date")
         _isLoadingDailyActivity.value = true
 
         viewModelScope.launch {
@@ -249,23 +231,14 @@ class HealthGroupHomeViewModel @Inject constructor(
 
                 userSeqs.forEach { userSeq ->
                     try {
-                        Log.d("HealthGroupHomeVM", "Loading daily activity for userSeq=$userSeq, date=$dateStr")
-
                         repository.getActualActivityForUser(userSeq, dateStr).onSuccess { data ->
-                            Log.d("HealthGroupHomeVM", "Received daily activity for userSeq=$userSeq")
                             _dailyActivityData.value = _dailyActivityData.value + (userSeq to data)
 
-                            // 모든 데이터 로그 출력
-                            Log.d("HealthGroupHomeVM", "👣 걸음수: ${data.totalSteps}")
-                            Log.d("HealthGroupHomeVM", "🔥 소모 칼로리: ${data.totalCalories.toInt()} kcal")
-                            Log.d("HealthGroupHomeVM", "📏 운동 거리: ${"%.2f".format(data.totalDistances)} km")
-                            Log.d("HealthGroupHomeVM", "⏱️ 운동 시간: ${(data.totalDuration / 60000)} 분")
-
                         }.onFailure { e ->
-                            Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+//                            Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
                         }
                     } catch (e: Exception) {
-                        Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
+//                        Log.e("HealthGroupHomeVM", "Error loading daily activity for userSeq=$userSeq", e)
                     }
                 }
             } finally {
@@ -278,32 +251,26 @@ class HealthGroupHomeViewModel @Inject constructor(
         _dailyActivityData.value = emptyMap()
     }
 
-    // 그룹 멤버 한줄평 저장 (userSeq -> comment)
+    // 그룹 멤버 한줄평 저장
     private val _memberComments = MutableStateFlow<Map<Long, String>>(emptyMap())
     val memberComments: StateFlow<Map<Long, String>> = _memberComments
 
     fun loadGroupMemberComments(groupSeq: Long) {
         viewModelScope.launch {
             try {
-                Log.d("HealthGroupHomeVM", "========== Loading member comments for groupSeq=$groupSeq ==========")
                 val response = groupRepo.getGroupMemberComments(groupSeq)
 
                 val comments = response.data?.comments ?: emptyList()
-                Log.d("HealthGroupHomeVM", "API Response: ${comments.size} total comments")
                 comments.forEach { comment ->
                     Log.d("HealthGroupHomeVM", "  - userSeq=${comment.userSeq}, userName=${comment.userName}, comment=${comment.comment}")
                 }
 
-                // userSeq -> comment 맵으로 변환 (comment가 null이 아닌 것만)
                 val commentMap = comments
                     .filter { !it.comment.isNullOrBlank() }
                     .associate { it.userSeq to it.comment!! }
 
                 _memberComments.value = commentMap
-                Log.d("HealthGroupHomeVM", "Final commentMap: $commentMap")
-                Log.d("HealthGroupHomeVM", "Loaded ${commentMap.size} member comments (non-null)")
             } catch (e: Exception) {
-                Log.e("HealthGroupHomeVM", "Error loading member comments: ${e.message}", e)
                 _memberComments.value = emptyMap()
             }
         }

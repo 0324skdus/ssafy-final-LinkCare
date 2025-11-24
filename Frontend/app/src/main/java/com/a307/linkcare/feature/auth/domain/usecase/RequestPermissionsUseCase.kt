@@ -2,7 +2,7 @@ package com.a307.linkcare.feature.auth.domain.usecase
 
 import android.app.Activity
 import androidx.health.connect.client.HealthConnectClient
-import com.a307.linkcare.common.util.HealthPermissions
+import com.a307.linkcare.common.util.permission.HealthPermissions
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import javax.inject.Inject

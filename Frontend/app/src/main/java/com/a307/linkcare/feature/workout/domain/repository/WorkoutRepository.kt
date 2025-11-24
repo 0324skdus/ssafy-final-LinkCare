@@ -1,6 +1,6 @@
 package com.a307.linkcare.feature.workout.domain.repository
 
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.workout.domain.dto.WorkoutSummaryRequest
 import com.a307.linkcare.feature.workout.data.api.WorkoutApi
 import javax.inject.Inject

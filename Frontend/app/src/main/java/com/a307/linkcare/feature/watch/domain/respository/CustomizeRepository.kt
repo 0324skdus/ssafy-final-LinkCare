@@ -1,6 +1,6 @@
 package com.a307.linkcare.feature.watch.domain.respository
 
-import com.a307.linkcare.common.network.CustomizeLocalStore
+import com.a307.linkcare.common.network.store.CustomizeLocalStore
 import javax.inject.Inject
 
 class CustomizeRepository @Inject constructor(

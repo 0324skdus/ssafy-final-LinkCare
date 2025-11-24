@@ -3,6 +3,7 @@ package com.a307.linkcare.feature.healthgroup.data.api
 
 
 import com.a307.linkcare.feature.healthgroup.data.model.response.AllHealthDataDto
+import com.a307.linkcare.feature.healthgroup.data.model.response.ApiResponse
 import com.a307.linkcare.feature.healthgroup.data.model.response.DailyHealthDataDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -23,9 +24,3 @@ interface HealthSyncApi {
         @Body data: AllHealthDataDto
     ): Response<ApiResponse<AllHealthDataDto>>
 }
-
-data class ApiResponse<T>(
-    val message: String,
-    val status: Int,
-    val data: T?
-)

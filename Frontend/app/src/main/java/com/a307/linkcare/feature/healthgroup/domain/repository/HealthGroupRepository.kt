@@ -1,7 +1,7 @@
 package com.a307.linkcare.feature.healthgroup.domain.repository
 
 import android.util.Log
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.healthgroup.data.api.HealthGroupApi
 import com.a307.linkcare.feature.healthgroup.data.model.request.ActualActivity
 import com.a307.linkcare.feature.healthgroup.data.model.response.DailyActivitySummaryResponse

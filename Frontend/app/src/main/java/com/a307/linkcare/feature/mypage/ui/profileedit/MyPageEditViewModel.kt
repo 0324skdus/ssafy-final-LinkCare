@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.mypage.data.model.dto.Profile
 import com.a307.linkcare.feature.mypage.domain.repository.MyPageRepository
 import com.a307.linkcare.feature.mypage.data.model.request.toUpdateRequest
+import com.a307.linkcare.feature.mypage.ui.state.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -15,12 +17,6 @@ import javax.inject.Inject
 class MyPageEditViewModel @Inject constructor(
     private val repo: MyPageRepository
 ) : ViewModel() {
-
-    sealed class UiState {
-        object Loading : UiState()
-        data class Success(val profile: Profile) : UiState()
-        data class Error(val message: String) : UiState()
-    }
 
     var uiState by mutableStateOf<UiState>(UiState.Loading)
         private set

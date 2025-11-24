@@ -2,7 +2,6 @@
 
 package com.a307.linkcare.feature.mypage.ui.store
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -35,39 +33,13 @@ import androidx.compose.ui.unit.sp
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.loadCroppedPainterIO
-import androidx.compose.runtime.produceState
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.a307.linkcare.common.util.CropTransparentTransformation
-
-@Composable
-fun rememberCroppedPainter(@DrawableRes resId: Int?): Painter? {
-    val ctx = LocalContext.current
-    // resId가 null일 수 있으면 null 처리
-    val painter by produceState<Painter?>(initialValue = null, key1 = resId, key2 = ctx) {
-        value = if (resId != null) loadCroppedPainterIO(ctx, resId) else null
-    }
-    return painter
-}
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.feature.mypage.data.model.dto.StoreItem
+import com.a307.linkcare.feature.mypage.data.model.dto.StoreUiState
 
 enum class StoreTab { CHARACTER, BACKGROUND }
-
-data class StoreItem(
-    val id: Long,
-    val imageUrl: String,
-    val animatedImageUrl: String? = null,
-    val price: Int,
-    val owned: Boolean
-)
-
-data class StoreUiState(
-    val coins: Int,
-    val characterItems: List<StoreItem>,
-    val backgroundItems: List<StoreItem>,
-    val equippedBackground: String,
-    val equippedCharacter: String,
-)
 
 /* --------- 상점 화면 --------- */
 @Composable

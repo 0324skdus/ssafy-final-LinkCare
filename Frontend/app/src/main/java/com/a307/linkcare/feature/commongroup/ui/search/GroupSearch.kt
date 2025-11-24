@@ -26,37 +26,10 @@ import com.a307.linkcare.common.theme.white
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 
-
-private val dummyGroups = listOf(
-    GroupItem(
-        id = 1,
-        title = "라면안먹기 (3/6)",
-        summary = "일주일에 10000보를 달리는 건강 목표! 수요일 3회, 수면 7시간, 꾸준 24주, 개인 활동을 하는 소셜형 그룹입니다.",
-        pace = "300kcal | 30min | 4000steps | 3km",
-        members = "3/6",
-        thumbnailRes = null // 썸네일 없으면 아이콘 대체
-    ),
-    GroupItem(
-        id = 2,
-        title = "러닝런닝가 (3/6)",
-        summary = "주 3회 함께 뛰는 달리기 그룹. 초보 환영!",
-        pace = "250kcal | 25min | 3000steps | 2.4km",
-        members = "3/6",
-        thumbnailRes = null
-    ),
-    GroupItem(
-        id = 3,
-        title = "걷기먼저 (5/8)",
-        summary = "매일 가볍게 걷고 수다 떠는 따뜻한 그룹.",
-        pace = "200kcal | 20min | 3000steps | 2km",
-        members = "5/8",
-        thumbnailRes = null
-    )
-)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupSearch(
-    kind: String, // "care" | "health"
+    kind: String,
     query: String,
     onQueryChange: (String) -> Unit,
     onBack: () -> Unit,
@@ -82,10 +55,9 @@ fun GroupSearch(
         }
     }
 
-    // 에러 메시지 스낵바 표시
+    // 에러 메시지
     errorMessage?.let { error ->
         LaunchedEffect(error) {
-            // TODO: 스낵바로 에러 표시
             viewModel.clearError()
         }
     }
@@ -117,7 +89,7 @@ fun GroupSearch(
                 message = "앗! 검색 결과가 없어요."
             )
 
-            // 결과 있음 (검색어가 있을 때 또는 전체 목록 보여줄 때)
+            // 결과 있음
             else -> LazyColumn(
                 modifier = Modifier
                     .padding(padding)
@@ -148,8 +120,6 @@ private fun GroupResultCard(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-
-            // ── 상단: 썸네일 + 제목/멤버 + 신청 버튼 ───────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -243,7 +213,6 @@ private fun GroupResultCard(
                 }
             }
 
-            // ── 하단: 그룹 설명 ─────────────────────
             Spacer(Modifier.height(12.dp))
 
             Text(

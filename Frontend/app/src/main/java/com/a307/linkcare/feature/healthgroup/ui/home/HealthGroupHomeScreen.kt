@@ -1,13 +1,10 @@
 package com.a307.linkcare.feature.healthgroup.ui.home
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.*
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HealthGroupHomeScreen(
     groupSeq: Long,

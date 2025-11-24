@@ -35,8 +35,8 @@ import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.auth.model.OAuthToken
 import com.a307.linkcare.feature.auth.data.model.request.KakaoLoginRequest
 import com.a307.linkcare.feature.auth.data.model.request.GoogleLoginRequest
-import com.a307.linkcare.common.network.RetrofitClient
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.client.RetrofitClient
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.auth.data.model.request.LoginRequest
 import com.a307.linkcare.feature.auth.data.model.response.LoginResponse
 import com.a307.linkcare.feature.auth.data.model.request.UpdateFcmTokenRequest

@@ -2,9 +2,9 @@ package com.a307.linkcare.feature.ai.domain.service
 
 import android.app.Application
 import android.util.Log
-import com.a307.linkcare.common.util.AiResponseValidator
-import com.a307.linkcare.common.util.AiLetterResponseValidator
-import com.a307.linkcare.common.util.AiNudgeResponseValidator
+import com.a307.linkcare.common.util.validator.AiResponseValidator
+import com.a307.linkcare.common.util.validator.AiLetterResponseValidator
+import com.a307.linkcare.common.util.validator.AiNudgeResponseValidator
 import com.a307.linkcare.feature.ai.data.api.AiApi
 import com.a307.linkcare.feature.ai.data.model.AiCommentRequest
 import com.a307.linkcare.feature.ai.data.model.UserHealthStatsResponse
@@ -16,7 +16,7 @@ import com.a307.linkcare.feature.ai.domain.model.ModelRegistry
 import com.a307.linkcare.feature.ai.domain.usecase.LoadModelUseCase
 import com.a307.linkcare.feature.ai.domain.usecase.SendMessageResult
 import com.a307.linkcare.feature.ai.domain.usecase.SendMessageUseCase
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.commongroup.domain.repository.GroupRepository
 import com.a307.linkcare.feature.commongroup.data.model.response.GoalCriteria
 import com.a307.linkcare.feature.commongroup.data.model.response.GroupDetailResponse

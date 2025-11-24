@@ -38,10 +38,10 @@ import coil.size.Size
 import com.a307.linkcare.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.common.util.loader.painterResourceCropped
 import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.caregroup.ui.detail.HealthToday
 import com.a307.linkcare.common.component.page.NudgeLetterCard
 import com.a307.linkcare.common.component.page.Suggestion

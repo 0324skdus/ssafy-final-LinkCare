@@ -3,9 +3,7 @@ package com.a307.linkcare.feature.caregroup.ui.edit
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -20,8 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,10 +29,10 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
-import com.a307.linkcare.common.component.molecules.*
+import com.a307.linkcare.common.component.molecules.avatar.GroupAvatarPicker
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.feature.caregroup.data.model.request.ShareOptions
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.feature.caregroup.data.model.dto.GroupMember
 import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.data.model.response.GroupDetailResponse
 import com.a307.linkcare.feature.mypage.ui.mypage.MyPageViewModel
@@ -63,32 +59,9 @@ private fun uriToFile(context: Context, uri: Uri): File? {
 
         tempFile
     } catch (e: Exception) {
-        Log.e("CareGroupEdit", "URI to File 변환 실패: ${e.message}", e)
         null
     }
 }
-
-// ====== 예시 도메인 ======
-data class CareGroup(
-    val id: Long,
-    val name: String,
-    val description: String,
-    val maxMember: Int,
-    val share: ShareOptions,
-    val inviteLink: String,
-    val members: List<GroupMember>,
-    @DrawableRes val avatarRes: Int? = null
-)
-
-data class GroupMember(
-    val id: Long,
-    val name: String,
-    @DrawableRes val avatarRes: Int?,
-    val isLeader: Boolean,
-    val avatarUrl: String? = null
-)
-// ========================
-
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,16 +83,10 @@ fun CareGroupEdit(
     // 그룹 캐릭터 정보 로드
     val groupCharacters by myPageViewModel.groupCharacters.collectAsState()
     val characterMap = remember(groupCharacters) {
-        Log.d("CareGroupEdit", "🎭 characterMap 생성: groupCharacters size=${groupCharacters.size}")
-        groupCharacters.forEach { char ->
-            Log.d("CareGroupEdit", "  - userId=${char.userId}, userName=${char.userName}, imageUrl=${char.mainCharacterImageUrl}")
-        }
         groupCharacters.associateBy({ it.userId }, { it })
     }
 
-    // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
-        Log.d("CareGroupEdit", "🔄 loadGroupCharacters 호출: groupSeq=$groupSeq")
         viewModel.loadGroupDetail(groupSeq)
         myPageViewModel.loadGroupCharacters(groupSeq)
     }
@@ -209,7 +176,6 @@ fun CareGroupEdit(
         }
     }
 
-    // Handle update success
     LaunchedEffect(updateState) {
         when (updateState) {
             is CareGroupEditViewModel.UpdateState.Success -> {
@@ -229,7 +195,6 @@ fun CareGroupEdit(
         }
     }
 
-    // Show loading or error states
     when (val state = uiState) {
         is CareGroupEditViewModel.UiState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -258,7 +223,6 @@ fun CareGroupEdit(
             return
         }
         is CareGroupEditViewModel.UiState.Success -> {
-            // Continue with rendering the form - all UI code must be here
             RenderCareGroupEditForm(
                 navController = navController,
                 groupDetail = state.groupDetail,
@@ -296,7 +260,7 @@ private fun RenderCareGroupEditForm(
     // 현재 로그인한 사용자가 그룹장인지 확인
     val isLeader = groupDetail.members.find { it.userSeq == groupDetail.currentUserSeq }?.isLeader ?: false
 
-    // ---- 내부 상태: 초기값 프리필 ----
+    // 초기값 프리필
     var name by remember { mutableStateOf(groupDetail.groupName) }
     var desc by remember { mutableStateOf(groupDetail.groupDescription) }
     var maxMemberText by remember { mutableStateOf(groupDetail.capacity.toString()) }
@@ -326,9 +290,7 @@ private fun RenderCareGroupEditForm(
     val canSubmit = isLeader &&
             name.isNotBlank() && maxValid && requiredAllChecked
 
-    val clipboard: ClipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -442,12 +404,6 @@ private fun RenderCareGroupEditForm(
                 key = { index, m -> m.userSeq }
             ) { _, member ->
                 val charInfo = characterMap[member.userSeq]
-                Log.d("CareGroupEdit", "👤 Member: userSeq=${member.userSeq}, userName=${member.userName}")
-                Log.d("CareGroupEdit", "   - charInfo: ${if (charInfo != null) "찾음" else "null"}")
-                Log.d("CareGroupEdit", "   - mainCharacterImageUrl: ${charInfo?.mainCharacterImageUrl}")
-                Log.d("CareGroupEdit", "   - mainBackgroundImageUrl: ${charInfo?.mainBackgroundImageUrl}")
-                Log.d("CareGroupEdit", "   - fallback: ${member.mainCharacterBaseImageUrl}")
-
                 val groupMember = GroupMember(
                     id = member.userSeq,
                     name = member.userName,
@@ -752,27 +708,5 @@ private fun MemberRow(
                 }
             }
         }
-    }
-}
-
-
-/** 아바타 간단 칩 */
-@Composable
-fun GroupAvatarChip(
-    @DrawableRes avatarRes: Int,
-    avatarUrl: String? = null
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .height(40.dp)
-            .background(Color.Transparent)
-    ) {
-        GroupAvatarPickerEdit(
-            defaultRes = avatarRes,
-            onImagePicked = {},
-            enabled = false,
-            imageUrl = avatarUrl
-        )
     }
 }

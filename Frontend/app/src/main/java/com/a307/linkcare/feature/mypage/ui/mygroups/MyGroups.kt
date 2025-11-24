@@ -1,7 +1,6 @@
 package com.a307.linkcare.feature.mypage.ui.mygroups
 
 import android.util.Log
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -32,30 +31,16 @@ import com.a307.linkcare.common.theme.main
 import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.data.model.response.MyGroupResponse
+import com.a307.linkcare.feature.mypage.data.model.dto.GroupSummary
 
 enum class GroupType { CARE, HEALTH }
 
-data class GroupSummary(
-    val id: Long,
-    val name: String,
-    val type: GroupType,
-    val minGoalText: String,
-    val desc: String,
-    val current: Int,
-    val max: Int,
-    @DrawableRes val imageRes: Int = 0,
-    val imageUrl: String? = null,
-    val joinStatus: String = "MEMBER",
-    val isPending: Boolean = false
-)
-
-// MyGroupResponse를 GroupSummary로 변환
 fun MyGroupResponse.toGroupSummary(): GroupSummary {
     return GroupSummary(
         id = groupSeq,
         name = groupName,
         type = if (type == "HEALTH") GroupType.HEALTH else GroupType.CARE,
-        minGoalText = "", // API에서 목표 데이터가 없으면 빈 문자열
+        minGoalText = "",
         desc = groupDescription,
         current = currentMembers,
         max = capacity,

@@ -38,7 +38,6 @@ fun NotiList(
     val formatter = remember { SimpleDateFormat("MM.dd HH:mm", Locale.KOREA) }
     val readGray = Color(0xFF9E9E9E)
 
-    // ViewModel에서 콕 찌르기 데이터 가져오기
     val pokeAlarms by viewModel.pokeAlarms.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
@@ -155,7 +154,6 @@ fun NotiList(
             }
         }
 
-        // 2) 모두 읽음 버튼
         Button(
             onClick = {
                 viewModel.markAllAlarmsAsRead()
@@ -174,7 +172,6 @@ fun NotiList(
     }
 }
 
-// ISO 8601 날짜 파싱 헬퍼 함수
 private fun parseAndFormatDate(isoDate: String, formatter: SimpleDateFormat): String {
     return try {
         // 여러 형식 시도

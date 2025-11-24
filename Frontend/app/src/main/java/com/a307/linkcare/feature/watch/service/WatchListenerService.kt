@@ -2,8 +2,8 @@ package com.a307.linkcare.feature.watch.service
 
 import android.content.Intent
 import android.util.Log
-import com.a307.linkcare.common.di.WorkoutServiceEntryPoint
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.di.entrypoint.WorkoutServiceEntryPoint
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.watch.manager.ExerciseSessionManager
 import com.a307.linkcare.feature.watch.data.mapper.toRequest
 import com.a307.linkcare.feature.watch.domain.model.WorkoutSummary

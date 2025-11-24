@@ -29,7 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.a307.linkcare.R
-import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.feature.auth.ui.permission.HealthPermissionViewModel
 import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
@@ -48,8 +47,11 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import com.a307.linkcare.common.component.atoms.DatePagerRow
 import com.a307.linkcare.common.component.atoms.SummaryChipList
-import com.a307.linkcare.common.di.ExerciseSessionEntryPoint
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.component.molecules.health.HealthGroupHeaderCard
+import com.a307.linkcare.common.component.molecules.health.ProgressSummaryCard
+import com.a307.linkcare.common.component.molecules.memberrow.MemberRowHealth
+import com.a307.linkcare.common.di.entrypoint.ExerciseSessionEntryPoint
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.commongroup.data.model.response.GoalCriteria
 import com.a307.linkcare.feature.commongroup.data.model.request.MemberDetailInfo
 import com.a307.linkcare.feature.healthgroup.ui.detail.HealthMemberDetail
@@ -59,16 +61,12 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlin.collections.get
 
 /* ---------- 날짜 유틸 ---------- */
-@RequiresApi(Build.VERSION_CODES.O)
 val KOR_WEEK = WeekFields.of(DayOfWeek.MONDAY, 1)
 
-@RequiresApi(Build.VERSION_CODES.O)
 val DATE_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREA)
 
-@RequiresApi(Build.VERSION_CODES.O)
 private fun LocalDate.weekOfMonth(): Int = this.get(KOR_WEEK.weekOfMonth())
 
-@RequiresApi(Build.VERSION_CODES.O)
 private fun LocalDate.korLabel(today: LocalDate = LocalDate.now()): String {
     val diff = ChronoUnit.DAYS.between(today, this).toInt()
     val suffix = when (diff) {
@@ -80,15 +78,12 @@ private fun LocalDate.korLabel(today: LocalDate = LocalDate.now()): String {
     return "${this.format(DATE_FMT)}$suffix"
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 private fun LocalDate.toEpochMilliAtLocal(): Long =
     this.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-@RequiresApi(Build.VERSION_CODES.O)
 private fun epochMilliToLocalDate(millis: Long): LocalDate =
     Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HealthGroupHome(
     groupSeq: Long,
@@ -612,8 +607,14 @@ fun HealthGroupHome(
                         unit = currentUnit,
                         onTapIconClick = {
                             // ⑥ wellness_other_short: AI 빠른 넛지 메시지 생성
-                            Log.d("MemberRowHealth", "[콕 찌르기 시작] 그룹=$groupSeq, 대상=${member.name}(${member.userPk})")
-                            aiSuggestionViewModel.loadQuickWellnessNudgeMessage(groupSeq, member.userPk)
+                            Log.d(
+                                "MemberRowHealth",
+                                "[콕 찌르기 시작] 그룹=$groupSeq, 대상=${member.name}(${member.userPk})"
+                            )
+                            aiSuggestionViewModel.loadQuickWellnessNudgeMessage(
+                                groupSeq,
+                                member.userPk
+                            )
                         }
                     )
                     if (index < membersWithActivity.lastIndex) {
@@ -1118,7 +1119,6 @@ private fun GoalEditSheet(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 private fun clampDate(
     date: LocalDate,
     min: LocalDate,

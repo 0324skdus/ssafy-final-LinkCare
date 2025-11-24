@@ -56,11 +56,6 @@ fun GroupList(
     val processedNotifications by viewModel.processedNotifications.collectAsState()
     val groupImages by viewModel.groupImages.collectAsState()
 
-    // 디버깅: notifications 변경 감지
-    LaunchedEffect(notifications.size) {
-        Log.d("GroupList", "📋 UI 재구성: ${notifications.size}개 알림")
-    }
-
     // 알림 로드
     LaunchedEffect(Unit) {
         viewModel.loadNotifications("GROUP")
@@ -120,7 +115,7 @@ fun GroupList(
 
                         val textColor = if (notification.isRead) ReadGray else black
 
-                        // 알림 타입에 따른 메시지 - 처리되었으면 처리 메시지, 아니면 원본
+                        // 알림 타입에 따른 메시지
                         val message = if (isProcessed && processedMessage.isNotEmpty()) {
                             processedMessage
                         } else {
@@ -137,23 +132,19 @@ fun GroupList(
                                     isDismissed = true
                                     scope.launch {
                                         try {
-                                            Log.d("GroupList", "알림 삭제 시도: ${notification.notificationId}")
                                             val result = viewModel.deleteNotification(notification.notificationId)
                                             result.onSuccess {
-                                                Log.d("GroupList", "알림 삭제 성공")
                                                 Toast.makeText(context, "알림을 삭제했습니다", Toast.LENGTH_SHORT).show()
                                             }.onFailure { error ->
-                                                Log.e("GroupList", "알림 삭제 실패: ${error.message}", error)
-                                                Toast.makeText(context, "삭제 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "삭제 실패", Toast.LENGTH_SHORT).show()
                                                 isDismissed = false
                                             }
                                         } catch (e: Exception) {
-                                            Log.e("GroupList", "알림 삭제 예외: ${e.message}", e)
-                                            Toast.makeText(context, "삭제 중 오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "삭제 중 오류 발생", Toast.LENGTH_SHORT).show()
                                             isDismissed = false
                                         }
                                     }
-                                    true // 스와이프 완료 허용
+                                    true
                                 } else {
                                     false
                                 }
@@ -164,7 +155,6 @@ fun GroupList(
                         SwipeToDismissBox(
                             state = dismissState,
                             backgroundContent = {
-                                // currentValue를 사용하여 실제 스와이프 상태 확인
                                 val color = when (dismissState.currentValue) {
                                     SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF6B6B)
                                     else -> Color.Transparent
@@ -251,9 +241,7 @@ fun GroupList(
 
                                 Spacer(Modifier.width(12.dp))
 
-                                // 시간 파싱 및 한국 시간대로 변환
                                 val timeText = try {
-                                    // UTC 시간으로 파싱
                                     val utcDateTime = if (notification.createdAt.endsWith("Z")) {
                                         ZonedDateTime.parse(notification.createdAt)
                                     } else {
@@ -268,7 +256,6 @@ fun GroupList(
                                     val displayFormatter = DateTimeFormatter.ofPattern("MM.dd HH:mm")
                                     kstDateTime.format(displayFormatter)
                                 } catch (e: Exception) {
-                                    Log.e("GroupList", "시간 파싱 실패: ${notification.createdAt}", e)
                                     notification.createdAt.take(16)
                                 }
 
@@ -279,7 +266,7 @@ fun GroupList(
                                 )
                             }
 
-                            // 요청일 때만 하단 버튼 (처리되지 않았을 때만 표시)
+                            // 요청일 때만 하단 버튼
                             if (notification.type == NotificationType.GROUP_JOIN_REQUEST
                                 && notification.relatedRequestSeq != null
                                 && !isProcessed) {
@@ -311,7 +298,7 @@ fun GroupList(
                                                         Toast.makeText(context, "가입 신청을 거절했습니다", Toast.LENGTH_SHORT).show()
                                                     }
                                                     .onFailure { error ->
-                                                        Toast.makeText(context, "거절 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, "거절 실패", Toast.LENGTH_SHORT).show()
                                                     }
                                             }
                                         },
@@ -343,7 +330,7 @@ fun GroupList(
                                                         Toast.makeText(context, "가입 신청을 승인했습니다", Toast.LENGTH_SHORT).show()
                                                     }
                                                     .onFailure { error ->
-                                                        Toast.makeText(context, "승인 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, "승인 실패", Toast.LENGTH_SHORT).show()
                                                     }
                                             }
                                         },

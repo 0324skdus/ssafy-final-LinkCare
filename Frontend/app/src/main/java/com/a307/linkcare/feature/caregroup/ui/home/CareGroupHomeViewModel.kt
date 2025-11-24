@@ -33,20 +33,16 @@ class CareGroupHomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                Log.d("CareGroupHomeVM", "Loading health data for userSeq=$userSeq, date=$date")
                 val data = if (date != null) {
                     repo.getDailyHealthDetailByDate(userSeq, date)
                 } else {
                     repo.getDailyHealthDetail(userSeq)
                 }
                 if (data != null) {
-                    Log.d("CareGroupHomeVM", "Received health data for userSeq=$userSeq")
                     _healthData.value = _healthData.value + (userSeq to data)
                 } else {
-                    Log.d("CareGroupHomeVM", "No health data for userSeq=$userSeq")
                 }
             } catch (e: Exception) {
-                Log.e("CareGroupHomeVM", "Error loading health data for userSeq=$userSeq", e)
                 e.printStackTrace()
             } finally {
                 _isLoading.value = false
@@ -55,7 +51,6 @@ class CareGroupHomeViewModel @Inject constructor(
     }
 
     fun loadHealthDataForMembers(userSeqs: List<Int>, date: LocalDate? = null) {
-        Log.d("CareGroupHomeVM", "loadHealthDataForMembers called with ${userSeqs.size} members, date=$date")
         userSeqs.forEach { userSeq ->
             loadHealthData(userSeq, date)
         }
@@ -169,25 +164,6 @@ class CareGroupHomeViewModel @Inject constructor(
         _healthFeedbackMap.value = emptyMap()
     }
 
-    fun loadHealthFeedback(userSeq: Int, date: LocalDate) {
-        viewModelScope.launch {
-            try {
-                val targetDate = date
-                Log.d("CareGroupHomeVM", "Loading health feedback for userSeq=$userSeq, date=$targetDate")
-                val feedback = repo.getHealthFeedback(userSeq, targetDate)
-                if (feedback != null) {
-                    Log.d("CareGroupHomeVM", "Received health feedback for userSeq=$userSeq: ${feedback.status}")
-                    _healthFeedbackMap.value = _healthFeedbackMap.value + (userSeq to feedback)
-                } else {
-                    Log.d("CareGroupHomeVM", "No health feedback for userSeq=$userSeq")
-                }
-            } catch (e: Exception) {
-                Log.e("CareGroupHomeVM", "Error loading health feedback for userSeq=$userSeq", e)
-                e.printStackTrace()
-            }
-        }
-    }
-
     fun loadHealthFeedbackForMembers(userSeqs: List<Int>, date: LocalDate) {
         Log.d("CareGroupHomeVM", "loadHealthFeedbackForMembers called with ${userSeqs.size} members, date=$date")
         _isLoadingHealthFeedback.value = true
@@ -216,30 +192,25 @@ class CareGroupHomeViewModel @Inject constructor(
         }
     }
 
-    // 그룹 멤버 한줄평 저장 (userSeq -> comment)
+    // 그룹 멤버 한줄평 저장
     private val _memberComments = MutableStateFlow<Map<Long, String>>(emptyMap())
     val memberComments: StateFlow<Map<Long, String>> = _memberComments
 
     fun loadGroupMemberComments(groupSeq: Long) {
         viewModelScope.launch {
             try {
-                Log.d("CareGroupHomeVM", "========== Loading member comments for groupSeq=$groupSeq ==========")
                 val response = groupRepo.getGroupMemberComments(groupSeq)
 
                 val comments = response.data?.comments ?: emptyList()
-                Log.d("CareGroupHomeVM", "API Response: ${comments.size} total comments")
                 comments.forEach { comment ->
                     Log.d("CareGroupHomeVM", "  - userSeq=${comment.userSeq}, userName=${comment.userName}, comment=${comment.comment}")
                 }
 
-                // userSeq -> comment 맵으로 변환 (comment가 null이 아닌 것만)
                 val commentMap = comments
                     .filter { !it.comment.isNullOrBlank() }
                     .associate { it.userSeq to it.comment!! }
 
                 _memberComments.value = commentMap
-                Log.d("CareGroupHomeVM", "Final commentMap: $commentMap")
-                Log.d("CareGroupHomeVM", "Loaded ${commentMap.size} member comments (non-null)")
             } catch (e: Exception) {
                 Log.e("CareGroupHomeVM", "Error loading member comments: ${e.message}", e)
                 _memberComments.value = emptyMap()

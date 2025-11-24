@@ -14,7 +14,7 @@ import com.a307.linkcare.feature.notification.service.MyFirebaseMessagingService
 import com.a307.linkcare.feature.notification.data.api.NotificationApi
 import com.a307.linkcare.feature.notification.manager.NotificationEventManager
 import com.a307.linkcare.feature.notification.domain.repository.NotificationRepository
-import com.a307.linkcare.common.network.ProcessedNotificationStore
+import com.a307.linkcare.common.network.store.ProcessedNotificationStore
 import com.a307.linkcare.feature.notification.domain.model.response.AlarmResponse
 import com.a307.linkcare.feature.notification.domain.model.response.NotificationResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +37,6 @@ class NotificationViewModel @Inject constructor(
 
     private val processedStore = ProcessedNotificationStore(context)
 
-    // StateFlow 및 프로퍼티 선언을 init 블록 위로 이동
     private val _notifications = MutableStateFlow<List<NotificationResponse>>(emptyList())
     val notifications: StateFlow<List<NotificationResponse>> = _notifications
 
@@ -71,31 +70,23 @@ class NotificationViewModel @Inject constructor(
 
     private val fcmReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d("NotificationViewModel", "브로드캐스트 수신: ${intent?.action}")
             loadNotifications("GROUP", silent = true)
         }
     }
 
     init {
-        Log.d("NotificationViewModel", "ViewModel 초기화 시작")
         registerFcmReceiver()
 
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "SharedFlow 구독 시작")
             notificationEventManager.newNotificationEvent.collect {
-                Log.d("NotificationViewModel", "✅ SharedFlow 이벤트 수신! - 알림 목록 갱신 호출")
                 loadNotifications("GROUP", silent = true)
             }
         }
-
-        Log.d("NotificationViewModel", "ViewModel 초기화 완료")
     }
 
     // 알림 목록 로드
     fun loadNotifications(category: String = "GROUP", silent: Boolean = false) {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "loadNotifications 시작 (silent=$silent, category=$category)")
-
             if (!silent) {
                 _isLoading.value = true
             }
@@ -104,13 +95,10 @@ class NotificationViewModel @Inject constructor(
 
             repository.getMyNotifications(category)
                 .onSuccess { notifications ->
-                    Log.d("NotificationViewModel", "✅ API 성공: ${notifications.size}개 알림 받음")
                     _notifications.value = notifications
-                    Log.d("NotificationViewModel", "StateFlow 업데이트 완료")
                     loadGroupImages(notifications)
                 }
                 .onFailure { error ->
-                    Log.e("NotificationViewModel", "❌ API 실패: ${error.message}", error)
                     if (!silent) {
                         _errorMessage.value = error.message ?: "알림을 불러오는데 실패했습니다"
                     }
@@ -120,15 +108,12 @@ class NotificationViewModel @Inject constructor(
                 _isLoading.value = false
             }
             _isRefreshing.value = false
-
-            Log.d("NotificationViewModel", "loadNotifications 완료")
         }
     }
 
-    // 모든 알림 로드 (POKE, LETTER)
+    // 모든 알림 로드
     fun loadAllAlarms() {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "[LOAD_ALARMS] 모든 알림 조회 시작")
             _isRefreshing.value = true
 
             try {
@@ -141,60 +126,47 @@ class NotificationViewModel @Inject constructor(
                     val letters = allAlarms.filter { it.messageType == "LETTER" }
                     _pokeAlarms.value = pokes
                     _letterAlarms.value = letters
-                    Log.d("NotificationViewModel", "[LOAD_ALARMS] ✅ 성공: 전체 ${allAlarms.size}개")
                 } else {
-                    Log.e("NotificationViewModel", "[LOAD_ALARMS] ❌ 실패: HTTP ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("NotificationViewModel", "[LOAD_ALARMS] ❌ 예외", e)
             }
             _isRefreshing.value = false
         }
     }
 
-    // 특정 알림 읽음 처리 (Alarm용)
+    // 특정 알림 읽음 처리
     fun markAlarmAsRead(alarmId: Long) {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "[MARK_READ] 알림 읽음 처리 시작: alarmId=$alarmId")
 
             try {
-                // 1. 서버에 읽음 처리 요청
                 val response = notificationApi.markAlarmAsRead(alarmId)
 
                 if (response.isSuccessful) {
-                    Log.d("NotificationViewModel", "[MARK_READ] ✅ 서버 읽음 처리 성공")
-
-                    // 2. 로컬 상태 업데이트 (흐림 처리)
                     val updated: List<AlarmResponse> = _alarms.value.map {
                         if (it.alarmId == alarmId) it.copy(read = true) else it
                     }
                     _alarms.value = updated
 
-                    // 3. 다시 분리
                     val pokes: List<AlarmResponse> = updated.filter { it.messageType == "POKE" }
                     val letters: List<AlarmResponse> = updated.filter { it.messageType == "LETTER" }
                     _pokeAlarms.value = pokes
                     _letterAlarms.value = letters
-
-                    Log.d("NotificationViewModel", "[MARK_READ] 로컬 상태 업데이트 완료")
                 } else {
-                    Log.e("NotificationViewModel", "[MARK_READ] ❌ 서버 읽음 처리 실패: HTTP ${response.code()}")
+                    Log.e("NotificationViewModel", "[MARK_READ] 서버 읽음 처리 실패: HTTP ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("NotificationViewModel", "[MARK_READ] ❌ 예외 발생", e)
+                Log.e("NotificationViewModel", "[MARK_READ] 예외 발생", e)
             }
         }
     }
 
-    // 전체 알림 읽음 처리 (Alarm용)
+    // 전체 알림 읽음 처리
     fun markAllAlarmsAsRead() {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "[MARK_ALL_READ] 전체 알림 읽음 처리 시작")
 
             try {
                 // 안 읽은 알림들의 ID 수집
                 val unreadAlarms: List<AlarmResponse> = _alarms.value.filter { !it.read }
-                Log.d("NotificationViewModel", "[MARK_ALL_READ] 안 읽은 알림 ${unreadAlarms.size}개")
 
                 // 각 알림에 대해 읽음 처리 API 호출
                 var successCount = 0
@@ -211,9 +183,7 @@ class NotificationViewModel @Inject constructor(
                     }
                 }
 
-                Log.d("NotificationViewModel", "[MARK_ALL_READ] 처리 완료: $successCount/${unreadAlarms.size}개 성공")
-
-                // 로컬 상태 업데이트 (모두 읽음으로 변경)
+                // 로컬 상태 업데이트
                 val updated: List<AlarmResponse> = _alarms.value.map { it.copy(read = true) }
                 _alarms.value = updated
 
@@ -223,22 +193,18 @@ class NotificationViewModel @Inject constructor(
                 _letterAlarms.value = letters
 
             } catch (e: Exception) {
-                Log.e("NotificationViewModel", "[MARK_ALL_READ] ❌ 전체 처리 예외", e)
+                Log.e("NotificationViewModel", "[MARK_ALL_READ] 전체 처리 예외", e)
             }
         }
     }
 
-    // 알림 삭제 (Alarm용)
+    // 알림 삭제
     fun deleteAlarm(alarmId: Long) {
         viewModelScope.launch {
-            Log.d("NotificationViewModel", "[DELETE_ALARM] 알림 삭제 시작: alarmId=$alarmId")
-
             try {
                 val response = notificationApi.deleteAlarm(alarmId)
 
                 if (response.isSuccessful) {
-                    Log.d("NotificationViewModel", "[DELETE_ALARM] ✅ 서버 삭제 성공")
-
                     // 로컬 상태에서 제거
                     val updated: List<AlarmResponse> = _alarms.value.filter { it.alarmId != alarmId }
                     _alarms.value = updated
@@ -249,12 +215,11 @@ class NotificationViewModel @Inject constructor(
                     _pokeAlarms.value = pokes
                     _letterAlarms.value = letters
 
-                    Log.d("NotificationViewModel", "[DELETE_ALARM] 로컬 상태 업데이트 완료")
                 } else {
-                    Log.e("NotificationViewModel", "[DELETE_ALARM] ❌ 서버 삭제 실패: HTTP ${response.code()}")
+                    Log.e("NotificationViewModel", "[DELETE_ALARM] 서버 삭제 실패: HTTP ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("NotificationViewModel", "[DELETE_ALARM] ❌ 예외 발생", e)
+                Log.e("NotificationViewModel", "[DELETE_ALARM] 예외 발생", e)
             }
         }
     }
@@ -299,7 +264,7 @@ class NotificationViewModel @Inject constructor(
     suspend fun approveJoinRequest(requestSeq: Long, notificationId: Long, userName: String): Result<Unit> {
         val result = repository.approveJoinRequest(requestSeq)
         if (result.isSuccess) {
-            // 처리 결과 메시지 저장 (DataStore에 영구 저장)
+            // 처리 결과 메시지 저장
             val message = "${userName}님 신청을 수락하였습니다"
             processedStore.addProcessedNotification(notificationId, message)
         }
@@ -310,7 +275,7 @@ class NotificationViewModel @Inject constructor(
     suspend fun rejectJoinRequest(requestSeq: Long, notificationId: Long, userName: String): Result<Unit> {
         val result = repository.rejectJoinRequest(requestSeq)
         if (result.isSuccess) {
-            // 처리 결과 메시지 저장 (DataStore에 영구 저장)
+            // 처리 결과 메시지 저장
             val message = "${userName}님 신청을 거절하였습니다"
             processedStore.addProcessedNotification(notificationId, message)
         }
@@ -322,20 +287,15 @@ class NotificationViewModel @Inject constructor(
         return try {
             val result = repository.deleteNotification(notificationId)
             result.onSuccess {
-                Log.d("NotificationViewModel", "✅ 알림 삭제 성공: $notificationId")
-                // 로컬 상태에서 제거
                 _notifications.value = _notifications.value.filter {
                     it.notificationId != notificationId
                 }
-                // DataStore에서도 제거
                 processedStore.removeProcessedNotification(notificationId)
             }.onFailure { error ->
-                Log.e("NotificationViewModel", "❌ 알림 삭제 실패: ${error.message}", error)
                 _errorMessage.value = error.message ?: "알림 삭제에 실패했습니다"
             }
             result
         } catch (e: Exception) {
-            Log.e("NotificationViewModel", "❌ 알림 삭제 예외: ${e.message}", e)
             _errorMessage.value = e.message ?: "알림 삭제 중 오류가 발생했습니다"
             Result.failure(e)
         }
@@ -356,7 +316,6 @@ class NotificationViewModel @Inject constructor(
                     try {
                         val detail = groupRepository.getGroupDetail(groupSeq)
                         newImages[groupSeq] = detail.imageUrl
-                        Log.d("NotificationViewModel", "그룹 이미지 로드 성공: $groupSeq -> ${detail.imageUrl}")
                     } catch (error: Exception) {
                         Log.e("NotificationViewModel", "그룹 이미지 로드 실패: $groupSeq - ${error.message}")
                     }
@@ -378,11 +337,9 @@ class NotificationViewModel @Inject constructor(
 
         try {
             LocalBroadcastManager.getInstance(context).registerReceiver(fcmReceiver, filter)
-            Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 등록 완료")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.registerReceiver(fcmReceiver, filter, Context.RECEIVER_EXPORTED)
-                Log.d("NotificationViewModel", "Global 리시버 등록 완료")
             }
         } catch (e: Exception) {
             Log.e("NotificationViewModel", "리시버 등록 실패: ${e.message}", e)
@@ -393,11 +350,9 @@ class NotificationViewModel @Inject constructor(
         super.onCleared()
         try {
             LocalBroadcastManager.getInstance(context).unregisterReceiver(fcmReceiver)
-            Log.d("NotificationViewModel", "LocalBroadcastManager 리시버 해제")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.unregisterReceiver(fcmReceiver)
-                Log.d("NotificationViewModel", "Global 리시버 해제")
             }
         } catch (e: Exception) {
             Log.e("NotificationViewModel", "리시버 해제 실패: ${e.message}", e)

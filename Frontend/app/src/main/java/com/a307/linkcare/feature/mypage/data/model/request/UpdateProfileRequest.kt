@@ -1,7 +1,7 @@
 package com.a307.linkcare.feature.mypage.data.model.request
 
 import com.a307.linkcare.feature.mypage.ui.profileedit.Gender
-import com.a307.linkcare.feature.mypage.ui.profileedit.Profile
+import com.a307.linkcare.feature.mypage.data.model.dto.Profile
 
 data class UpdateProfileRequest(
     val birth: String,

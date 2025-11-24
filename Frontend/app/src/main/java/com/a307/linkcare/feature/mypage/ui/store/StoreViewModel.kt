@@ -5,18 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.a307.linkcare.feature.mypage.data.model.dto.StoreItem
+import com.a307.linkcare.feature.mypage.data.model.dto.StoreUiState
 import com.a307.linkcare.feature.mypage.domain.repository.ShopRepository
+import com.a307.linkcare.feature.mypage.ui.state.StoreEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed class StoreEvent {
-    data class PurchaseSuccess(val itemName: String) : StoreEvent()
-    data class PurchaseFailed(val reason: String) : StoreEvent()
-    object NotEnoughCoins : StoreEvent()
-}
 
 @HiltViewModel
 class StoreViewModel @Inject constructor(

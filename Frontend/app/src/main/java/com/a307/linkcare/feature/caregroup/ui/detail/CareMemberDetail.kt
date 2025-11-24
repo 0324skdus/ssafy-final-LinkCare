@@ -37,8 +37,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.common.util.loader.painterResourceCropped
 import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import com.a307.linkcare.common.component.page.NudgeLetterCard
 import com.a307.linkcare.common.component.page.Suggestion
@@ -46,7 +46,7 @@ import com.a307.linkcare.common.component.page.User
 import com.a307.linkcare.feature.commongroup.domain.model.Member
 import kotlin.math.roundToInt
 import com.a307.linkcare.R
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.mypage.data.model.response.GroupCharacterResponse
 
 /* ---------- 모델 ---------- */

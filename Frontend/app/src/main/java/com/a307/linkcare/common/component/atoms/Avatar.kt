@@ -5,7 +5,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -33,10 +31,9 @@ import coil.request.ImageRequest
 import com.a307.linkcare.avatarTest.AvatarAnimator
 import com.a307.linkcare.avatarTest.AvatarSelection
 import com.a307.linkcare.avatarTest.Species
-import com.a307.linkcare.common.theme.white
 import com.a307.linkcare.R
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.common.util.painterResourceCropped
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.common.util.loader.painterResourceCropped
 @Composable
 fun Avatar(
     @DrawableRes imageRes: Int = R.drawable.char_bear_1,

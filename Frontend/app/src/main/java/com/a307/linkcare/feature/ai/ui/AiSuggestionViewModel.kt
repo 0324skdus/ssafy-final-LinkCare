@@ -3,8 +3,8 @@ package com.a307.linkcare.feature.ai.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.common.util.AiLetterResponseValidator
-import com.a307.linkcare.common.util.AiNudgeResponseValidator
+import com.a307.linkcare.common.util.validator.AiLetterResponseValidator
+import com.a307.linkcare.common.util.validator.AiNudgeResponseValidator
 import com.a307.linkcare.feature.ai.domain.service.AiCommentService
 import com.a307.linkcare.feature.notification.data.api.NotificationApi
 import com.a307.linkcare.feature.notification.domain.model.request.SaveNotificationRequest

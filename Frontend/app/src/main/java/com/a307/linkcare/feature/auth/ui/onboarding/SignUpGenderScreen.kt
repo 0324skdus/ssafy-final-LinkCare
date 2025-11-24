@@ -26,9 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.LcBtn
-import com.a307.linkcare.common.component.molecules.PagerDots
+import com.a307.linkcare.common.component.molecules.header.PagerDots
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import kotlinx.coroutines.launch
 
 private enum class Gender { MALE, FEMALE }

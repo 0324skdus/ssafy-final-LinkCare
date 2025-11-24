@@ -3,10 +3,12 @@ package com.a307.linkcare.feature.mypage.ui.mypage
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.common.network.RetrofitClient
+import com.a307.linkcare.common.network.client.RetrofitClient
 import com.a307.linkcare.feature.mypage.domain.repository.MyPageRepository
 import com.a307.linkcare.feature.mypage.data.model.response.GroupCharacterResponse
 import com.a307.linkcare.feature.caregroup.domain.repository.CareGroupRepository
+import com.a307.linkcare.feature.mypage.data.model.dto.MyPageUiState
+import com.a307.linkcare.feature.mypage.ui.state.MyPageApiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -14,12 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed interface MyPageApiState {
-    object Loading : MyPageApiState
-    data class Success(val uiState: MyPageUiState) : MyPageApiState
-    data class Error(val message: String) : MyPageApiState
-}
 
 @HiltViewModel
 class MyPageViewModel @Inject constructor(
@@ -67,13 +63,11 @@ class MyPageViewModel @Inject constructor(
                         _apiState.value = MyPageApiState.Success(uiState)
                     } else {
                         val errorMsg = "사용자 정보를 불러오지 못했습니다: ${userResponse.code()}"
-                        Log.e("MyPageViewModel", errorMsg)
                         _apiState.value = MyPageApiState.Error(errorMsg)
                     }
                 }
             } catch (e: Exception) {
                 val errorMsg = "서버 통신 오류: ${e.message}"
-                Log.e("MyPageViewModel", errorMsg, e)
                 _apiState.value = MyPageApiState.Error(errorMsg)
             } finally {
                 if (isRefresh) {
@@ -106,7 +100,6 @@ class MyPageViewModel @Inject constructor(
                 _groupCharacters.value = uiList
 
             } catch (e: Exception) {
-                Log.e("MyPageViewModel", "loadGroupCharacters error", e)
                 _groupCharacterError.value = e.message
             } finally {
                 _groupCharacterLoading.value = false

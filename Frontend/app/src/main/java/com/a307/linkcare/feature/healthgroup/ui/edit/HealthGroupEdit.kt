@@ -5,7 +5,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,13 +32,13 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.a307.linkcare.R
 import com.a307.linkcare.common.component.atoms.*
-import com.a307.linkcare.common.component.molecules.*
+import com.a307.linkcare.common.component.molecules.avatar.GroupAvatarPicker
+import com.a307.linkcare.common.component.molecules.health.BaselineInputs
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.feature.caregroup.ui.edit.GroupMember
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.feature.caregroup.data.model.dto.GroupMember
 import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
 import com.a307.linkcare.feature.commongroup.data.model.response.GroupDetailResponse
-import com.a307.linkcare.feature.healthgroup.data.model.request.ShareOptions
 import com.a307.linkcare.feature.mypage.ui.mypage.MyPageViewModel
 import com.a307.linkcare.feature.mypage.data.model.response.GroupCharacterResponse
 import kotlinx.coroutines.CoroutineScope
@@ -64,38 +63,9 @@ private fun uriToFile(context: Context, uri: Uri): File? {
 
         tempFile
     } catch (e: Exception) {
-        Log.e("HealthGroupEdit", "URI to File 변환 실패: ${e.message}", e)
         null
     }
 }
-
-// ====== 헬스 그룹 도메인 ======
-data class HealthGroup(
-    val id: Long,
-    val name: String,
-    val description: String,
-    val maxMember: Int,
-    val share: ShareOptions,
-    val inviteLink: String,
-    val members: List<GroupMember>,
-    @DrawableRes val avatarRes: Int? = null,
-    val baseline: HealthBaseline? = null
-)
-
-data class HealthBaseline(
-    val kcal: Int? = null,
-    val minutes: Int? = null,
-    val steps: Int? = null,
-    val km: Float? = null
-)
-
-data class HealthMember(
-    val id: Long,
-    val name: String,
-    @DrawableRes val avatarRes: Int?,
-    val isLeader: Boolean
-)
-// ============================
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,9 +95,7 @@ fun HealthGroupEdit(
         groupCharacters.associateBy({ it.userId }, { it })
     }
 
-    // Load group detail when screen opens
     LaunchedEffect(groupSeq) {
-        Log.d("HealthGroupEdit", "🔄 loadGroupCharacters 호출: groupSeq=$groupSeq")
         viewModel.loadGroupDetail(groupSeq)
         myPageViewModel.loadGroupCharacters(groupSeq)
     }
@@ -217,8 +185,7 @@ fun HealthGroupEdit(
         }
     }
 
-    // Handle update success
-    LaunchedEffect(updateState) {
+     LaunchedEffect(updateState) {
         when (updateState) {
             is HealthGroupEditViewModel.UpdateState.Success -> {
                 Toast.makeText(context, "그룹 정보가 수정되었습니다", Toast.LENGTH_SHORT).show()
@@ -266,7 +233,6 @@ fun HealthGroupEdit(
             return
         }
         is HealthGroupEditViewModel.UiState.Success -> {
-            // Continue with rendering the form - all UI code must be here
             RenderHealthGroupEditForm(
                 navController = navController,
                 groupDetail = state.groupDetail,
@@ -770,26 +736,5 @@ private fun MemberRow(
                 }
             }
         }
-    }
-}
-
-/** 아바타 간단 칩 */
-@Composable
-private fun GroupAvatarChip(
-    @DrawableRes avatarRes: Int,
-    avatarUrl: String? = null
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .height(40.dp)
-            .background(Color.Transparent)
-    ) {
-        GroupAvatarPickerEdit(
-            defaultRes = avatarRes,
-            onImagePicked = {},
-            enabled = false,
-            imageUrl = avatarUrl
-        )
     }
 }

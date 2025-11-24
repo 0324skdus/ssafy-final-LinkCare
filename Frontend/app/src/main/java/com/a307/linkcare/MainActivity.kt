@@ -15,7 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.a307.linkcare.common.theme.LinkCareTheme
 import com.a307.linkcare.feature.auth.data.api.ProfileApi
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.auth.data.model.request.UpdateFcmTokenRequest
 import com.a307.linkcare.navigation.AppNavGraph
 import com.google.firebase.messaging.FirebaseMessaging
@@ -33,14 +33,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var tokenStore: TokenStore
 
-    // 알림 권한 요청 런처 (Android 13+)
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            Log.i("MainActivity", "✅ 알림 권한 승인됨")
+            Log.i("MainActivity", "알림 권한 승인됨")
         } else {
-            Log.w("MainActivity", "❌ 알림 권한 거부됨 - FCM 푸시 알림을 받을 수 없습니다")
+            Log.w("MainActivity", "알림 권한 거부됨 - FCM 푸시 알림을 받을 수 없습니다")
         }
     }
 
@@ -50,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        // FCM 토큰 서버 전송 (로그인된 경우만)
+        // FCM 토큰 서버 전송
         updateFcmTokenToServer()
 
         setContent {
@@ -76,14 +75,12 @@ class MainActivity : ComponentActivity() {
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED -> {
-                    Log.i("MainActivity", "✅ 알림 권한 이미 있음")
+                    Log.i("MainActivity", " 알림 권한 이미 있음")
                 }
                 shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
-                    Log.i("MainActivity", "알림 권한 필요 - 사용자에게 설명 후 요청")
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
                 else -> {
-                    Log.i("MainActivity", "알림 권한 요청 (로그인 성공 후)")
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
@@ -95,35 +92,24 @@ class MainActivity : ComponentActivity() {
     private fun updateFcmTokenToServer() {
         lifecycleScope.launch {
             try {
-                Log.i("MainActivity", "=== MainActivity FCM 토큰 업데이트 시작 ===")
-
                 // 액세스 토큰 확인
                 val accessToken = tokenStore.getAccess()
                 if (accessToken.isNullOrEmpty()) {
-                    Log.w("MainActivity", "액세스 토큰이 없어 FCM 토큰 전송 스킵 (로그인 안됨)")
                     return@launch
                 }
 
-                Log.d("MainActivity", "액세스 토큰 확인 완료")
-
                 // 현재 FCM 토큰 가져오기
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
-                Log.i("MainActivity", "현재 FCM 토큰 획득: ${fcmToken.take(20)}...")
-
                 // 서버에 전송
-                Log.d("MainActivity", "서버로 FCM 토큰 전송 중...")
                 val response = profileApi.updateFcmToken(UpdateFcmTokenRequest(fcmToken))
                 if (response.isSuccessful) {
-                    Log.i("MainActivity", "✅ FCM 토큰 서버 전송 성공!")
                 } else {
-                    Log.e("MainActivity", "❌ FCM 토큰 서버 전송 실패: ${response.code()} - ${response.message()}")
                     response.errorBody()?.string()?.let { errorBody ->
                         Log.e("MainActivity", "에러 응답: $errorBody")
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "❌ FCM 토큰 처리 중 에러: ${e.message}", e)
-                e.printStackTrace()
+               e.printStackTrace()
             }
         }
     }

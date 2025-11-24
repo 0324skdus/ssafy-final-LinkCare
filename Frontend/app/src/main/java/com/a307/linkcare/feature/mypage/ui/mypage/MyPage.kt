@@ -50,9 +50,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.a307.linkcare.R
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.CropTransparentTransformation
-import com.a307.linkcare.common.network.RetrofitClient
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.util.transformation.CropTransparentTransformation
+import com.a307.linkcare.common.network.client.RetrofitClient
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.caregroup.ui.detail.ActivitySessionCard
 import com.a307.linkcare.feature.caregroup.ui.detail.DetailRow
 import com.a307.linkcare.feature.caregroup.ui.detail.EmptyDataText
@@ -69,21 +69,13 @@ import com.a307.linkcare.feature.caregroup.ui.detail.getTotalSleepHours
 import com.a307.linkcare.feature.caregroup.ui.detail.getWaterStatus
 import com.a307.linkcare.feature.caregroup.ui.detail.getWaterSummary
 import com.a307.linkcare.feature.caregroup.ui.detail.round1
+import com.a307.linkcare.feature.mypage.data.model.dto.MyPageUiState
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.launch
 
 private val shadowColor = Color(0x1A000000)
 
-
-data class MyPageUiState(
-    val nickname: String,
-    val coinLabel: String,
-    val groupCountLabel: String,
-    val avatarUrl: String?,
-    val avatarBgUrl: String? = null,
-    val healthToday: HealthToday? = null
-)
 
 @Composable
 fun MyPage(

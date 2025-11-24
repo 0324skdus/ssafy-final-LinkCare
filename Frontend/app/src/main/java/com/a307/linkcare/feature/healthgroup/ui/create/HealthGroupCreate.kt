@@ -17,11 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.a307.linkcare.common.component.molecules.*
 import com.a307.linkcare.common.theme.*
 import com.a307.linkcare.common.component.atoms.*
 import com.a307.linkcare.feature.healthgroup.data.model.request.ShareOptions
 import com.a307.linkcare.R
+import com.a307.linkcare.common.component.molecules.avatar.GroupAvatarPicker
+import com.a307.linkcare.common.component.molecules.health.BaselineInputs
 import com.a307.linkcare.feature.commongroup.ui.home.MyGroupsViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody

@@ -40,13 +40,16 @@ import androidx.compose.ui.platform.LocalContext
 import com.a307.linkcare.feature.ai.ui.AiSuggestionViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.a307.linkcare.common.component.molecules.care.MetricChartCard
+import com.a307.linkcare.common.component.molecules.health.ProgressSummaryCard
+import com.a307.linkcare.common.component.molecules.memberrow.MemberRowCare
 import com.a307.linkcare.feature.auth.ui.permission.HealthPermissionViewModel
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.caregroup.ui.detail.BloodPressure
 import com.a307.linkcare.feature.caregroup.ui.detail.CareMemberDetail
 import com.a307.linkcare.feature.caregroup.ui.detail.DailyActivitySummary
 import com.a307.linkcare.feature.caregroup.ui.detail.ExerciseSession
-import com.a307.linkcare.common.di.ExerciseSessionEntryPoint
+import com.a307.linkcare.common.di.entrypoint.ExerciseSessionEntryPoint
 import com.a307.linkcare.feature.caregroup.domain.mapper.buildWeeklyChartData
 import com.a307.linkcare.feature.caregroup.domain.mapper.endOfWeek
 import com.a307.linkcare.feature.caregroup.domain.mapper.epochMilliToLocalDate
@@ -59,7 +62,6 @@ import com.a307.linkcare.feature.caregroup.ui.detail.Sleep
 import com.a307.linkcare.feature.caregroup.ui.detail.WaterIntake
 import com.a307.linkcare.feature.caregroup.data.model.response.SleepStatisticsResponse
 import com.a307.linkcare.feature.commongroup.data.model.request.MemberDetailInfo
-import com.a307.linkcare.feature.mypage.data.model.response.GroupCharacterResponse
 import com.a307.linkcare.feature.mypage.ui.mypage.MyPageViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel
 import com.a307.linkcare.sdk.health.presentation.HealthSyncViewModel.SyncState
@@ -75,7 +77,7 @@ interface TokenStoreEntryPoint {
 }
 fun sampleHealthToday(m: Member): HealthToday =
     HealthToday(
-        // 💓 혈압
+        // 혈압
         bloodPressures = List((1..3).random()) {
             val hour = (7..21).random()
             val minute = listOf("00", "15", "30", "45").random()
@@ -86,7 +88,7 @@ fun sampleHealthToday(m: Member): HealthToday =
             )
         }.sortedBy { it.startTime },
 
-        // 💧 음수량
+        // 음수량
         waterIntakes = List((3..6).random()) {
             val hour = (8..22).random()
             val minute = listOf("00", "30").random()
@@ -97,7 +99,7 @@ fun sampleHealthToday(m: Member): HealthToday =
         }.sortedBy { it.startTime },
         waterGoalMl = 2000,
 
-        // 😴 수면
+        // 수면
         sleeps = listOf(
             Sleep(
                 startTime = "2025-01-14T23:30:00",
@@ -114,7 +116,7 @@ fun sampleHealthToday(m: Member): HealthToday =
             ) // 낮잠
         } else emptyList(),
 
-        // 🏃 운동
+        // 운동
         dailyActivitySummary = DailyActivitySummary(
             exercises = List((1..3).random()) { idx ->
                 ExerciseSession(
@@ -131,7 +133,7 @@ fun sampleHealthToday(m: Member): HealthToday =
     )
 
 /* ---------- 날짜 유틸 ---------- */
-enum class MetricType { ACTIVITY, BLOOD_PRESSURE, SLEEP }
+enum class MetricType { ACTIVITY, SLEEP }
 
 /* ---------- 스크린 ---------- */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -145,12 +147,12 @@ fun CareGroupHome(
     healthViewModel: CareGroupHomeViewModel = hiltViewModel(),
     syncViewModel: HealthSyncViewModel = hiltViewModel(),
     myPageViewModel: MyPageViewModel = hiltViewModel(),
-    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()  // ⑤ AI 제안 추가
+    aiSuggestionViewModel: AiSuggestionViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = context as Activity
 
-    // ExerciseSessionManager 주입 (Singleton via EntryPoint)
+    // ExerciseSessionManager 주입
     val exerciseSessionManager = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
@@ -161,7 +163,7 @@ fun CareGroupHome(
     val permissionState by healthPermissionViewModel.state.collectAsState()
     val stepUiState by healthViewModel.stepUiState.collectAsState()
 
-    // ⑤ AI 빠른 넛지 메시지
+    // AI 빠른 넛지 메시지
     val quickNudgeMessage by aiSuggestionViewModel.quickNudgeMessage.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -190,18 +192,13 @@ fun CareGroupHome(
     val characterMap = remember(groupChars) {
         groupChars.associateBy({ it.userId }, { it })
     }
-    LaunchedEffect(characterMap) {
-//        Log.d("CareGroupHome", "characterMap keys = ${characterMap.keys}")
-    }
 
     // 그룹 상세 정보 로드
     LaunchedEffect(groupSeq) {
-        Log.d("CareGroupHome", "========== LaunchedEffect triggered for groupSeq=$groupSeq ==========")
         myPageViewModel.loadGroupCharacters(groupSeq)
         groupViewModel.loadGroupDetail(groupSeq)
         healthViewModel.loadGroupStepStatistics(groupSeq)
-        Log.d("CareGroupHome", "Calling loadGroupMemberComments for groupSeq=$groupSeq")
-        healthViewModel.loadGroupMemberComments(groupSeq)  // 한줄평 로드
+        healthViewModel.loadGroupMemberComments(groupSeq)
     }
 
     // TokenStore를 Hilt를 통해 가져옴
@@ -234,11 +231,6 @@ fun CareGroupHome(
             }
         }
     }
-
-    val groupCharResponse: List<GroupCharacterResponse> =
-        myPageViewModel.groupCharacters.collectAsState().value ?: emptyList()
-
-//    val context = LocalContext.current
     val currentUserName = remember {
         tokenStore.getName() ?: "나"
     }
@@ -252,7 +244,6 @@ fun CareGroupHome(
     // Pull-to-Refresh 상태
     var isRefreshing by remember { mutableStateOf(false) }
 
-    val detail by groupViewModel.detail.collectAsState()
     val membersResponse by groupViewModel.members.collectAsState()
     val groupName by groupViewModel.groupName.collectAsState()
     val totalStats by groupViewModel.totalActivityStats.collectAsState()
@@ -262,7 +253,7 @@ fun CareGroupHome(
 
     // 날짜/리스트 상태
     val today = remember { LocalDate.now() }
-    val minDate = remember { today.minusYears(1) }   // 1년 전
+    val minDate = remember { today.minusYears(1) }
     var selectedDate by rememberSaveable { mutableStateOf(today) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
 
@@ -320,11 +311,7 @@ fun CareGroupHome(
     }
 
     val members = remember(membersResponse, stepUiState, healthFeedbackMap, memberComments) {
-        Log.d("CareGroupHome", "========== Creating members list ==========")
-        Log.d("CareGroupHome", "memberComments available: ${memberComments.size} comments")
-        Log.d("CareGroupHome", "memberComments map: $memberComments")
-
-        // 총 거리
+       // 총 거리
         val totalSteps = stepUiState.goal
         val stepsByUserSeq = stepUiState.members.associateBy(
             keySelector = { it.userSeq },
@@ -337,9 +324,6 @@ fun CareGroupHome(
         membersResponse.map { m ->
             // 캐릭터
             val charInfo = characterMap[m.userSeq]
-            val avatarUrl = charInfo?.mainCharacterImageUrl
-            val bgUrl = charInfo?.mainBackgroundImageUrl
-            val petName = charInfo?.petName
 
             val steps = if (hasStats) {
                 stepsByUserSeq[m.userSeq] ?: 0
@@ -362,16 +346,13 @@ fun CareGroupHome(
                 feedback?.summary ?: "오늘 하루도 파이팅!"
             }
 
-            Log.d("CareGroupHome", "Loading member: ${m.userName}, $status")
-
             val bubbleText = memberComments[m.userSeq] ?: ""
-            Log.d("CareGroupHome", "Member ${m.userName} (userSeq=${m.userSeq}): bubbleText='$bubbleText'")
 
             Member(
                 name = m.userName,
                 progresses = steps,
                 goal = goal,
-                avatarRes = R.drawable.char_bear_1,   // TODO: m.mainCharacterBaseImageUrl 매핑
+                avatarRes = R.drawable.char_bear_1,
                 bubbleText = bubbleText,
                 isLeader = m.isLeader,
                 userPk = m.userSeq,
@@ -381,16 +362,12 @@ fun CareGroupHome(
         }
     }
 
-    // 하나의 확장 상태만 유지 (리스트 공통)
     var expandedMemberName by remember { mutableStateOf<String?>(null) }
 
-    // 주차/일자 데이터 (데모)
     var weekMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
     var todayMembers by remember { mutableStateOf<List<Member>>(emptyList()) }
 
-    var todayGroupPercent by remember { mutableStateOf(0.62f) }   // TODO: API 나오면 교체
-    var todayGroupProgress by remember { mutableStateOf(10234) }  // TODO
-    var totalGroupGoal by remember { mutableStateOf(20000) }      // TODO
+    var todayGroupPercent by remember { mutableStateOf(0.62f) }
 
     // 날짜 이동
     val onPrevDay = {
@@ -414,15 +391,11 @@ fun CareGroupHome(
     val month = selectedDate.monthValue
     val wom = selectedDate.weekOfMonth()
     LaunchedEffect(year, month, wom, members) {
-        val start = selectedDate.startOfWeek()
-        val end = selectedDate.endOfWeek()
-        // TODO: 주차별 데이터 필터링이 필요하면 여기서 처리
         weekMembers = members
     }
 
     // 날짜 변경 시
     LaunchedEffect(selectedDate, weekMembers) {
-        // TODO: 날짜별 데이터 필터링이 필요하면 여기서 처리
         todayMembers = weekMembers
     }
 
@@ -434,22 +407,18 @@ fun CareGroupHome(
       if (userPks.isNotEmpty()) {
             healthViewModel.loadHealthDataForMembers(userPks, selectedDate)
         } else {
-            Log.d("CareGroupHome", "No valid userPks to load health data")
         }
     }
 
-    // 다이얼로그는 리스트 바깥에서 remember
     val dpState = rememberDatePickerState(
         initialSelectedDateMillis = selectedDate.toEpochMilliAtLocal(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                 val date = epochMilliToLocalDate(utcTimeMillis)
-                // minDate ~ today 사이만 선택 가능
                 return !date.isBefore(minDate) && !date.isAfter(today)
             }
 
             override fun isSelectableYear(year: Int): Boolean {
-                // 연도도 같이 제한
                 return year in minDate.year..today.year
             }
         }
@@ -540,7 +509,7 @@ fun CareGroupHome(
                         onPrev = onPrevDay,
                         onNext = onNextDay,
                         label = selectedDate.korLabel(),
-                        onClick = { showCalendar = true } // 클릭으로 달력 열기
+                        onClick = { showCalendar = true }
                     )
                 }
 
@@ -574,8 +543,6 @@ fun CareGroupHome(
                         },
                         isSelf = (m.userPk == TokenStore(context).getUserPk()),
                         onTapIconClick = {
-                            // ⑤ health_other_short: AI 빠른 넛지 메시지 생성
-                            Log.d("MemberRowCare", "[콕 찌르기 시작] 그룹=$groupSeq, 대상=${m.name}(${m.userPk})")
                             aiSuggestionViewModel.loadQuickNudgeMessage(groupSeq, m.userPk)
                         }
                     )
@@ -630,20 +597,16 @@ fun CareGroupHome(
                     Spacer(Modifier.height(6.dp))
                 }
 
-                // 운동 탭일 때만 진행률 카드
                 if (metricType == MetricType.ACTIVITY) {
                     item {
                         Spacer(Modifier.height(6.dp))
                         ProgressSummaryCard(
                             title = "활동 요약",
                             members = todayMembers,
-//                            totalSteps = stepUiState.goal,
-//                            totalGoal = stepUiState.goal,
                             modifier = Modifier
                         )
                     }
                 } else {
-                    // 혈압/수면: 멤버별 라인 + 전체 평균 라인
                     item {
                         Spacer(Modifier.height(6.dp))
                         val chartData = remember(selectedDate, weekMembers, metricType, sleepStatistics) {
@@ -656,12 +619,10 @@ fun CareGroupHome(
                         }
                         MetricChartCard(
                             title = when (metricType) {
-                                MetricType.BLOOD_PRESSURE -> "주간 혈압 추이"
                                 MetricType.SLEEP -> "주간 수면 시간 추이"
-                                else -> "" // 사용 안됨
+                                else -> ""
                             },
                             unit = when (metricType) {
-                                MetricType.BLOOD_PRESSURE -> "mmHg"
                                 MetricType.SLEEP -> "분"
                                 else -> ""
                             },
@@ -753,34 +714,6 @@ fun CareGroupHome(
     }
 }
 
-/* ---------- 컴포넌트 ---------- */
-@Composable
-private fun ScreenTitleRow(
-    title: String,
-    subtitle: String,
-    onEditClick: () -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 22.sp, color = black)
-            Spacer(Modifier.height(4.dp))
-            Text(subtitle, color = Color(0xFF666666), lineHeight = 18.sp)
-        }
-        FilledTonalButton(
-            onClick = onEditClick,
-            colors = ButtonDefaults.filledTonalButtonColors(containerColor = main, contentColor = white),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(10.dp)
-        ) { Text("목표 수정") }
-    }
-}
-
 @Composable
 private fun HeaderCard(
     progress: Float,
@@ -794,7 +727,7 @@ private fun HeaderCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clickable { onClick() }, // 클릭으로 달력 오픈
+                .clickable { onClick() },
             color = main,
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -856,14 +789,6 @@ fun buildSummaryChips(type: MetricType, s: CareWeekSummary, sleepStats: SleepSta
         s.steps?.let { "👣 ${it} 걸음 걸었어요" },
         s.activeMinutes?.let { "⏱️ ${it}분 운동했어요" }
     )
-
-    MetricType.BLOOD_PRESSURE -> listOfNotNull(
-        if (s.systolicAvg != null && s.diastolicAvg != null)
-            "🩺 평균 혈압 ${s.systolicAvg}/${s.diastolicAvg} mmHg" else null,
-        s.morningBp?.let { (sys, dia) -> "🌅 아침 ${sys}/${dia} mmHg" },
-        s.eveningBp?.let { (sys, dia) -> "🌇 저녁 ${sys}/${dia} mmHg" }
-    )
-
     MetricType.SLEEP -> buildSleepSummaryMessages(
         stats = sleepStats,
         members = members
@@ -888,13 +813,6 @@ fun sampleSummary(dateLabel: String, type: MetricType): CareWeekSummary = when (
         steps = 10043,
         calories = 10043,
         activeMinutes = 62
-    )
-    MetricType.BLOOD_PRESSURE -> CareWeekSummary(
-        dateLabel = dateLabel,
-        systolicAvg = 118,
-        diastolicAvg = 76,
-        morningBp = 120 to 78,
-        eveningBp = 116 to 74
     )
     MetricType.SLEEP -> CareWeekSummary(
         dateLabel = dateLabel,
@@ -929,30 +847,6 @@ private fun MetricTypeTabs(
     }
 }
 
-@Composable
-private fun CareGroupFab(
-    permissionState: HealthPermissionViewModel.State,
-    onRequestPermission: () -> Unit,
-    onSync: () -> Unit
-) {
-    FloatingActionButton(
-        onClick = {
-            when (permissionState) {
-                HealthPermissionViewModel.State.Granted -> onSync()
-                HealthPermissionViewModel.State.NeedPermission -> onRequestPermission()
-                is HealthPermissionViewModel.State.Error -> onRequestPermission()
-                HealthPermissionViewModel.State.Idle -> onRequestPermission()
-            }
-        },
-        containerColor = main,
-        contentColor = white
-    ) {
-        Icon(Icons.Default.Refresh, contentDescription = "동기화")
-    }
-}
-
-
-@RequiresApi(Build.VERSION_CODES.O)
 private fun clampDate(
     date: LocalDate,
     min: LocalDate,

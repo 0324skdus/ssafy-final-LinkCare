@@ -1,6 +1,6 @@
 package com.a307.linkcare.feature.caregroup.domain.repository
 
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.caregroup.ui.detail.HealthToday
 import com.a307.linkcare.feature.caregroup.data.api.CareGroupApi
 import com.a307.linkcare.feature.caregroup.data.api.HealthFeedbackApi

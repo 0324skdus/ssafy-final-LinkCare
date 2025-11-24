@@ -5,8 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.mypage.domain.repository.DecorateRepository
-import com.a307.linkcare.feature.mypage.data.model.dto.BackgroundDto
-import com.a307.linkcare.feature.mypage.data.model.dto.CharacterDto
+import com.a307.linkcare.feature.mypage.data.model.dto.DecorateUiState
 import com.a307.linkcare.feature.watch.manager.DataLayerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,14 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-data class DecorateUiState(
-    val ownedCharacters: List<CharacterDto> = emptyList(),
-    val ownedBackgrounds: List<BackgroundDto> = emptyList(),
-    val mainCharacter: CharacterDto? = null,
-    val mainBackground: BackgroundDto? = null,
-    val loading: Boolean = false
-)
 
 @HiltViewModel
 class DecorateViewModel @Inject constructor(

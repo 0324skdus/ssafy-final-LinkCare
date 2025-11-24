@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.a307.linkcare.feature.auth.domain.usecase.ArePermissionsGrantedUseCase
 import com.a307.linkcare.feature.auth.domain.usecase.RequestPermissionsUseCase
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.sdk.health.domain.repository.HealthRepository
 import com.a307.linkcare.sdk.health.domain.sync.*
 import com.a307.linkcare.sdk.health.domain.sync.activitySummary.ActivitySummaryReader

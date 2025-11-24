@@ -3,7 +3,7 @@ package com.a307.linkcare.feature.commongroup.ui.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.a307.linkcare.common.network.TokenStore
+import com.a307.linkcare.common.network.store.TokenStore
 import com.a307.linkcare.feature.commongroup.domain.repository.GroupRepository
 import com.a307.linkcare.feature.commongroup.data.model.response.GroupDetailResponse
 import com.a307.linkcare.feature.commongroup.data.model.request.GroupTotalActivityStats

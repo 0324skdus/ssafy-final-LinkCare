@@ -2,7 +2,6 @@
 
 package com.a307.linkcare.navigation
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -18,10 +17,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import com.a307.linkcare.common.di.entrypoint.AiWorkManagerEntryPoint
 import com.a307.linkcare.common.theme.main
-import com.a307.linkcare.feature.ai.domain.worker.AiWorkManager
 import com.a307.linkcare.feature.auth.ui.onboarding.OnboardingViewModel
-import com.a307.linkcare.common.network.RetrofitClient
+import com.a307.linkcare.common.network.client.RetrofitClient
 import com.a307.linkcare.feature.auth.data.model.request.SendVerificationCodeRequest
 import com.a307.linkcare.feature.auth.data.model.request.SignupRequest
 import com.a307.linkcare.feature.auth.data.model.request.VerifyCodeRequest
@@ -34,18 +33,9 @@ import com.a307.linkcare.feature.auth.ui.onboarding.SignupHeightScreen
 import com.a307.linkcare.feature.auth.ui.signup.SignupScreen
 import com.a307.linkcare.feature.commongroup.ui.invite.InvitationPreviewScreen
 import com.a307.linkcare.feature.auth.ui.intro.IntroTourScreen
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
-
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface AiWorkManagerEntryPoint {
-    fun aiWorkManager(): AiWorkManager
-}
 
 @Composable
 fun AppNavGraph(
@@ -53,10 +43,8 @@ fun AppNavGraph(
     startDestination: String = Route.Login.route,
     initialDeepLinkToken: String? = null
 ) {
-    // 딥링크 토큰을 remember로 저장
     val deepLinkToken = remember { mutableStateOf(initialDeepLinkToken) }
 
-    // Context로부터 AiWorkManager 가져오기
     val context = LocalContext.current
     val aiWorkManager = remember {
         val app = context.applicationContext as com.a307.linkcare.LinkCareApp
@@ -75,18 +63,15 @@ fun AppNavGraph(
             LoginScreen(
                 navController = navController,
                 onLoginSuccess = { isFirstLogin ->
-                    // 로그인 성공 → AI 코멘트 생성 즉시 실행
-                    Log.d("AppNavGraph", "🤖 로그인 성공 - AI WorkManager 즉시 실행")
                     aiWorkManager.runNow()
 
-                    // 딥링크가 있으면 초대 화면으로, 아니면 일반 플로우
                     val token = deepLinkToken.value
                     if (!token.isNullOrEmpty()) {
                         navController.navigate(Route.InvitationPreview.withArgs(token)) {
                             popUpTo(Route.Login.route) { inclusive = true }
                             launchSingleTop = true
                         }
-                        deepLinkToken.value = null // 사용 후 초기화
+                        deepLinkToken.value = null
                     } else if (isFirstLogin) {
                         // 첫 로그인 시: Intro로 이동
                         navController.navigate(Route.Intro.route) {
@@ -110,7 +95,6 @@ fun AppNavGraph(
 
         // 회원가입 화면
         composable(Route.Signup.route) {
-            // 네트워크 콜백에 필요한 Compose 도구
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
             fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -119,7 +103,6 @@ fun AppNavGraph(
                 onVerifyEmail = { email ->
                     scope.launch {
                         try {
-                            // 1) 중복 확인
                             val dupRes = RetrofitClient.authApi.checkEmail(email)
                             if (!dupRes.isSuccessful) {
                                 toast("이메일 중복 확인 실패")
@@ -131,7 +114,6 @@ fun AppNavGraph(
                                 return@launch
                             }
 
-                            // 2) 사용 가능: 인증 코드 발송
                             val sendRes = RetrofitClient.authApi.sendVerificationCode(
                                 SendVerificationCodeRequest(email)
                             )
@@ -193,7 +175,7 @@ fun AppNavGraph(
             )
         }
 
-        // 인트로 화면 (2초 후 자동으로 Onboarding 이동)
+        // 인트로 화면
         composable(Route.Intro.route) {
             var navigated by remember { mutableStateOf(false) }
 
@@ -214,7 +196,7 @@ fun AppNavGraph(
             }
         }
 
-        // 온보딩 (회원정보 수집 Flow)
+        // 온보딩
         composable(Route.Onboarding.route) {
             SignupPager(
                 navController = navController,
@@ -305,10 +287,6 @@ fun SignupPager(
                 pagerState = pagerState,
                 pageCount = pageCount,
                 onStart = { idx, name ->
-                    // 캐릭터 선택 후 프로필 제출
-//                    vm.setCharacterId(idx);
-//                    vm.setCharacterName(name);
-//                   vm.submitProfile();
                 },
                 onNavigateToIntro = onFinished
             )

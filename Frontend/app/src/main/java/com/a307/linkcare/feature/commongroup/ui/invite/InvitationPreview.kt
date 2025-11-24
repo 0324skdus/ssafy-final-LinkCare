@@ -318,7 +318,7 @@ private fun ErrorContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "❌",
+            text = "X",
             style = MaterialTheme.typography.displayLarge
         )
 

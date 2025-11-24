@@ -44,9 +44,13 @@ android {
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
-            "\"${(localProps["GOOGLE_WEB_CLIENT_ID"] ?: "").toString()}\""
+            "\"${localProps["GOOGLE_WEB_CLIENT_ID"]}\""
         )
-
+        buildConfigField(
+            "String",
+            "KAKAO_NATIVE_APP_KEY",
+            "\"${localProps["KAKAO_NATIVE_APP_KEY"]}\""
+        )
         resValue("string", "kakao_native_app_key", (localProps["KAKAO_NATIVE_APP_KEY"] ?: "").toString())
         resValue("string", "kakao_scheme", "kakao${(localProps["KAKAO_NATIVE_APP_KEY"] ?: "").toString()}")
         resValue("string", "web_client_id", googleWebClientId)

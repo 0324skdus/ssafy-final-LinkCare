@@ -37,11 +37,11 @@ import com.a307.linkcare.R
 import dagger.hilt.android.EntryPointAccessors
 import com.a307.linkcare.common.component.atoms.LcBtn
 import com.a307.linkcare.common.component.atoms.LcInputField
-import com.a307.linkcare.common.component.molecules.PagerDots
+import com.a307.linkcare.common.component.molecules.header.PagerDots
 import com.a307.linkcare.common.theme.*
-import com.a307.linkcare.common.util.loadCroppedPainterIO
+import com.a307.linkcare.common.util.loader.loadCroppedPainterIO
 import com.a307.linkcare.feature.auth.ui.permission.HealthPermissionViewModel
-import com.a307.linkcare.common.util.HealthPermissions
+import com.a307.linkcare.common.util.permission.HealthPermissions
 import com.a307.linkcare.feature.auth.ui.permission.SamsungHealthPermissionDialog
 import com.a307.linkcare.feature.watch.ui.CustomizeRepoHolderVM
 import com.a307.linkcare.feature.watch.manager.DataLayerManager
