@@ -82,12 +82,15 @@ LinkCare – 일상 속 건강 관리, 모바일 헬스케어
 ## 4️⃣ 아키텍처
 📍 Wear OS
 → Health Services → Data Layer → Mobile AI Character Engine
+
 📍 Mobile
 → On-device AI (Gemma 기반 lightweight reasoning)
 → REST API (Spring Boot)
+
 📍 Backend
 → AI Goal Recommendation (LightGBM)
 → Stats Aggregation / History
+
 📍 FCM
 → Group Notification / Real-time Motivation
 
