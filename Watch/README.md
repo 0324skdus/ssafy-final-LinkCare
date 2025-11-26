@@ -2,6 +2,22 @@
 
 Wear OS 기반 운동 트래킹 애플리케이션으로, 모바일 앱과 실시간 연동되는 헬스케어 솔루션입니다.
 
+## 📸 스크린샷
+
+<div align="center">
+
+| 운동 준비 화면 | 운동 진행 화면 | 운동 완료 화면 |
+|:---:|:---:|:---:|
+| ![Preparing](screenshots/watch_preparing.png) | ![Exercise](screenshots/watch_exercise.png) | ![Summary](screenshots/watch_summary.png) |
+| 권한 확인 및 시작 | 실시간 메트릭 표시 | 운동 요약 통계 |
+
+| 커스터마이징 테마 1 | 커스터마이징 테마 2 |
+|:---:|:---:|
+| ![Theme 1](screenshots/watch_theme1.png) | ![Theme 2](screenshots/watch_theme2.png) |
+| 캐릭터 & 배경 조합 예시 | 40가지 테마 조합 가능 |
+
+</div>
+
 ## 🎯 주요 기능
 
 ### 1. 실시간 운동 데이터 트래킹
