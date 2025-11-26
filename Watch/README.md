@@ -6,15 +6,15 @@ Wear OS 기반 운동 트래킹 애플리케이션으로, 모바일 앱과 실�
 
 <div align="center">
 
-| 운동 준비 화면 | 운동 진행 화면 | 운동 완료 화면 |
+| 운동 준비 화면 | 운동 진행 화면 | 운동 제어 화면 |
 |:---:|:---:|:---:|
 | ![Preparing](screenshots/watch_preparing.png) | ![Exercise](screenshots/watch_exercise.png) | ![Summary](screenshots/watch_summary.png) |
-| 권한 확인 및 시작 | 실시간 메트릭 표시 | 운동 요약 통계 |
+| 권한 확인 및 시작 | 실시간 메트릭 표시 | 운동 종료/ 일시정지 버튼 |
 
-| 커스터마이징 테마 1 | 커스터마이징 테마 2 |
+| 운동 완료 화면 1 | 운동 완료 화면 2 |
 |:---:|:---:|
 | ![Theme 1](screenshots/watch_theme1.png) | ![Theme 2](screenshots/watch_theme2.png) |
-| 캐릭터 & 배경 조합 예시 | 40가지 테마 조합 가능 |
+| 운동 기록 요약 | 운동 재시작 버튼튼 |
 
 </div>
 
