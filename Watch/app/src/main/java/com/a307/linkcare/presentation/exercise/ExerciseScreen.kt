@@ -65,6 +65,7 @@ import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.compose.ambient.AmbientAware
 import com.google.android.horologist.compose.ambient.AmbientState
 import com.google.android.horologist.health.composables.ActiveDurationText
+import com.a307.linkcare.core.Constants
 import com.a307.linkcare.data.DataLayerManager
 import com.a307.linkcare.data.ThemePreferences
 import com.a307.linkcare.presentation.summary.toWorkoutSummary
@@ -240,6 +241,12 @@ private fun ExerciseMetrics(
         val backgroundRes = when (backgroundId) {
             1 -> R.drawable.background_default
             2 -> R.drawable.background_2
+            3 -> R.drawable.background_3
+            4 -> R.drawable.background_4
+            5 -> R.drawable.background_5
+            6 -> R.drawable.background_6
+            7 -> R.drawable.background_7
+            8 -> R.drawable.background_8
             else -> R.drawable.background_default
         }
 
@@ -255,8 +262,8 @@ private fun ExerciseMetrics(
             isAnimating = !uiState.isPaused,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 50.dp)
-                .scale(2.0f)
+                .padding(bottom = Constants.UI.CHARACTER_BOTTOM_PADDING_DP.dp)
+                .scale(Constants.UI.CHARACTER_SCALE)
         )
 
         Column(
@@ -511,7 +518,7 @@ fun AnimatedCharacter(
     LaunchedEffect(isAnimating) {
         if (isAnimating) {
             while (true) {
-                delay(150)
+                delay(Constants.UI.ANIMATION_FRAME_DELAY_MS)
                 currentFrame = (currentFrame + 1) % frames.size
             }
         } else {

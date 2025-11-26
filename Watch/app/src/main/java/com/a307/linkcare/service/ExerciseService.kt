@@ -1,6 +1,5 @@
 package com.a307.linkcare.service
 
-import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Binder
@@ -13,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.a307.linkcare.core.Constants
 import com.a307.linkcare.data.DataLayerManager
 import com.a307.linkcare.data.ExerciseClientManager
 import com.a307.linkcare.data.isExerciseInProgress
@@ -49,6 +49,7 @@ class ExerciseService : LifecycleService() {
 
     // companion으로 세션 단위 중복 방지
     companion object {
+        private const val TAG = "ExerciseService"
         private val UNBIND_DELAY = 3.seconds
         private val sentSessionSummaries = mutableSetOf<Long>()
     }
@@ -100,15 +101,15 @@ class ExerciseService : LifecycleService() {
         exerciseClientManager.endExercise()
 
         // 잠깐대기, 마지막 업데이트 반영
-        delay(500)
+        delay(Constants.Exercise.END_EXERCISE_DELAY_MS)
 
         // 이제 상태 가져오기
         val currentState = exerciseServiceMonitor.exerciseServiceState.value
         val metrics = currentState.exerciseMetrics
-        val endTimestamp = System.currentTimeMillis()
+        val endTimestamp = System.currentTimeMillis() / 1000  // 초 단위로 변환
         val durationSec =
             (currentState.activeDurationCheckpoint?.activeDuration?.seconds ?: 0L).toInt()
-        val startTimestamp = endTimestamp - (durationSec * 1000L)
+        val startTimestamp = endTimestamp - durationSec  // 이미 초 단위이므로 1000 곱하기 불필요
 
         val summary = WorkoutSummary(
             sessionId = currentSessionId,
@@ -182,7 +183,7 @@ class ExerciseService : LifecycleService() {
                                 TAG,
                                 "📡 Sent realtime metrics to mobile: ID=${sessionId} HR=${metrics.heartRate?.toInt() ?: 0}, Cal=${metrics.calories?.toInt() ?: 0}, Dur=$durationSec"
                             )
-                            delay(2000) // 2초 주기로 전송
+                            delay(Constants.Exercise.METRICS_SEND_INTERVAL_MS)
                         }
                     }
                 }

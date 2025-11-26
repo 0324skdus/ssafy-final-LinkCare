@@ -6,6 +6,7 @@ import com.google.android.gms.wearable.*
 import com.a307.linkcare.data.model.WorkoutSummary
 
 object DataLayerManager {
+    private const val TAG = "DataLayerManager"
     private lateinit var dataClient: DataClient
     private lateinit var messageClient: MessageClient
     private lateinit var nodeClient: NodeClient
@@ -29,8 +30,8 @@ object DataLayerManager {
         }
 
         dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
-            .addOnSuccessListener { Log.d("DataLayer", "✅ metrics sent") }
-            .addOnFailureListener { Log.e("DataLayer", "❌ metrics send failed", it) }
+            .addOnSuccessListener { Log.d(TAG, "✅ metrics sent") }
+            .addOnFailureListener { Log.e(TAG, "❌ metrics send failed", it) }
     }
 
     //세션 상태 전송(START / PAUSE / RESUME / STOP)
@@ -43,24 +44,24 @@ object DataLayerManager {
                         "/linkcare/session",
                         state.toByteArray()
                     ).addOnSuccessListener {
-                        Log.d("DataLayer", "✅ session message sent to ${node.displayName}")
+                        Log.d(TAG, "✅ session message sent to ${node.displayName}")
                     }.addOnFailureListener {
-                        Log.e("DataLayer", "❌ failed to send session to ${node.displayName}", it)
+                        Log.e(TAG, "❌ failed to send session to ${node.displayName}", it)
                     }
                 }
             }
-            .addOnFailureListener { Log.e("DataLayer", "❌ node lookup failed", it) }
+            .addOnFailureListener { Log.e(TAG, "❌ node lookup failed", it) }
     }
 
     //운동 종료 후 요약 리포트 전송
     fun sendWorkoutSummary(context: Context, summary: WorkoutSummary) {
         if (summary.sessionId == 0L) {
-            Log.w("DataLayer", "⚠️ Ignoring summary send: empty sessionId")
+            Log.w(TAG, "⚠️ Ignoring summary send: empty sessionId")
             return
         }
         val timestamp = System.currentTimeMillis()
         Log.d(
-            "DataLayer",
+            TAG,
             "⚙️ sendWorkoutSummary() called at $timestamp, session=${summary.sessionId}"
         )
         val dataMap = PutDataMapRequest.create("/linkcare/summary").apply {
@@ -73,7 +74,7 @@ object DataLayerManager {
             dataMap.putLong("endTimestamp", summary.endTimestamp)
         }
         dataClient.putDataItem(dataMap.asPutDataRequest().setUrgent())
-            .addOnSuccessListener { Log.d("DataLayer", "✅ summary sent") }
-            .addOnFailureListener { Log.e("DataLayer", "❌ summary send failed", it) }
+            .addOnSuccessListener { Log.d(TAG, "✅ summary sent") }
+            .addOnFailureListener { Log.e(TAG, "❌ summary send failed", it) }
     }
 }

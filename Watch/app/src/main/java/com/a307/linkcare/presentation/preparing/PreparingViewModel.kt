@@ -24,11 +24,6 @@ constructor(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
     private var sessionId: Long = 0L
-//    init {
-//        viewModelScope.launch {
-//            healthServicesRepository.prepareExercise()
-//        }
-//    }
 
     fun startExercise() {
         // ✅ 세션ID 생성
@@ -83,6 +78,15 @@ constructor(
             add(Manifest.permission.ACTIVITY_RECOGNITION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 add(Manifest.permission.POST_NOTIFICATIONS)
+            // Health Connect permissions for Android 14+ (API 34+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                add("android.permission.health.READ_HEART_RATE")
+                add("android.permission.health.READ_EXERCISE")
+                add("android.permission.health.READ_STEPS")
+                add("android.permission.health.READ_DISTANCE")
+                add("android.permission.health.READ_TOTAL_CALORIES_BURNED")
+                add("android.permission.health.READ_ACTIVE_CALORIES_BURNED")
+            }
         }
     }
 }

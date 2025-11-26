@@ -12,6 +12,10 @@ import kotlinx.coroutines.launch
 
 class DataLayerListenerService : WearableListenerService() {
 
+    companion object {
+        private const val TAG = "DataLayerListener"
+    }
+
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         // 🔹 1️⃣ DataEventBuffer를 바로 복제해서 안전하게 저장
         val events = dataEvents.map { it.freeze() }  // freeze()는 DataEvent의 스냅샷을 생성
@@ -31,7 +35,7 @@ class DataLayerListenerService : WearableListenerService() {
 
                         saveThemeToPrefs(applicationContext, charId, bgId)
 
-                        Log.d("DataLayer", "⬅️ Received theme from phone: char=$charId bg=$bgId")
+                        Log.d(TAG, "⬅️ Received theme from phone: char=$charId bg=$bgId")
                     }
                 }
             }
