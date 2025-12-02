@@ -40,4 +40,22 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
 
     // 특정 그룹에서 특정 사용자의 멤버 정보 조회
     Optional<GroupMember> findByGroupAndUser_UserPk(Group group, Long userPk);
+
+    @Query("SELECT gm FROM GroupMember gm " +
+            "JOIN FETCH gm.user " +
+            "WHERE gm.group = :group")
+    List<GroupMember> findByGroupWithUser(@Param("group") Group group);
+
+    // 특정 그룹에 특정 사용자가 멤버인지 확인 (userId로)
+    boolean existsByGroupAndUser_UserPk(Group group, Long userPk);
+
+    // 그룹 상세 조회 시 N+1 문제 해결을 위한 쿼리
+    @Query("SELECT gm FROM GroupMember gm " +
+            "JOIN FETCH gm.user u " +
+            "LEFT JOIN FETCH u.mainCharacter mc " +
+            "LEFT JOIN FETCH u.mainBackground mb " +
+            "WHERE gm.group = :group")
+    List<GroupMember> findMembersWithDetailsByGroup(@Param("group") Group group);
+
+    Optional<GroupMember> findByUser_UserPkAndGroup_GroupSeq(Long userPk, Long groupSeq);
 }

@@ -9,6 +9,10 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+
+        flatDir {
+            dirs("app/libs")
+        }
     }
 }
 dependencyResolutionManagement {
@@ -16,9 +20,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://devrepo.kakao.com/nexus/content/groups/public/")
+        }
     }
 }
 
 rootProject.name = "LinkCare"
 include(":app")
+include(":llama")
  

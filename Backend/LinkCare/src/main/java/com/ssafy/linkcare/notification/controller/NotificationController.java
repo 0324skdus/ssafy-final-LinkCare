@@ -96,4 +96,24 @@ public class NotificationController {
         log.info("전체 알림 읽음 처리 API 호출: userId={}", userId);
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "알림 삭제",
+            description = "특정 알림을 삭제합니다")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "알림 삭제 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "본인의 알림이 아님"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음")
+    })
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> deleteNotification(
+            Authentication authentication,
+            @PathVariable Long notificationId) {
+
+        Long userId = Long.parseLong(authentication.getName());
+        notificationService.deleteNotification(userId, notificationId);
+
+        log.info("알림 삭제 API 호출: userId={}, notificationId={}", userId, notificationId);
+        return ResponseEntity.ok().build();
+    }
 }

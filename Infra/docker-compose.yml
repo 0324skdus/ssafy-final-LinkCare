@@ -17,6 +17,7 @@ services:
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+      GMS_KEY: ${GMS_KEY}
     volumes:
       - /home/ubuntu/app/secret/firebase-service-account.json:/run/secrets/firebase.json:ro
     depends_on:
@@ -45,6 +46,15 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  linkcare-ai:
+    image: linkcare-ai:latest       # EC2에 로드된 이미지명
+    container_name: linkcare-ai
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - /home/ubuntu/models:/app/app/models
 
 volumes:
   mysql_data:

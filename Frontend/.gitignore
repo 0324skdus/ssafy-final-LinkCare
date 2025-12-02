@@ -43,6 +43,8 @@ build/
 !src/**/build/
 gradle-app.setting
 .gradletasknamecache
+gradlew
+gradlew.bat
 
 # Android Studio
 captures/
@@ -257,3 +259,9 @@ google-services.json
 *.BASE.*
 *.LOCAL.*
 *.REMOTE.*
+
+
+/app/readthis.md
+/app/readthisforGemma.md
+/app/src/main/java/com/a307/linkcare/NUL
+/nul
